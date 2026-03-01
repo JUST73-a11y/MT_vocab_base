@@ -1,0 +1,477 @@
+
+> vocab-learner-mvp@0.1.0 lint
+> eslint
+
+
+C:\Users\M\Desktop\vocab-learner-mvp\app\admin\dashboard\page.tsx
+    4:68   warning  'ListPlus' is defined but never used                             @typescript-eslint/no-unused-vars
+    4:84   warning  'LayoutDashboard' is defined but never used                      @typescript-eslint/no-unused-vars
+  302:111  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  386:100  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  386:108  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  386:118  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  444:145  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  448:165  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  448:171  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  585:80   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  586:80   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  693:40   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  693:52   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  717:144  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  719:126  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  757:73   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  866:157  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  873:162  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+C:\Users\M\Desktop\vocab-learner-mvp\app\admin\layout.tsx
+    8:55   warning  'Menu' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-unused-vars
+   13:11   warning  'pathname' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     @typescript-eslint/no-unused-vars
+   16:12   warning  'isMobileMenuOpen' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             @typescript-eslint/no-unused-vars
+   16:30   warning  'setIsMobileMenuOpen' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          @typescript-eslint/no-unused-vars
+   21:9    error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\M\Desktop\vocab-learner-mvp\app\admin\layout.tsx:21:9
+  19 |
+  20 |     useEffect(() => {
+> 21 |         setMounted(true);
+     |         ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  22 |         if (!loading) {
+  23 |             if (!user) {
+  24 |                 router.push('/login');  react-hooks/set-state-in-effect
+   75:74   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   react/no-unescaped-entities
+  112:91   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   react/no-unescaped-entities
+  155:110  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   react/no-unescaped-entities
+  156:147  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   react/no-unescaped-entities
+
+C:\Users\M\Desktop\vocab-learner-mvp\app\api\admin\stats\route.ts
+  7:27  warning  'req' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\M\Desktop\vocab-learner-mvp\app\api\admin\users\[id]\route.ts
+  4:8  warning  'Unit' is defined but never used  @typescript-eslint/no-unused-vars
+  5:8  warning  'Word' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\M\Desktop\vocab-learner-mvp\app\api\admin\users\route.ts
+  9:27  warning  'req' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\M\Desktop\vocab-learner-mvp\app\api\auth\me\route.ts
+  10:27  warning  'req' is defined but never used  @typescript-eslint/no-unused-vars
+  62:18  warning  'e' is defined but never used    @typescript-eslint/no-unused-vars
+  78:28  warning  'req' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\M\Desktop\vocab-learner-mvp\app\api\quiz\student\active-session\route.ts
+  6:8   warning  'User' is defined but never used  @typescript-eslint/no-unused-vars
+  9:27  warning  'req' is defined but never used   @typescript-eslint/no-unused-vars
+
+C:\Users\M\Desktop\vocab-learner-mvp\app\api\quiz\student\answer\route.ts
+  135:13  error  'usedWordIds' is never reassigned. Use 'const' instead  prefer-const
+
+C:\Users\M\Desktop\vocab-learner-mvp\app\api\quiz\student\start\route.ts
+  72:24  error  'sessionId' is never reassigned. Use 'const' instead  prefer-const
+  72:35  error  'mode' is never reassigned. Use 'const' instead       prefer-const
+
+C:\Users\M\Desktop\vocab-learner-mvp\app\api\sessions\route.ts
+   4:8   warning  'User' is defined but never used   @typescript-eslint/no-unused-vars
+  27:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+  53:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+  85:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\M\Desktop\vocab-learner-mvp\app\api\settings\route.ts
+  25:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+  49:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\M\Desktop\vocab-learner-mvp\app\api\student\link-teacher\route.ts
+  27:13  error  'tProfiles' is never reassigned. Use 'const' instead  prefer-const
+  32:13  error  'tProfile' is never reassigned. Use 'const' instead   prefer-const
+
+C:\Users\M\Desktop\vocab-learner-mvp\app\api\teacher\categories\route.ts
+  7:27  warning  'req' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\M\Desktop\vocab-learner-mvp\app\api\teacher\categories\tree\route.ts
+  57:13  error  'unitCountMap' is never reassigned. Use 'const' instead  prefer-const
+
+C:\Users\M\Desktop\vocab-learner-mvp\app\api\teacher\groups\[id]\access\route.ts
+  19:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\M\Desktop\vocab-learner-mvp\app\api\teacher\groups\[id]\members\route.ts
+   4:8   warning  'User' is defined but never used   @typescript-eslint/no-unused-vars
+  33:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\M\Desktop\vocab-learner-mvp\app\api\teacher\groups\[id]\quiz-session\route.ts
+  32:24  error    'questionCount' is never reassigned. Use 'const' instead  prefer-const
+  32:44  error    'durationMin' is never reassigned. Use 'const' instead    prefer-const
+  32:62  error    'timeLimitSec' is never reassigned. Use 'const' instead   prefer-const
+  72:14  warning  'error' is defined but never used                         @typescript-eslint/no-unused-vars
+  87:14  warning  'error' is defined but never used                         @typescript-eslint/no-unused-vars
+
+C:\Users\M\Desktop\vocab-learner-mvp\app\api\teacher\groups\[id]\route.ts
+  39:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\M\Desktop\vocab-learner-mvp\app\api\teacher\groups\route.ts
+   9:27  warning  'req' is defined but never used    @typescript-eslint/no-unused-vars
+  34:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+  56:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\M\Desktop\vocab-learner-mvp\app\api\teacher\shares\[id]\route.ts
+  42:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\M\Desktop\vocab-learner-mvp\app\api\teacher\shares\route.ts
+  26:13  error    'query' is never reassigned. Use 'const' instead  prefer-const
+  40:14  warning  'error' is defined but never used                 @typescript-eslint/no-unused-vars
+
+C:\Users\M\Desktop\vocab-learner-mvp\app\api\teacher\students\[id]\access\route.ts
+  24:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\M\Desktop\vocab-learner-mvp\app\api\teacher\students\[id]\quiz-stats\route.ts
+  45:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\M\Desktop\vocab-learner-mvp\app\api\teacher\students\route.ts
+  8:27  warning  'req' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\M\Desktop\vocab-learner-mvp\app\api\units\[id]\route.ts
+   23:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+   67:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+  103:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\M\Desktop\vocab-learner-mvp\app\api\units\route.ts
+  24:13  error  'query' is never reassigned. Use 'const' instead       prefer-const
+  64:13  error  'unitsQuery' is never reassigned. Use 'const' instead  prefer-const
+
+C:\Users\M\Desktop\vocab-learner-mvp\app\api\users\[id]\route.ts
+  13:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\M\Desktop\vocab-learner-mvp\app\api\words\[id]\route.ts
+  24:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+  40:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\M\Desktop\vocab-learner-mvp\app\api\words\route.ts
+  83:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\M\Desktop\vocab-learner-mvp\app\login\page.tsx
+    3:31   warning  'useRef' is defined but never used                               @typescript-eslint/no-unused-vars
+    7:33   warning  'ArrowLeft' is defined but never used                            @typescript-eslint/no-unused-vars
+    7:66   warning  'CheckCircle2' is defined but never used                         @typescript-eslint/no-unused-vars
+   16:7    warning  'isPasswordStrong' is assigned a value but never used            @typescript-eslint/no-unused-vars
+   18:6    warning  'ForgotStep' is defined but never used                           @typescript-eslint/no-unused-vars
+   98:28   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+   98:33   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  135:102  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  204:44   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  206:35   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  206:45   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+C:\Users\M\Desktop\vocab-learner-mvp\app\register\page.tsx
+  150:92   error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  150:102  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  152:59   error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  192:122  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  208:223  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+C:\Users\M\Desktop\vocab-learner-mvp\app\student\dashboard\page.tsx
+   27:8    warning  React Hook useEffect has a missing dependency: 'loadData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+   63:30   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                              react/no-unescaped-entities
+   80:138  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                              react/no-unescaped-entities
+   90:110  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                              react/no-unescaped-entities
+   93:124  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                              react/no-unescaped-entities
+  102:113  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                              react/no-unescaped-entities
+  123:51   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                              react/no-unescaped-entities
+  133:57   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                              react/no-unescaped-entities
+  133:64   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                              react/no-unescaped-entities
+  133:97   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                              react/no-unescaped-entities
+  133:120  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                              react/no-unescaped-entities
+
+C:\Users\M\Desktop\vocab-learner-mvp\app\student\layout.tsx
+   8:51  warning  'Menu' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   @typescript-eslint/no-unused-vars
+   8:57  warning  'X' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      @typescript-eslint/no-unused-vars
+  16:12  warning  'isMobileMenuOpen' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              @typescript-eslint/no-unused-vars
+  16:30  warning  'setIsMobileMenuOpen' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           @typescript-eslint/no-unused-vars
+  20:9   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\M\Desktop\vocab-learner-mvp\app\student\layout.tsx:20:9
+  18 |
+  19 |     useEffect(() => {
+> 20 |         setMounted(true);
+     |         ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  21 |         if (!loading) {
+  22 |             if (!user) router.push('/login');
+  23 |             else if (user.role !== 'student') router.push('/teacher/dashboard');  react-hooks/set-state-in-effect
+
+C:\Users\M\Desktop\vocab-learner-mvp\app\student\onboarding\page.tsx
+   63:18   warning  'err' is defined but never used                                  @typescript-eslint/no-unused-vars
+  110:30   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  110:88   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  118:36   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  118:41   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  118:68   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  131:122  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  167:49   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  167:62   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  167:81   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  168:34   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  168:64   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  168:73   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+C:\Users\M\Desktop\vocab-learner-mvp\app\student\quiz\page.tsx
+   75:12   warning  'checkingSession' is assigned a value but never used                                                              @typescript-eslint/no-unused-vars
+  171:8    warning  React Hook useEffect has a missing dependency: 'submitAnswer'. Either include it or remove the dependency array   react-hooks/exhaustive-deps
+  187:8    warning  React Hook useEffect has a missing dependency: 'triggerSelect'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  224:55   warning  'isTimeout' is defined but never used                                                                             @typescript-eslint/no-unused-vars
+  287:11   warning  'toggleMode' is assigned a value but never used                                                                   @typescript-eslint/no-unused-vars
+  310:69   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                   react/no-unescaped-entities
+  347:120  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                   react/no-unescaped-entities
+  353:81   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                   react/no-unescaped-entities
+  403:70   warning  Expected an assignment or function call and instead saw an expression                                             @typescript-eslint/no-unused-expressions
+  696:66   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                   react/no-unescaped-entities
+
+C:\Users\M\Desktop\vocab-learner-mvp\app\student\random\page.tsx
+   10:58   warning  'Timer' is defined but never used                                                                                                                       @typescript-eslint/no-unused-vars
+   13:43   warning  'isPaused' is defined but never used                                                                                                                    @typescript-eslint/no-unused-vars
+   35:11   warning  'router' is assigned a value but never used                                                                                                             @typescript-eslint/no-unused-vars
+   53:24   warning  'setSpeechRate' is assigned a value but never used                                                                                                      @typescript-eslint/no-unused-vars
+   70:75   warning  React Hook useEffect has a missing dependency: 'loadInitialData'. Either include it or remove the dependency array                                      react-hooks/exhaustive-deps
+  154:17   error    'session' is never reassigned. Use 'const' instead                                                                                                      prefer-const
+  182:8    warning  React Hook useEffect has missing dependencies: 'currentWord', 'handleSpeak', and 'showTranslation'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  243:31   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                         react/no-unescaped-entities
+  243:39   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                         react/no-unescaped-entities
+  305:162  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                         react/no-unescaped-entities
+  388:125  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                         react/no-unescaped-entities
+  423:57   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                         react/no-unescaped-entities
+  472:41   error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`                                                                                         react/no-unescaped-entities
+  472:71   error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`                                                                                         react/no-unescaped-entities
+  481:127  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                         react/no-unescaped-entities
+  540:39   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                         react/no-unescaped-entities
+
+C:\Users\M\Desktop\vocab-learner-mvp\app\teacher\dashboard\page.tsx
+   40:36   error    Compilation Skipped: Existing memoization could not be preserved
+
+React Compiler has skipped optimizing this component because the existing manual memoization could not be preserved. The inferred dependencies did not match the manually specified dependencies, which could cause the value to change more or less frequently than expected. The inferred dependency was `user`, but the source dependencies were [user?.teacherCode]. Inferred less specific property than source.
+
+C:\Users\M\Desktop\vocab-learner-mvp\app\teacher\dashboard\page.tsx:40:36
+  38 |     }, [user]);
+  39 |
+> 40 |     const handleCopy = useCallback(() => {
+     |                                    ^^^^^^^
+> 41 |         if (!user?.teacherCode) return;
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 42 |         navigator.clipboard.writeText(user.teacherCode);
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 43 |         setCopied(true);
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 44 |         toast.success('Teacher kodi nusxalandi!');
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 45 |         setTimeout(() => setCopied(false), 2000);
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 46 |     }, [user?.teacherCode]);
+     | ^^^^^^ Could not preserve existing manual memoization
+  47 |
+  48 |     // Group by category
+  49 |     const grouped = units.reduce((acc, unit) => {  react-hooks/preserve-manual-memoization
+  147:34   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     react/no-unescaped-entities
+  248:46   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     react/no-unescaped-entities
+  283:123  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     react/no-unescaped-entities
+  338:57   warning  'idx' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     @typescript-eslint/no-unused-vars
+
+C:\Users\M\Desktop\vocab-learner-mvp\app\teacher\groups\page.tsx
+   73:12   warning  'loadingSession' is assigned a value but never used                                                                                             @typescript-eslint/no-unused-vars
+   73:28   warning  'setLoadingSession' is assigned a value but never used                                                                                          @typescript-eslint/no-unused-vars
+   87:8    warning  React Hook useEffect has a missing dependency: 'loadData'. Either include it or remove the dependency array                                     react-hooks/exhaustive-deps
+  269:8    warning  React Hook useEffect has missing dependencies: 'fetchActiveSession' and 'fetchLeaderboard'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  338:105  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                 react/no-unescaped-entities
+  421:69   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                 react/no-unescaped-entities
+  456:94   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                 react/no-unescaped-entities
+  512:57   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                 react/no-unescaped-entities
+  518:282  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                 react/no-unescaped-entities
+  576:137  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                 react/no-unescaped-entities
+  586:189  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                 react/no-unescaped-entities
+  642:137  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                 react/no-unescaped-entities
+  652:137  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                 react/no-unescaped-entities
+  667:155  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                 react/no-unescaped-entities
+  686:117  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                 react/no-unescaped-entities
+  686:126  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                 react/no-unescaped-entities
+  698:113  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                 react/no-unescaped-entities
+  698:118  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                 react/no-unescaped-entities
+  699:145  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                 react/no-unescaped-entities
+  699:155  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                 react/no-unescaped-entities
+  699:163  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                 react/no-unescaped-entities
+  714:145  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                 react/no-unescaped-entities
+  719:117  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                 react/no-unescaped-entities
+  719:126  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                 react/no-unescaped-entities
+  730:72   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                 react/no-unescaped-entities
+  730:103  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                 react/no-unescaped-entities
+  730:201  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                 react/no-unescaped-entities
+  736:127  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                 react/no-unescaped-entities
+  850:104  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                 react/no-unescaped-entities
+  851:120  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                 react/no-unescaped-entities
+  856:88   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                 react/no-unescaped-entities
+  857:90   error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`                                                                                 react/no-unescaped-entities
+  857:110  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`                                                                                 react/no-unescaped-entities
+  858:122  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                 react/no-unescaped-entities
+
+C:\Users\M\Desktop\vocab-learner-mvp\app\teacher\layout.tsx
+    8:55   warning  'Menu' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-unused-vars
+   15:12   warning  'isMobileMenuOpen' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               @typescript-eslint/no-unused-vars
+   15:30   warning  'setIsMobileMenuOpen' is assigned a value but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            @typescript-eslint/no-unused-vars
+   20:9    error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\M\Desktop\vocab-learner-mvp\app\teacher\layout.tsx:20:9
+  18 |
+  19 |     useEffect(() => {
+> 20 |         setMounted(true);
+     |         ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  21 |         if (!loading) {
+  22 |             if (!user) {
+  23 |                 router.push('/login');  react-hooks/set-state-in-effect
+   85:74   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     react/no-unescaped-entities
+  121:91   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     react/no-unescaped-entities
+  165:110  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     react/no-unescaped-entities
+  166:147  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     react/no-unescaped-entities
+
+C:\Users\M\Desktop\vocab-learner-mvp\app\teacher\shared\page.tsx
+    6:27   warning  'Plus' is defined but never used                                                                             @typescript-eslint/no-unused-vars
+    6:47   warning  'ArrowDownLeft' is defined but never used                                                                    @typescript-eslint/no-unused-vars
+   44:8    warning  React Hook useEffect has a missing dependency: 'loadData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  165:105  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                              react/no-unescaped-entities
+  175:49   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                              react/no-unescaped-entities
+  175:59   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                              react/no-unescaped-entities
+  242:70   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                              react/no-unescaped-entities
+  278:138  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                              react/no-unescaped-entities
+  278:152  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                              react/no-unescaped-entities
+
+C:\Users\M\Desktop\vocab-learner-mvp\app\teacher\students\page.tsx
+   53:8    warning  React Hook useEffect has a missing dependency: 'loadData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  139:109  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                              react/no-unescaped-entities
+  231:69   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                              react/no-unescaped-entities
+  231:71   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                              react/no-unescaped-entities
+  231:80   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                              react/no-unescaped-entities
+  231:82   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                              react/no-unescaped-entities
+  250:57   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                              react/no-unescaped-entities
+  256:282  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                              react/no-unescaped-entities
+  315:137  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                              react/no-unescaped-entities
+  325:189  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                              react/no-unescaped-entities
+
+C:\Users\M\Desktop\vocab-learner-mvp\app\teacher\units\[id]\page.tsx
+   40:12   warning  'existingCategories' is assigned a value but never used                                                      @typescript-eslint/no-unused-vars
+   56:8    warning  React Hook useEffect has a missing dependency: 'loadData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  139:21   error    'phonetic' is never reassigned. Use 'const' instead                                                          prefer-const
+  324:31   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                              react/no-unescaped-entities
+  413:41   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                              react/no-unescaped-entities
+  413:46   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                              react/no-unescaped-entities
+  421:39   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                              react/no-unescaped-entities
+  575:116  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                              react/no-unescaped-entities
+
+C:\Users\M\Desktop\vocab-learner-mvp\app\teacher\units\new\page.tsx
+    7:10   warning  'createUnit' is defined but never used                           @typescript-eslint/no-unused-vars
+    8:33   warning  'FolderOpen' is defined but never used                           @typescript-eslint/no-unused-vars
+   84:18   warning  'err' is defined but never used                                  @typescript-eslint/no-unused-vars
+  156:99   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  157:108  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  157:115  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  165:35   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  203:80   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+C:\Users\M\Desktop\vocab-learner-mvp\app\teacher\units\page.tsx
+   15:36   warning  'ChevronDown' is defined but never used                                @typescript-eslint/no-unused-vars
+  102:13   warning  Expected an assignment or function call and instead saw an expression  @typescript-eslint/no-unused-expressions
+  177:115  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`        react/no-unescaped-entities
+  276:50   warning  'unitsError' is assigned a value but never used                        @typescript-eslint/no-unused-vars
+  374:93   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`        react/no-unescaped-entities
+  524:130  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`        react/no-unescaped-entities
+  553:111  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`        react/no-unescaped-entities
+  553:120  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`        react/no-unescaped-entities
+  553:124  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`        react/no-unescaped-entities
+  627:81   error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`        react/no-unescaped-entities
+  641:125  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`        react/no-unescaped-entities
+
+C:\Users\M\Desktop\vocab-learner-mvp\inspect_db.js
+  1:18  error  A `require()` style import is forbidden  @typescript-eslint/no-require-imports
+
+C:\Users\M\Desktop\vocab-learner-mvp\lib\apiFetch.ts
+  22:18  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\M\Desktop\vocab-learner-mvp\lib\firestore.ts
+  23:34  warning  'userData' is defined but never used  @typescript-eslint/no-unused-vars
+  29:31  warning  'userId' is defined but never used    @typescript-eslint/no-unused-vars
+  38:38  warning  'email' is defined but never used     @typescript-eslint/no-unused-vars
+
+C:\Users\M\Desktop\vocab-learner-mvp\lib\serverAuth.ts
+   1:10  warning  'NextResponse' is defined but never used  @typescript-eslint/no-unused-vars
+  29:14  warning  'e' is defined but never used             @typescript-eslint/no-unused-vars
+
+C:\Users\M\Desktop\vocab-learner-mvp\lib\useUnits.ts
+  62:8  warning  React Hook useCallback has a missing dependency: 'adminTeacherId'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\M\Desktop\vocab-learner-mvp\middleware.ts
+  49:14  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\M\Desktop\vocab-learner-mvp\models\Category.ts
+  1:8  warning  'mongoose' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\M\Desktop\vocab-learner-mvp\models\Group.ts
+  1:8  warning  'mongoose' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\M\Desktop\vocab-learner-mvp\models\GroupMember.ts
+  1:8  warning  'mongoose' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\M\Desktop\vocab-learner-mvp\models\GroupQuizSession.ts
+  1:8  warning  'mongoose' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\M\Desktop\vocab-learner-mvp\models\GroupUnitAccess.ts
+  1:8  warning  'mongoose' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\M\Desktop\vocab-learner-mvp\models\QuizAnswer.ts
+  1:8  warning  'mongoose' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\M\Desktop\vocab-learner-mvp\models\QuizAttempt.ts
+  1:8  warning  'mongoose' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\M\Desktop\vocab-learner-mvp\models\Session.ts
+  1:8  warning  'mongoose' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\M\Desktop\vocab-learner-mvp\models\Settings.ts
+  1:8  warning  'mongoose' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\M\Desktop\vocab-learner-mvp\models\StudentProfile.ts
+  1:8  warning  'mongoose' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\M\Desktop\vocab-learner-mvp\models\StudentUnitAccess.ts
+  1:8  warning  'mongoose' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\M\Desktop\vocab-learner-mvp\models\TeacherProfile.ts
+  1:8  warning  'mongoose' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\M\Desktop\vocab-learner-mvp\models\Unit.ts
+  1:8  warning  'mongoose' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\M\Desktop\vocab-learner-mvp\models\UnitShare.ts
+  1:8  warning  'mongoose' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\M\Desktop\vocab-learner-mvp\models\User.ts
+  1:28  warning  'model' is defined but never used   @typescript-eslint/no-unused-vars
+  1:35  warning  'models' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\M\Desktop\vocab-learner-mvp\models\Word.ts
+  1:8  warning  'mongoose' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\M\Desktop\vocab-learner-mvp\scripts\check-users.mjs
+  4:8  warning  'path' is defined but never used  @typescript-eslint/no-unused-vars
+
+✖ 267 problems (155 errors, 112 warnings)
+  9 errors and 0 warnings potentially fixable with the `--fix` option.
+

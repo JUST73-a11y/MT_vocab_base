@@ -1,0 +1,62 @@
+﻿--- Kids 2 Single Line ---
+[
+  {
+    "englishWord": "Describe",
+    "uzbekTranslation": "tasvirlamoq",
+    "phonetic": "diskrayb"
+  },
+  {
+    "englishWord": "Face",
+    "uzbekTranslation": "yuz",
+    "phonetic": "feys"
+  },
+  {
+    "englishWord": "Forehead",
+    "uzbekTranslation": "peshona",
+    "phonetic": "fored"
+  }
+]
+
+--- Kids 2 Numbered/Tabbed ---
+[
+  {
+    "englishWord": "Talk",
+    "uzbekTranslation": "Suhbatlashmoq",
+    "phonetic": "ToтАЩlk"
+  },
+  {
+    "englishWord": "Your",
+    "uzbekTranslation": "Sizning",
+    "phonetic": "YoтАЩr"
+  },
+  {
+    "englishWord": "Remember",
+    "uzbekTranslation": "Yodda tutmoq",
+    "phonetic": "Rimembr"
+  }
+]
+
+--- Adult (with examples) ---
+[
+  {
+    "englishWord": "Temporary",
+    "uzbekTranslation": "Vaqtinchalik",
+    "exampleSentence": "She was employed on a temporary basis.",
+    "phonetic": "adj"
+  },
+  {
+    "englishWord": "Creatively",
+    "uzbekTranslation": "Yaratuvchanlik bilan, oтАЩzgacha",
+    "exampleSentence": "The students are encouraged to think creatively.",
+    "phonetic": "adverb"
+  }
+]
+
+--- Long Word ---
+[
+  {
+    "englishWord": "play a musical instrument",
+    "uzbekTranslation": "musiqa asbobi chalish",
+    "phonetic": "play musikal insturument"
+  }
+]

@@ -1,0 +1,2 @@
+app/api/quiz/student/answer/route.ts(7,8): error TS2300: Duplicate identifier 'GroupQuizSession'.
+app/api/quiz/student/answer/route.ts(8,8): error TS2300: Duplicate identifier 'GroupQuizSession'.

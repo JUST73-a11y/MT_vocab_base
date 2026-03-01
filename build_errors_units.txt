@@ -1,0 +1,3 @@
+app/api/teacher/groups/[id]/quiz-session/[sessionId]/results/route.ts(4,37): error TS2307: Cannot find module '@/models/GroupQuizResultSnapshot' or its corresponding type declarations.
+app/api/teacher/groups/[id]/quiz-session/route.ts(7,37): error TS2307: Cannot find module '@/models/GroupQuizResultSnapshot' or its corresponding type declarations.
+app/teacher/units/page.tsx(13,41): error TS2307: Cannot find module 'framer-motion' or its corresponding type declarations.
