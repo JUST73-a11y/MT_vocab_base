@@ -12,12 +12,34 @@ import SessionScore from '@/models/SessionScore';
 import mongoose from 'mongoose';
 import { getServerSession } from '@/lib/serverAuth';
 /** Utility to generate 3 unique options, ensuring one is exactly the target word */
-function buildQuestionData(word: any, allWords: any[]) {
-    const pool = allWords.filter(w => w._id.toString() !== word._id.toString());
-    const shuffledPool = pool.sort(() => Math.random() - 0.5);
+function buildQuestionData(word: any, allWords: any[], recentDistractors: string[] = []) {
+    const targetEn = (word.englishWord || '').toLowerCase();
 
+    // 1. Gather pool excluding the target word
+    const pool = allWords.filter(w => w._id.toString() !== word._id.toString());
+
+    // 2. Score the pool for similarity
+    const scoredPool = pool.map(w => {
+        let score = 0;
+        const wEn = (w.englishWord || '').toLowerCase();
+
+        // Similar length priority
+        if (Math.abs(wEn.length - targetEn.length) <= 2) score += 5;
+        // Same first letter priority
+        if (wEn[0] === targetEn[0]) score += 10;
+        // Penalty if recently used as a distractor
+        if (recentDistractors.includes(w._id.toString())) score -= 50;
+
+        // Random jitter
+        score += Math.random() * 10;
+
+        return { word: w, score };
+    }).sort((a, b) => b.score - a.score);
+
+    // 3. Select exactly 2 distinct distractors
     const distractors: typeof pool = [];
-    for (const w of shuffledPool) {
+    for (const item of scoredPool) {
+        const w = item.word;
         const dupEn = distractors.some(d => d.englishWord.toLowerCase() === w.englishWord.toLowerCase());
         const dupUz = distractors.some(d => d.uzbekTranslation.toLowerCase() === w.uzbekTranslation.toLowerCase());
         const dupWordEn = w.englishWord.toLowerCase() === word.englishWord.toLowerCase();
@@ -29,11 +51,12 @@ function buildQuestionData(word: any, allWords: any[]) {
         if (distractors.length >= 2) break;
     }
 
+    // 4. Fallback if pool is too small (rare)
     while (distractors.length < 2) {
         distractors.push({ _id: `fb_${distractors.length}`, englishWord: '— — —', uzbekTranslation: '— — —' });
     }
 
-    // 4. Construct raw options and shuffle
+    // 5. Construct raw options and shuffle
     const rawOptions = [
         { enText: word.englishWord, uzText: word.uzbekTranslation, isTarget: true },
         { enText: distractors[0].englishWord, uzText: distractors[0].uzbekTranslation, isTarget: false },
@@ -43,7 +66,7 @@ function buildQuestionData(word: any, allWords: any[]) {
     // Safely shuffle into a new array
     const shuffledOptions = [...rawOptions].sort(() => Math.random() - 0.5);
 
-    // 5. Assign clean IDs (opt_0, opt_1, opt_2) and locate the correct one
+    // 6. Assign clean IDs (opt_0, opt_1, opt_2) and locate the correct one
     let targetOptionId = '';
     const formattedOptions = shuffledOptions.map((opt, index) => {
         const id = `opt_${index}`;
@@ -59,7 +82,8 @@ function buildQuestionData(word: any, allWords: any[]) {
             phonetic: word.phonetic || null,
             options: formattedOptions,
         },
-        correctOptionId: targetOptionId
+        correctOptionId: targetOptionId,
+        chosenDistractorIds: distractors.map(d => String(d._id)).filter(id => !id.startsWith('fb_'))
     };
 }
 
@@ -227,12 +251,16 @@ export async function POST(req: Request) {
         // ───────────────────────────────────────────────
 
         // 4. PREPARE NEXT STEP OR END QUIZ
-        const allWords = await Word.find({ unitId: { $in: attempt.unitIds } }).lean();
+        const allWordsInUnits = await Word.find({ unitId: { $in: attempt.unitIds } }).lean();
+        const sessionTargetWords = attempt.wordIds && attempt.wordIds.length > 0
+            ? allWordsInUnits.filter((w: any) => attempt.wordIds.some((id: any) => id.toString() === w._id.toString()))
+            : allWordsInUnits;
+
         let usedWordIds = attempt.usedWordIds || [];
         usedWordIds.push(wordId);
 
         const usedSet = new Set<string>(usedWordIds.map((id: any) => id.toString()));
-        let remainingWords = allWords.filter((w: any) => !usedSet.has(w._id.toString()));
+        let remainingWords = sessionTargetWords.filter((w: any) => !usedSet.has(w._id.toString()));
 
         let sessionActive = true;
 
@@ -245,7 +273,7 @@ export async function POST(req: Request) {
                 // The session is STILL active, but words ran out! 
                 // We don't want to show an 'end screen' because teacher hasn't stopped it.
                 // We will reset usedWordIds conceptually (or pick any random word) so the loop continues.
-                remainingWords = allWords; // Serve from the entire pool again endlessly!
+                remainingWords = sessionTargetWords; // Serve from the entire pool again endlessly!
             }
         } else if (remainingWords.length === 0) {
             // Self-study quizzes just end naturally.
@@ -263,9 +291,16 @@ export async function POST(req: Request) {
         };
 
         if (sessionActive && remainingWords.length > 0) {
+            let recentDistractors = attempt.usedDistractorIds || [];
+            if (recentDistractors.length > 20) recentDistractors = recentDistractors.slice(-20);
+
             // Serve the next question
             const nextWord = remainingWords[Math.floor(Math.random() * remainingWords.length)];
-            const { clientQuestion, correctOptionId } = buildQuestionData(nextWord, allWords);
+            const { clientQuestion, correctOptionId, chosenDistractorIds } = buildQuestionData(nextWord, allWordsInUnits, recentDistractors);
+
+            if (chosenDistractorIds.length > 0) {
+                updateDoc.$push.usedDistractorIds = { $each: chosenDistractorIds };
+            }
 
             const newServedAt = new Date();
             nextClientQuestion = {

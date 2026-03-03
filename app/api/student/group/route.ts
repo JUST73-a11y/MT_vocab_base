@@ -45,7 +45,11 @@ export async function GET(req: Request) {
         const [users, wallets, activeQuizDoc, dailyStatsDocs] = await Promise.all([
             User.find({ _id: { $in: memberIds } }).select('_id name totalWordsSeen').lean(),
             Wallet.find({ studentId: { $in: memberIds } }).lean(),
-            GroupQuizSession.findOne({ groupId: groupId, status: 'ACTIVE' }).lean(),
+            GroupQuizSession.findOne({
+                groupId: groupId,
+                status: 'ACTIVE',
+                $or: [{ endsAt: { $gt: new Date() } }, { endsAt: { $exists: false } }]
+            }).lean(),
             DailyStudentStats.find({ studentId: { $in: memberIds }, date: todayDateStr }).lean()
         ]);
 

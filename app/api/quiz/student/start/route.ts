@@ -7,14 +7,34 @@ import GroupQuizSession from '@/models/GroupQuizSession';
 import { getServerSession } from '@/lib/serverAuth';
 
 /** Utility to generate 3 unique options, ensuring one is exactly the target word */
-function buildQuestionData(word: any, allWords: any[]) {
+function buildQuestionData(word: any, allWords: any[], recentDistractors: string[] = []) {
+    const targetEn = (word.englishWord || '').toLowerCase();
+
     // 1. Gather pool excluding the target word
     const pool = allWords.filter(w => w._id.toString() !== word._id.toString());
-    const shuffledPool = pool.sort(() => Math.random() - 0.5);
 
-    // 2. Select exactly 2 distinct distractors
+    // 2. Score the pool for similarity
+    const scoredPool = pool.map(w => {
+        let score = 0;
+        const wEn = (w.englishWord || '').toLowerCase();
+
+        // Similar length priority
+        if (Math.abs(wEn.length - targetEn.length) <= 2) score += 5;
+        // Same first letter priority
+        if (wEn[0] === targetEn[0]) score += 10;
+        // Penalty if recently used as a distractor
+        if (recentDistractors.includes(w._id.toString())) score -= 50;
+
+        // Random jitter
+        score += Math.random() * 10;
+
+        return { word: w, score };
+    }).sort((a, b) => b.score - a.score);
+
+    // 3. Select exactly 2 distinct distractors
     const distractors: typeof pool = [];
-    for (const w of shuffledPool) {
+    for (const item of scoredPool) {
+        const w = item.word;
         // Ensure no exact English or Uzbek duplicates in our carefully selected distractors
         const dupEn = distractors.some(d => d.englishWord.toLowerCase() === w.englishWord.toLowerCase());
         const dupUz = distractors.some(d => d.uzbekTranslation.toLowerCase() === w.uzbekTranslation.toLowerCase());
@@ -27,12 +47,12 @@ function buildQuestionData(word: any, allWords: any[]) {
         if (distractors.length >= 2) break;
     }
 
-    // 3. Fallback if pool is too small (rare)
+    // 4. Fallback if pool is too small (rare)
     while (distractors.length < 2) {
         distractors.push({ _id: `fb_${distractors.length}`, englishWord: '— — —', uzbekTranslation: '— — —' });
     }
 
-    // 4. Construct raw options and shuffle
+    // 5. Construct raw options and shuffle
     const rawOptions = [
         { enText: word.englishWord, uzText: word.uzbekTranslation, isTarget: true },
         { enText: distractors[0].englishWord, uzText: distractors[0].uzbekTranslation, isTarget: false },
@@ -42,7 +62,7 @@ function buildQuestionData(word: any, allWords: any[]) {
     // Safely shuffle into a new array to prevent reference loss
     const shuffledOptions = [...rawOptions].sort(() => Math.random() - 0.5);
 
-    // 5. Assign clean IDs (opt_0, opt_1, opt_2) and locate the correct one
+    // 6. Assign clean IDs (opt_0, opt_1, opt_2) and locate the correct one
     let targetOptionId = '';
     const formattedOptions = shuffledOptions.map((opt, index) => {
         const id = `opt_${index}`;
@@ -58,7 +78,8 @@ function buildQuestionData(word: any, allWords: any[]) {
             phonetic: word.phonetic || null,
             options: formattedOptions,
         },
-        correctOptionId: targetOptionId
+        correctOptionId: targetOptionId,
+        chosenDistractorIds: distractors.map(d => String(d._id)).filter(id => !id.startsWith('fb_'))
     };
 }
 
@@ -69,7 +90,7 @@ export async function POST(req: Request) {
             return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
         }
 
-        let { unitIds, sessionId, mode = 'STUDENT_SELF', timeLimitSec = 10 } = await req.json();
+        let { unitIds, sessionId, mode = 'STUDENT_SELF', timeLimitSec = 10, questionCount } = await req.json();
 
         await dbConnect();
 
@@ -83,6 +104,7 @@ export async function POST(req: Request) {
                 return NextResponse.json({ message: 'Session is no longer active' }, { status: 400 });
             }
             timeLimitSec = session.timeLimitSec || 10;
+            questionCount = session.questionCount || 20;
             if (session.unitIds && session.unitIds.length > 0) {
                 unitIds = session.unitIds.map((uid: any) => uid.toString());
             }
@@ -97,8 +119,11 @@ export async function POST(req: Request) {
             return NextResponse.json({ message: 'No words found in selected units' }, { status: 400 });
         }
 
+        const shuffledWords = [...allWords].sort(() => Math.random() - 0.5);
+        const selectedWords = questionCount ? shuffledWords.slice(0, Number(questionCount)) : shuffledWords;
+        const wordIdsList = selectedWords.map(w => w._id);
+
         // Create the attempt entry in DB
-        const wordIdsList = allWords.map(w => w._id);
         const attempt = await QuizAttempt.create({
             studentId: student.id,
             sessionId: sessionId || undefined,
@@ -106,14 +131,15 @@ export async function POST(req: Request) {
             mode: mode,
             wordIds: wordIdsList,
             usedWordIds: [], // Empty to start
+            usedDistractorIds: [],
             correctCount: 0,
             answeredCount: 0,
             _qMemo: {}, // Initialize plain object
         });
 
-        // Pick a random starting word
-        const startingWord = allWords[Math.floor(Math.random() * allWords.length)];
-        const { clientQuestion, correctOptionId } = buildQuestionData(startingWord, allWords);
+        // Pick a random starting word from the selected subset
+        const startingWord = selectedWords[Math.floor(Math.random() * selectedWords.length)];
+        const { clientQuestion, correctOptionId, chosenDistractorIds } = buildQuestionData(startingWord, allWords);
 
         const servedAt = new Date();
 
@@ -124,6 +150,9 @@ export async function POST(req: Request) {
                     opt: correctOptionId,
                     servedAt: servedAt.getTime(),
                 }
+            },
+            $push: {
+                usedDistractorIds: { $each: chosenDistractorIds }
             }
         });
 
@@ -134,7 +163,7 @@ export async function POST(req: Request) {
                 servedAt: servedAt.toISOString(),
                 timeLimitSec
             },
-            total: allWords.length,
+            total: wordIdsList.length,
             timeLimitSec,
         });
 

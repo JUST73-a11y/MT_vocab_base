@@ -11,6 +11,7 @@ const QuizAttemptSchema = new Schema({
     answeredCount: { type: Number, default: 0 },
     wordIds: [{ type: Schema.Types.ObjectId, ref: 'Word' }],
     usedWordIds: [{ type: Schema.Types.ObjectId, ref: 'Word' }],
+    usedDistractorIds: [{ type: String }],
     // Server-side correctOptionId memo: { wordId: correctOptionId }
     _qMemo: { type: Object, default: {} },
     startedAt: { type: Date, default: Date.now, expires: 60 * 60 * 24 * 60 },

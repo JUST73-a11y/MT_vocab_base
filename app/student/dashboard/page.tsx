@@ -72,7 +72,7 @@ export default function StudentDashboard() {
                             <div className="p-2 md:p-3 bg-blue-500/10 rounded-xl md:rounded-2xl border border-blue-500/20 group-hover:scale-110 transition-transform shrink-0">
                                 <TrendingUp className="w-5 h-5 md:w-6 md:h-6 text-blue-400" />
                             </div>
-                            <h3 className="text-[9px] md:text-sm font-black text-white/40 uppercase tracking-widest truncate">Progress</h3>
+                            <h3 className="text-[9px] md:text-sm font-black text-white/40 uppercase tracking-widest w-full truncate whitespace-normal leading-tight">Bugungi O'rganilgan</h3>
                         </div>
                         <p className="text-2xl md:text-4xl lg:text-5xl font-black text-white truncate w-full">
                             {loadingData ? '...' : stats?.todayWords || 0}
@@ -86,7 +86,7 @@ export default function StudentDashboard() {
                             <div className="p-2 md:p-3 bg-emerald-500/10 rounded-xl md:rounded-2xl border border-emerald-500/20 group-hover:scale-110 transition-transform shrink-0">
                                 <BookOpen className="w-5 h-5 md:w-6 md:h-6 text-emerald-400" />
                             </div>
-                            <h3 className="text-[9px] md:text-sm font-black text-white/40 uppercase tracking-widest truncate">Jami</h3>
+                            <h3 className="text-[9px] md:text-sm font-black text-white/40 uppercase tracking-widest w-full truncate whitespace-normal leading-tight">Jami So'zlar</h3>
                         </div>
                         <p className="text-2xl md:text-4xl lg:text-5xl font-black text-white truncate w-full">
                             {loadingData ? '...' : stats?.totalWords || 0}
@@ -100,7 +100,7 @@ export default function StudentDashboard() {
                             <div className="p-2 md:p-3 bg-purple-500/10 rounded-xl md:rounded-2xl border border-purple-500/20 group-hover:scale-110 transition-transform shrink-0">
                                 <Play className="w-5 h-5 md:w-6 md:h-6 text-purple-400" />
                             </div>
-                            <h3 className="text-[9px] md:text-sm font-black text-white/40 uppercase tracking-widest truncate">Bo'limlar</h3>
+                            <h3 className="text-[9px] md:text-sm font-black text-white/40 uppercase tracking-widest w-full truncate whitespace-normal leading-tight">Faol Bo'limlar</h3>
                         </div>
                         <p className="text-2xl md:text-4xl lg:text-5xl font-black text-white truncate w-full">
                             {loadingData ? '...' : stats?.availableUnits || 0}
@@ -114,7 +114,7 @@ export default function StudentDashboard() {
                             <div className="p-2 md:p-3 bg-amber-500/10 rounded-xl md:rounded-2xl border border-amber-500/20 group-hover:scale-110 transition-transform shrink-0">
                                 <TrendingUp className="w-5 h-5 md:w-6 md:h-6 text-amber-400 rotate-90" />
                             </div>
-                            <h3 className="text-[9px] md:text-sm font-black text-white/40 uppercase tracking-widest truncate">MT Coins</h3>
+                            <h3 className="text-[9px] md:text-sm font-black text-white/40 uppercase tracking-widest w-full truncate whitespace-normal leading-tight">MT Coinlar</h3>
                         </div>
                         <p className="text-2xl md:text-4xl lg:text-5xl font-black text-amber-400 truncate w-full">
                             {loadingData ? '...' : stats?.mtCoins || 0}
@@ -127,7 +127,7 @@ export default function StudentDashboard() {
                             <div className="p-2 md:p-3 bg-indigo-500/10 rounded-xl md:rounded-2xl border border-indigo-500/20 group-hover:scale-110 transition-transform shrink-0">
                                 <Play className="w-5 h-5 md:w-6 md:h-6 text-indigo-400" />
                             </div>
-                            <h3 className="text-[9px] md:text-sm font-black text-white/40 uppercase tracking-widest truncate">To'gri</h3>
+                            <h3 className="text-[9px] md:text-sm font-black text-white/40 uppercase tracking-widest w-full truncate whitespace-normal leading-tight">To'g'ri Javoblar</h3>
                         </div>
                         <p className="text-2xl md:text-4xl lg:text-5xl font-black text-white truncate w-full">
                             {loadingData ? '...' : stats?.todayCorrect || 0}
