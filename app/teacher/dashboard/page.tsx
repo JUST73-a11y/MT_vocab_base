@@ -140,7 +140,7 @@ export default function TeacherDashboard() {
                                     <span className="text-[10px] font-black text-indigo-300 uppercase tracking-[0.2em]">Faol</span>
                                 </div>
                             </div>
-                            <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-white tracking-tight mb-2">
+                            <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-white tracking-tight mb-2 break-words whitespace-normal leading-tight">
                                 Salom, {user.name?.split(' ')[0] || 'O\'qituvchi'} 👋
                             </h1>
                             <p className="text-white/40 font-bold uppercase tracking-widest text-[11px]">

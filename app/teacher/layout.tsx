@@ -53,21 +53,30 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
     }
 
     return (
-        <div className="min-h-screen flex flex-col items-center bg-[#0a0a0f] font-sans text-white relative overflow-hidden">
+        <div className="min-h-[100svh] flex flex-col items-center bg-[#0a0a0f] font-sans text-white relative overflow-x-hidden">
             <MeshBackground />
-            {/* ── Desktop Top Nav ── */}
-            <nav className="hidden md:block sticky top-0 z-40 bg-gray-900/60 backdrop-blur-xl border-b border-white/5">
-                <div className="w-[95%] lg:w-[80%] max-w-[1600px] mx-auto px-6">
-                    <div className="flex items-center justify-between h-20">
+            {/* ── Desktop & Mobile Top Nav ── */}
+            <nav className="sticky top-0 w-full z-40 bg-gray-900/60 backdrop-blur-xl border-b border-white/5">
+                <div className="w-[95%] lg:w-[80%] max-w-[1600px] mx-auto px-4 md:px-6 justify-self-center">
+                    <div className="flex items-center justify-between h-16 md:h-20">
+                        {/* Left: Logo + Desktop Links */}
                         <div className="flex items-center gap-10">
-                            <Link href="/teacher/dashboard" className="flex items-center gap-2 group">
-                                <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 flex items-center justify-center border border-indigo-500/30 group-hover:bg-indigo-500/30 transition-all">
-                                    <BookOpen className="w-6 h-6 text-indigo-400" />
-                                </div>
-                                <span className="font-black text-xl tracking-tighter text-white">VocabTeacher</span>
-                            </Link>
+                            <div className="flex items-center gap-3 md:gap-4">
+                                {/* Mobile Hamburger */}
+                                <button onClick={() => setIsMobileMenuOpen(true)} className="md:hidden p-2 text-white/60 hover:text-white transition-colors">
+                                    <Menu className="w-6 h-6" />
+                                </button>
 
-                            <div className="flex items-center gap-1">
+                                <Link href="/teacher/dashboard" className="flex items-center gap-2 group">
+                                    <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl md:rounded-2xl bg-indigo-500/20 flex items-center justify-center border border-indigo-500/30 group-hover:bg-indigo-500/30 transition-all">
+                                        <BookOpen className="w-5 h-5 md:w-6 md:h-6 text-indigo-400" />
+                                    </div>
+                                    <span className="font-black text-lg md:text-xl tracking-tighter text-white">VocabTeacher</span>
+                                </Link>
+                            </div>
+
+                            {/* Desktop Links */}
+                            <div className="hidden md:flex items-center gap-1">
                                 {navItems.map((item) => {
                                     const isActive = pathname === item.href || (item.href !== '/teacher/dashboard' && pathname.startsWith(item.href));
                                     return (
@@ -81,22 +90,23 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-6">
-                            <button onClick={() => setShowContactModal(true)} className="btn-glass text-[11px] uppercase tracking-widest px-4 py-2">
+                        {/* Right Actions */}
+                        <div className="flex items-center gap-4 md:gap-6">
+                            <button onClick={() => setShowContactModal(true)} className="hidden md:flex btn-glass text-[11px] uppercase tracking-widest px-4 py-2">
                                 <MessageCircle className="w-4 h-4" /> Bog'lanish
                             </button>
 
-                            <div className="flex items-center gap-4 pl-6 border-l border-white/10">
-                                <Link href={user?.role === 'admin' ? '/admin/dashboard' : '/teacher/settings'} className="flex items-center gap-4 group cursor-pointer">
-                                    <div className="text-right">
+                            <div className="flex items-center gap-3 md:gap-4 md:pl-6 md:border-l md:border-white/10">
+                                <Link href={user?.role === 'admin' ? '/admin/dashboard' : '/teacher/settings'} className="flex items-center gap-3 md:gap-4 group cursor-pointer">
+                                    <div className="hidden md:block text-right">
                                         <p className="text-sm font-black text-white leading-none group-hover:text-indigo-400 transition-colors">{user?.name || 'Guest Teacher'}</p>
                                         <p className="text-[10px] font-black uppercase text-indigo-400 tracking-[0.2em] mt-1">{user?.role === 'admin' ? 'Admin' : 'Teacher'}</p>
                                     </div>
-                                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-black text-sm shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition-transform">
+                                    <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl md:rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-black text-xs md:text-sm shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition-transform">
                                         {(user?.name || 'T').charAt(0).toUpperCase()}
                                     </div>
                                 </Link>
-                                <button onClick={() => setShowLogoutModal(true)} className="p-2 text-white/20 hover:text-red-400 transition-colors">
+                                <button onClick={() => setShowLogoutModal(true)} className="hidden md:block p-2 text-white/20 hover:text-red-400 transition-colors">
                                     <LogOut className="w-5 h-5" />
                                 </button>
                             </div>
@@ -105,27 +115,56 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
                 </div>
             </nav>
 
-            {/* ── Mobile Bottom Nav ── */}
-            <nav className="md:hidden mobile-bottom-nav">
-                {navItems.filter(item => item.name !== 'Settings').map(item => {
-                    const active = pathname === item.href;
-                    return (
-                        <Link key={item.href} href={item.href}
-                            className={`flex flex-col items-center gap-1 transition-all ${active ? 'text-indigo-400 scale-110' : 'text-white/40'}`}>
-                            <item.icon className={`w-6 h-6 ${active ? 'fill-indigo-400/20' : ''}`} />
-                            <span className="text-[10px] font-black uppercase tracking-widest">{item.name}</span>
-                        </Link>
-                    );
-                })}
-                <button onClick={() => setShowContactModal(true)} className="flex flex-col items-center gap-1 text-white/40">
-                    <MessageCircle className="w-6 h-6" />
-                    <span className="text-[10px] font-black uppercase tracking-widest">Bog'lanish</span>
-                </button>
-                <button onClick={() => setShowLogoutModal(true)} className="flex flex-col items-center gap-1 text-red-500/60">
-                    <LogOut className="w-6 h-6" />
-                    <span className="text-[10px] font-black uppercase tracking-widest">Logout</span>
-                </button>
-            </nav>
+            {/* ── Mobile Left Drawer ── */}
+            {mounted && isMobileMenuOpen && createPortal(
+                <div className="fixed inset-0 z-[9999] md:hidden">
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)} />
+                    <div className="absolute top-0 left-0 bottom-0 w-[80vw] max-w-[320px] bg-[#0f0d1e] border-r border-white/5 shadow-2xl flex flex-col pt-6 font-sans">
+                        <div className="px-6 mb-8 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 flex items-center justify-center border border-indigo-500/30">
+                                    <BookOpen className="w-6 h-6 text-indigo-400" />
+                                </div>
+                                <div>
+                                    <span className="font-black text-lg tracking-tighter text-white block leading-tight">VocabTeacher</span>
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400">{user?.role === 'admin' ? 'Admin' : 'O\'qituvchi'}</span>
+                                </div>
+                            </div>
+                            <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 bg-white/5 rounded-xl text-white/60">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto px-4 space-y-2">
+                            {navItems.map(item => {
+                                const isActive = pathname === item.href || (item.href !== '/teacher/dashboard' && pathname.startsWith(item.href));
+                                return (
+                                    <Link key={item.href} href={item.href}
+                                        onClick={() => setIsMobileMenuOpen(false)}
+                                        className={`flex items-center gap-3 p-4 rounded-2xl transition-all ${isActive ? 'bg-indigo-500/10 border border-indigo-500/20 shadow-lg shadow-indigo-500/10' : 'border border-transparent hover:bg-white/5 hover:border-white/5'}`}>
+                                        <div className={`p-2 rounded-xl ${isActive ? 'bg-indigo-500 text-white' : 'bg-white/5 text-white/40'}`}>
+                                            <item.icon className="w-5 h-5" />
+                                        </div>
+                                        <span className={`font-black text-sm ${isActive ? 'text-white' : 'text-white/60'}`}>{item.name}</span>
+                                    </Link>
+                                );
+                            })}
+                        </div>
+
+                        <div className="p-4 mt-auto border-t border-white/5 space-y-2">
+                            <button onClick={() => { setIsMobileMenuOpen(false); setShowContactModal(true); }} className="w-full flex items-center gap-3 p-4 rounded-2xl border border-transparent hover:bg-white/5 hover:border-white/5 transition-all text-white/60">
+                                <div className="p-2 rounded-xl bg-white/5"><MessageCircle className="w-5 h-5" /></div>
+                                <span className="font-black text-sm">Bog'lanish</span>
+                            </button>
+                            <button onClick={() => { setIsMobileMenuOpen(false); setShowLogoutModal(true); }} className="w-full flex items-center gap-3 p-4 rounded-2xl border border-red-500/10 bg-red-500/5 text-red-400">
+                                <div className="p-2 rounded-xl bg-red-500/10"><LogOut className="w-5 h-5" /></div>
+                                <span className="font-black text-sm">Tizimdan chiqish</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
 
             {/* Global Logout Modal */}
             {mounted && showLogoutModal && createPortal(

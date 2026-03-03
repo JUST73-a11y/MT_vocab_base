@@ -815,7 +815,7 @@ export default function TeacherGroupsPage() {
                                                         <span className="text-xs font-black uppercase tracking-widest text-white/30">Sessiya yo&apos;q</span>
                                                     )}
                                                 </div>
-                                                <p className="text-white/40 text-xs">
+                                                <p className="text-white/40 text-xs truncate max-w-full">
                                                     {activeSession
                                                         ? `Boshlangan: ${new Date(activeSession.startsAt).toLocaleTimeString('uz-UZ')} · ${activeSession.questionCount} ta savol · ${activeSession.timeLimitSec ?? 10}s/savol`
                                                         : 'Yangi quiz sessiyasini boshlang'}

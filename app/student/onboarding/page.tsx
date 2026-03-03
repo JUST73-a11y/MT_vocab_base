@@ -113,8 +113,8 @@ export default function StudentOnboarding() {
                 ) : (
                     <div className="space-y-10">
                         <header>
-                            <h1 className="text-4xl font-black text-white tracking-tighter mb-4">Xush Kelibsiz, {user?.name?.split(' ')[0]}!</h1>
-                            <p className="text-white/40 font-bold uppercase tracking-[0.2em] text-[10px] leading-relaxed">
+                            <h1 className="text-4xl font-black text-white tracking-tighter mb-4 break-words whitespace-normal">Xush Kelibsiz, {user?.name?.split(' ')[0]}!</h1>
+                            <p className="text-white/40 font-bold uppercase tracking-[0.2em] text-[10px] leading-relaxed break-words whitespace-normal">
                                 Lug'at o'rganishni boshlash uchun o'qituvchingizdan<br />olgan maxsus kodni kiriting.
                             </p>
                         </header>

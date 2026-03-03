@@ -646,25 +646,25 @@ export default function UnitDetailPage() {
                         {words.map((word) => (
                             <div key={word.id} className="card !p-6 group hover:border-primary/30 transition-all border border-transparent">
                                 <div className="flex items-start justify-between">
-                                    <div className="flex-1">
-                                        <div className="flex items-baseline gap-3 mb-2">
-                                            <h3 className="text-xl font-bold text-white">{word.englishWord}</h3>
+                                    <div className="flex-1 min-w-0 pr-4">
+                                        <div className="flex items-baseline gap-3 mb-2 flex-wrap">
+                                            <h3 className="text-xl font-bold text-white break-words max-w-full">{word.englishWord}</h3>
                                             {word.phonetic && (
-                                                <span className="text-sm font-medium text-primary bg-primary/5 px-2 py-0.5 rounded border border-primary/10">
+                                                <span className="text-sm font-medium text-primary bg-primary/5 px-2 py-0.5 rounded border border-primary/10 truncate max-w-full">
                                                     [{word.phonetic}]
                                                 </span>
                                             )}
                                         </div>
-                                        <div className="flex items-center gap-4">
-                                            <p className="text-lg font-bold text-indigo-400">{word.uzbekTranslation}</p>
+                                        <div className="flex items-center gap-4 min-w-0">
+                                            <p className="text-lg font-bold text-indigo-400 break-words max-w-full">{word.uzbekTranslation}</p>
                                         </div>
                                         {word.exampleSentence && (
-                                            <p className="mt-3 text-sm text-gray-400 italic bg-white/5 py-2 px-4 rounded-xl inline-block">
+                                            <p className="mt-3 text-sm text-gray-400 italic bg-white/5 py-2 px-4 rounded-xl inline-block max-w-full break-words whitespace-normal">
                                                 &quot;{word.exampleSentence}&quot;
                                             </p>
                                         )}
                                     </div>
-                                    <div className="flex gap-2 ml-4">
+                                    <div className="flex gap-2 shrink-0">
                                         <button
                                             onClick={() => handleEdit(word)}
                                             className="btn-action !p-2 opacity-0 group-hover:opacity-100 transition-opacity"

@@ -296,21 +296,21 @@ export default function TeacherStudentsPage() {
                                     </tr>
                                 ) : filteredStudents.map(student => (
                                     <tr key={student._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center font-bold text-white text-sm">
+                                        <td className="px-6 py-4 min-w-[200px]">
+                                            <div className="flex items-center gap-3 w-full min-w-0">
+                                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center font-bold text-white text-sm shrink-0">
                                                     {student.name.charAt(0).toUpperCase()}
                                                 </div>
-                                                <div>
-                                                    <p className="font-medium text-gray-900 dark:text-white">{student.name}</p>
-                                                    <p className="text-xs text-gray-500">{student.email}</p>
+                                                <div className="min-w-0 flex-1">
+                                                    <p className="font-medium text-gray-900 dark:text-white truncate" title={student.name}>{student.name}</p>
+                                                    <p className="text-xs text-gray-500 truncate" title={student.email}>{student.email}</p>
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 text-gray-500">
+                                        <td className="px-6 py-4 text-gray-500 whitespace-nowrap">
                                             {student.lastLoginAt ? new Date(student.lastLoginAt).toLocaleDateString() : "—"}
                                         </td>
-                                        <td className="px-6 py-4 text-gray-500">
+                                        <td className="px-6 py-4 text-gray-500 whitespace-nowrap">
                                             {new Date(student.createdAt).toLocaleDateString()}
                                         </td>
                                         <td className="px-6 py-4 text-right">

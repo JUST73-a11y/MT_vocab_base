@@ -545,31 +545,31 @@ export default function UnitsPage() {
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: -20 }}
                                 onSubmit={handleCreateFolder}
-                                className="glass-card p-6 flex flex-col sm:flex-row gap-4 items-stretch sm:items-center !bg-indigo-500/[0.04] !border-indigo-500/30 shadow-2xl shadow-indigo-500/10"
+                                className="glass-card p-6 flex flex-col sm:flex-row gap-4 items-stretch sm:items-center !bg-indigo-500/[0.04] !border-indigo-500/30 shadow-2xl shadow-indigo-500/10 min-w-0"
                             >
-                                <div className="flex items-center gap-4 flex-1">
-                                    <div className="w-12 h-12 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center">
+                                <div className="flex items-center gap-4 flex-1 min-w-0">
+                                    <div className="w-12 h-12 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center shrink-0">
                                         <FolderPlus className="w-6 h-6 text-indigo-400" />
                                     </div>
-                                    <div className="flex-1">
-                                        <p className="text-[9px] font-black text-indigo-400/60 uppercase tracking-[0.2em] mb-1">Yangi Kategoriya nomi</p>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-[9px] font-black text-indigo-400/60 uppercase tracking-[0.2em] mb-1 truncate">Yangi Kategoriya nomi</p>
                                         <input
                                             ref={newFolderInputRef}
                                             type="text"
                                             placeholder="Masalan: Advanced Grammar..."
                                             value={newFolderName}
                                             onChange={e => setNewFolderName(e.target.value)}
-                                            className="w-full bg-transparent border-none outline-none text-lg font-black text-white placeholder:text-white/10 p-0"
+                                            className="w-full bg-transparent border-none outline-none text-lg font-black text-white placeholder:text-white/10 p-0 truncate"
                                         />
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-3 self-end sm:self-center">
+                                <div className="flex items-center gap-3 self-end sm:self-center shrink-0">
                                     <button type="button" onClick={() => { setShowNewFolder(false); setNewFolderName(''); }}
-                                        className="h-10 px-6 rounded-xl text-xs font-black uppercase tracking-widest text-white/30 hover:text-white hover:bg-white/5 transition-all">
+                                        className="h-10 px-4 sm:px-6 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest text-white/30 hover:text-white hover:bg-white/5 transition-all">
                                         Bekor
                                     </button>
                                     <button type="submit" disabled={creatingFolder || !newFolderName.trim()}
-                                        className="btn-premium h-11 px-6 text-xs font-black disabled:opacity-50 !rounded-xl">
+                                        className="btn-premium h-11 px-4 sm:px-6 text-[10px] sm:text-xs font-black disabled:opacity-50 !rounded-xl">
                                         {creatingFolder ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Yaratish'}
                                     </button>
                                 </div>
@@ -583,24 +583,24 @@ export default function UnitsPage() {
                                 key="search-results"
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                className="space-y-6"
+                                className="space-y-6 min-w-0"
                             >
-                                <div className="flex items-center gap-3 border-b border-white/5 pb-4">
-                                    <Search className="w-5 h-5 text-indigo-400" />
-                                    <h3 className="text-xl font-black text-white tracking-tight uppercase">
-                                        Qidiruv natijalari: <span className="text-white/30 font-bold ml-1">"{search}"</span>
+                                <div className="flex items-center gap-3 border-b border-white/5 pb-4 flex-wrap">
+                                    <Search className="w-5 h-5 text-indigo-400 shrink-0" />
+                                    <h3 className="text-lg sm:text-xl font-black text-white tracking-tight uppercase break-words min-w-0 flex-1 leading-tight">
+                                        Qidiruv natijalari: <span className="text-white/30 font-bold ml-1 break-all">"{search}"</span>
                                     </h3>
-                                    <span className="ml-auto px-4 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/10 text-xs font-black text-indigo-400">
+                                    <span className="px-3 sm:px-4 py-1 sm:py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/10 text-[10px] sm:text-xs font-black text-indigo-400 whitespace-nowrap shrink-0">
                                         {currentUnits.length} ta topildi
                                     </span>
                                 </div>
 
                                 {currentUnits.length === 0 ? (
-                                    <div className="glass-card p-24 text-center opacity-20 flex flex-col items-center gap-6">
-                                        <div className="w-20 h-20 rounded-full border-2 border-dashed border-white/40 flex items-center justify-center">
-                                            <Search className="w-10 h-10" />
+                                    <div className="glass-card p-12 sm:p-24 text-center opacity-20 flex flex-col items-center gap-6 w-full">
+                                        <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-dashed border-white/40 flex items-center justify-center shrink-0">
+                                            <Search className="w-8 h-8 sm:w-10 sm:h-10" />
                                         </div>
-                                        <p className="text-lg font-black tracking-widest uppercase">Hech narsa topilmadi</p>
+                                        <p className="text-lg font-black tracking-widest uppercase text-center break-words max-w-full">Hech narsa topilmadi</p>
                                     </div>
                                 ) : (
                                     <UnitsGrid units={currentUnits} onDelete={handleDeleteUnit} />
@@ -648,12 +648,12 @@ export default function UnitsPage() {
                                                             onClick={() => setCurrentPath([...currentPath, folder])}
                                                             className="p-8 text-left h-full flex flex-col gap-6"
                                                         >
-                                                            <div className={`w-14 h-14 rounded-2xl ${p.bg} ${p.border} border flex items-center justify-center group-hover:scale-110 transition-transform duration-500 shadow-inner`}>
+                                                            <div className={`w-14 h-14 rounded-2xl ${p.bg} ${p.border} border flex items-center justify-center group-hover:scale-110 transition-transform duration-500 shadow-inner shrink-0`}>
                                                                 <p.icon className={`w-6 h-6 ${p.text}`} />
                                                             </div>
-                                                            <div className="flex-1">
-                                                                <h4 className="text-xl font-black text-white uppercase tracking-tight line-clamp-2 leading-tight group-hover:text-indigo-200 transition-colors uppercase">{folder.name}</h4>
-                                                                <p className="text-[10px] font-black text-white/10 uppercase tracking-[0.2em] mt-2">Kategoriya</p>
+                                                            <div className="flex-1 min-w-0">
+                                                                <h4 className="text-xl font-black text-white uppercase tracking-tight line-clamp-2 leading-tight group-hover:text-indigo-200 transition-colors break-words">{folder.name}</h4>
+                                                                <p className="text-[10px] font-black text-white/10 uppercase tracking-[0.2em] mt-2 truncate">Kategoriya</p>
                                                             </div>
                                                             <div className="flex items-center justify-between pt-6 border-t border-white/5">
                                                                 <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em] group-hover:text-white/60 transition-colors">Explorer</span>

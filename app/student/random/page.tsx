@@ -436,13 +436,13 @@ export default function RandomPracticePage() {
                 </div>
             </header>
 
-            <main className="flex-1 w-full max-w-4xl flex flex-col items-center justify-center">
+            <main className="flex-1 w-full max-w-4xl flex flex-col items-center justify-center min-w-0 px-2 sm:px-4">
                 {currentWord && (
-                    <div className="w-full flex flex-col items-center animate-fade-in">
+                    <div className="w-full flex flex-col items-center animate-fade-in min-w-0">
                         <CircularTimer timeLeft={timeLeft} total={timerDuration} isPaused={isPaused} />
 
                         {/* Word Card */}
-                        <section className="glass-card w-full p-12 md:p-20 text-center relative overflow-hidden group">
+                        <section className="glass-card w-full p-8 md:p-20 text-center relative overflow-hidden group min-w-0">
                             <div className="absolute top-0 left-0 w-full h-full opacity-5 pointer-events-none group-hover:opacity-10 transition-opacity">
                                 <div className="absolute top-10 right-10 flex gap-4 rotate-12">
                                     <Headphones className="w-20 h-20" />
@@ -451,20 +451,20 @@ export default function RandomPracticePage() {
                             </div>
 
                             {/* [1] Large English Word */}
-                            <div className="relative mb-12">
-                                <h1 className={`text-[clamp(44px,15vw,110px)] font-black text-white tracking-tighter capitalize leading-[0.9] select-none transition-all duration-500 ${isBlurred ? 'blur-2xl opacity-20 scale-95' : ''}`}>
+                            <div className="relative mb-12 min-w-0 w-full px-2">
+                                <h1 className={`text-[clamp(32px,12vw,110px)] font-black text-white tracking-tighter capitalize leading-[1.1] select-none transition-all duration-500 break-words hyphens-auto w-full ${isBlurred ? 'blur-2xl opacity-20 scale-95' : ''}`}>
                                     {practiceMode === 'EN' ? currentWord.englishWord : currentWord.uzbekTranslation}
                                 </h1>
 
                                 {/* [2] Phonetic transcription (Directly below English) */}
                                 {practiceMode === 'EN' && currentWord.phonetic && (
-                                    <div className={`mt-4 transition-all duration-500 ${isBlurred ? 'blur-2xl opacity-20 scale-95' : ''}`}>
+                                    <div className={`mt-6 transition-all duration-500 w-full flex justify-center ${isBlurred ? 'blur-2xl opacity-20 scale-95' : ''}`}>
                                         <button
                                             onClick={() => handleSpeak(null, 'en-US')}
-                                            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 font-bold tracking-wider text-sm md:text-lg hover:bg-indigo-500/20 transition-all active:scale-95"
+                                            className="inline-flex items-center gap-2 px-4 py-2 md:py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 font-bold tracking-wider text-sm md:text-lg hover:bg-indigo-500/20 transition-all active:scale-95 max-w-full"
                                         >
-                                            <Volume2 className="w-4 h-4" />
-                                            {currentWord.phonetic}
+                                            <Volume2 className="w-4 h-4 shrink-0" />
+                                            <span className="truncate">{currentWord.phonetic}</span>
                                         </button>
                                     </div>
                                 )}
@@ -472,20 +472,20 @@ export default function RandomPracticePage() {
 
                             {/* [3] Example Sentence (Different color/style) */}
                             {currentWord.exampleSentence && (
-                                <div className="max-w-3xl mx-auto mb-12">
-                                    <p className="text-emerald-400/60 text-[10px] font-black uppercase tracking-[0.3em] mb-3">Context Usage</p>
-                                    <p className="text-lg md:text-2xl text-emerald-100/30 italic leading-relaxed font-medium px-4">
+                                <div className="max-w-3xl mx-auto mb-12 w-full px-2 sm:px-4">
+                                    <p className="text-emerald-400/60 text-[10px] sm:text-xs font-black uppercase tracking-[0.3em] mb-3">Context Usage</p>
+                                    <p className="text-base sm:text-lg md:text-2xl text-emerald-100/30 italic leading-relaxed font-medium break-words">
                                         "{currentWord.exampleSentence}"
                                     </p>
                                 </div>
                             )}
 
                             {/* [4] Uzbek Translation (Shown after time up) */}
-                            <div className="mt-8 min-h-[120px] pt-8 border-t border-white/5 flex items-center justify-center">
+                            <div className="mt-8 min-h-[120px] pt-8 border-t border-white/5 flex items-center justify-center w-full min-w-0 px-2 sm:px-4">
                                 {showTranslation ? (
-                                    <div className="animate-fade-in group/uz">
+                                    <div className="animate-fade-in group/uz w-full min-w-0">
                                         <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 mb-4">Ma'nosi</p>
-                                        <h2 className="text-4xl md:text-7xl font-black text-emerald-400 tracking-tight drop-shadow-[0_0_30px_rgba(16,185,129,0.4)] capitalize">
+                                        <h2 className="text-3xl sm:text-4xl md:text-7xl font-black text-emerald-400 tracking-tight drop-shadow-[0_0_30px_rgba(16,185,129,0.4)] capitalize break-words hyphens-auto w-full leading-[1.1]">
                                             {practiceMode === 'EN' ? currentWord.uzbekTranslation : currentWord.englishWord}
                                         </h2>
                                     </div>

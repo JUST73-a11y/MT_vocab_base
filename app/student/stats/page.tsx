@@ -214,24 +214,24 @@ export default function StudentStatsPage() {
                     <div className="space-y-2">
                         {history?.attempts.map(a => (
                             <button key={a._id} onClick={() => setSelectedAttempt(a)}
-                                className="w-full flex items-center justify-between p-4 rounded-2xl text-left transition-all hover:scale-[1.01]"
+                                className="w-full flex items-center justify-between p-4 rounded-2xl text-left transition-all hover:scale-[1.01] gap-4"
                                 style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                                <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+                                <div className="flex items-center gap-4 min-w-0">
+                                    <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
                                         style={{ background: a.mode === 'GROUP_SESSION' ? 'rgba(168,85,247,0.15)' : 'rgba(99,102,241,0.15)', border: `1px solid ${a.mode === 'GROUP_SESSION' ? 'rgba(168,85,247,0.3)' : 'rgba(99,102,241,0.3)'}` }}>
                                         <Trophy className="w-5 h-5" style={{ color: a.mode === 'GROUP_SESSION' ? '#a855f7' : '#6366f1' }} />
                                     </div>
-                                    <div>
-                                        <p className="font-black text-white text-sm">
+                                    <div className="min-w-0 flex-1">
+                                        <p className="font-black text-white text-sm truncate">
                                             {a.correctCount}/{a.answeredCount} to&apos;g&apos;ri
                                             {a.questionCountPlanned && <span className="text-white/40"> / {a.questionCountPlanned} savol</span>}
                                         </p>
-                                        <p className="text-xs text-white/40">
+                                        <p className="text-xs text-white/40 truncate">
                                             {formatDate(a.endedAt || a.startedAt)} • {formatTime(a.endedAt || a.startedAt)}
                                         </p>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-3 shrink-0">
                                     {(a.coinsEarned ?? 0) > 0 && (
                                         <span className="text-yellow-400 font-black text-sm">+{a.coinsEarned} 🪙</span>
                                     )}

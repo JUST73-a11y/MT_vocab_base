@@ -209,29 +209,29 @@ export default function UsersPage() {
                 </div>
             )}
 
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden w-full">
+                <div className="overflow-x-auto min-w-0 w-full">
+                    <table className="w-full text-left text-sm whitespace-nowrap sm:whitespace-normal">
                         <thead className="bg-gray-50 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400 font-medium border-b border-gray-200 dark:border-gray-700">
                             <tr>
-                                <th className="px-6 py-4">User</th>
-                                <th className="px-6 py-4">Role / Code</th>
-                                <th className="px-6 py-4">Joined</th>
-                                <th className="px-6 py-4">Activity / Coins</th>
-                                <th className="px-6 py-4 text-right">Actions</th>
+                                <th className="px-4 sm:px-6 py-4">User</th>
+                                <th className="px-4 sm:px-6 py-4">Role / Code</th>
+                                <th className="px-4 sm:px-6 py-4">Joined</th>
+                                <th className="px-4 sm:px-6 py-4">Activity / Coins</th>
+                                <th className="px-4 sm:px-6 py-4 text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                             {filteredUsers.map((u: any) => (
                                 <tr key={u._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                                    <td className="px-6 py-4">
+                                    <td className="px-4 sm:px-6 py-4 max-w-[200px] sm:max-w-none">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center font-bold text-gray-600 dark:text-gray-300">
+                                            <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center font-bold text-gray-600 dark:text-gray-300 shrink-0">
                                                 {u.name ? u.name.charAt(0).toUpperCase() : '?'}
                                             </div>
-                                            <div>
-                                                <p className="font-medium text-gray-900 dark:text-white">{u.name}</p>
-                                                <p className="text-xs text-gray-500">{u.email}</p>
+                                            <div className="min-w-0 flex-1">
+                                                <p className="font-medium text-gray-900 dark:text-white truncate">{u.name}</p>
+                                                <p className="text-xs text-gray-500 truncate">{u.email}</p>
                                             </div>
                                         </div>
                                     </td>

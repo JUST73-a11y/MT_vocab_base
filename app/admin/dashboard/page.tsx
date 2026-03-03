@@ -475,9 +475,9 @@ function AdminDashboardInner() {
                     </div>
 
                     {/* Management Table */}
-                    <div className="glass-card overflow-hidden">
-                        <div className="overflow-x-auto custom-scrollbar">
-                            <table className="w-full text-left border-collapse">
+                    <div className="glass-card overflow-hidden w-full">
+                        <div className="overflow-x-auto custom-scrollbar min-w-0 w-full">
+                            <table className="w-full text-left border-collapse whitespace-nowrap sm:whitespace-normal">
                                 <thead>
                                     <tr className="bg-white/[0.03] text-[10px] font-black text-white/40 uppercase tracking-[0.2em] border-b border-white/5">
                                         <th className="px-8 py-5 text-center">Unit Nomi</th>
@@ -576,9 +576,9 @@ function AdminDashboardInner() {
                         </div>
                     </div>
 
-                    <div className="glass-card overflow-hidden">
-                        <div className="overflow-x-auto custom-scrollbar">
-                            <table className="w-full text-left border-collapse">
+                    <div className="glass-card overflow-hidden w-full">
+                        <div className="overflow-x-auto custom-scrollbar min-w-0 w-full">
+                            <table className="w-full text-left border-collapse whitespace-nowrap sm:whitespace-normal">
                                 <thead>
                                     <tr className="bg-white/[0.03] text-[10px] font-black text-white/40 uppercase tracking-[0.2em] border-b border-white/5">
                                         <th className="px-8 py-5">Guruh Nomi</th>
@@ -747,9 +747,9 @@ function AdminDashboardInner() {
                         )}
 
                         {/* Management Table */}
-                        <div className="glass-card overflow-hidden">
-                            <div className="overflow-x-auto custom-scrollbar">
-                                <table className="w-full text-left border-collapse">
+                        <div className="glass-card overflow-hidden w-full">
+                            <div className="overflow-x-auto custom-scrollbar min-w-0 w-full">
+                                <table className="w-full text-left border-collapse whitespace-nowrap sm:whitespace-normal">
                                     <thead>
                                         <tr className="bg-white/[0.03] text-[10px] font-black text-white/40 uppercase tracking-[0.2em] border-b border-white/5">
                                             <th className="px-8 py-5">Foydalanuvchi</th>

@@ -104,19 +104,19 @@ export default function LoginPage() {
                     <button
                         onClick={handleGoogleLogin}
                         disabled={googleLoading || loading}
-                        className="w-full h-16 bg-white text-[#0a0a0f] rounded-2xl flex items-center justify-center gap-4 font-black transition-all hover:bg-gray-100 active:scale-[0.98] disabled:opacity-50"
+                        className="w-full h-14 bg-white/5 border border-white/10 text-white rounded-2xl flex items-center justify-center gap-4 font-black transition-all hover:bg-white/10 active:scale-[0.98] disabled:opacity-50"
                     >
                         {googleLoading ? (
-                            <Loader2 className="w-6 h-6 animate-spin" />
+                            <Loader2 className="w-5 h-5 animate-spin text-indigo-400" />
                         ) : (
-                            <svg className="w-6 h-6" viewBox="0 0 24 24">
+                            <svg className="w-5 h-5" viewBox="0 0 24 24">
                                 <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
                                 <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
                                 <path fill="#FBBC05" d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.1s.13-1.44.35-2.1V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l3.66-2.84z" />
                                 <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
                             </svg>
                         )}
-                        <span>Google orqali kirish</span>
+                        <span className="text-sm">Google orqali kirish</span>
                     </button>
 
                     <div className="relative flex items-center justify-center">
@@ -126,22 +126,6 @@ export default function LoginPage() {
                         <span className="relative px-4 bg-[#1a1a25] text-white/20 text-[10px] font-black uppercase tracking-widest">yoki</span>
                     </div>
 
-                    {/* Role Guidance */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="p-4 rounded-2xl bg-white/5 border border-white/10 flex flex-col gap-2">
-                            <span className="text-indigo-400 text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5">
-                                <Sparkles className="w-3 h-3" /> Student
-                            </span>
-                            <p className="text-[10px] text-white/40 leading-snug">Teacher kodingiz bo'lsa ulanasiz</p>
-                        </div>
-                        <div className="p-4 rounded-2xl bg-white/5 border border-white/10 flex flex-col gap-2">
-                            <span className="text-purple-400 text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5">
-                                <ShieldCheck className="w-3 h-3" /> Teacher
-                            </span>
-                            <p className="text-[10px] text-white/40 leading-snug">Admin sizni teacher qiladi</p>
-                        </div>
-                    </div>
-
                     {error && (
                         <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-6 py-4 rounded-2xl text-xs font-black uppercase tracking-widest animate-fade-in flex items-center gap-3">
                             <ShieldCheck className="w-5 h-5 flex-shrink-0" />
@@ -149,52 +133,47 @@ export default function LoginPage() {
                         </div>
                     )}
 
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                        <div className="space-y-4">
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-white/30 uppercase tracking-widest ml-1">Email</label>
-                                <div className="relative group">
-                                    <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20 group-focus-within:text-indigo-500 transition-colors" />
-                                    <input
-                                        type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-                                        className="w-full h-14 bg-white/[0.03] border border-white/10 rounded-2xl pl-14 pr-6 text-sm font-bold text-white outline-none focus:border-indigo-500/30 transition-all"
-                                        placeholder="nom@email.com" required
-                                    />
-                                </div>
+                    <form onSubmit={handleSubmit} className="space-y-5">
+                        <div className="space-y-2">
+                            <label className="text-[11px] font-black text-white/60 uppercase tracking-widest ml-1 block mb-1">Email manzilingiz</label>
+                            <input
+                                type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                                className="w-full h-14 bg-white/5 border border-white/10 rounded-2xl px-4 text-sm font-bold text-white outline-none focus:border-indigo-500/50 focus:bg-white/10 transition-all placeholder:text-white/20"
+                                placeholder="nom@email.com" required
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between px-1 mb-1">
+                                <label className="text-[11px] font-black text-white/60 uppercase tracking-widest">Parol</label>
+                                <button
+                                    type="button"
+                                    onClick={() => { alert('Hozircha faqat Google login tavsiya etiladi.'); }}
+                                    className="text-[10px] font-black uppercase tracking-widest text-indigo-400/60 hover:text-indigo-400 transition-colors"
+                                >
+                                    Unutdingizmi?
+                                </button>
                             </div>
-                            <div className="space-y-2">
-                                <div className="flex items-center justify-between px-1">
-                                    <label className="text-[10px] font-black text-white/30 uppercase tracking-widest">Parol</label>
-                                    <button
-                                        type="button"
-                                        onClick={() => { alert('Hozircha faqat Google login tavsiya etiladi.'); }}
-                                        className="text-[10px] font-black uppercase tracking-widest text-indigo-400/60 hover:text-indigo-400 transition-colors"
-                                    >
-                                        Unutdingizmi?
-                                    </button>
-                                </div>
-                                <div className="relative group">
-                                    <KeyRound className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20 group-focus-within:text-indigo-500 transition-colors" />
-                                    <input
-                                        type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)}
-                                        className="w-full h-14 bg-white/[0.03] border border-white/10 rounded-2xl pl-14 pr-14 text-sm font-bold text-white outline-none focus:border-indigo-500/30 transition-all"
-                                        placeholder="••••••••" required
-                                    />
-                                    <button
-                                        type="button" onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute right-5 top-1/2 -translate-y-1/2 text-white/20 hover:text-white transition-colors"
-                                    >
-                                        {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                                    </button>
-                                </div>
+                            <div className="relative group">
+                                <input
+                                    type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)}
+                                    className="w-full h-14 bg-white/5 border border-white/10 rounded-2xl px-4 pr-14 text-sm font-bold text-white outline-none focus:border-indigo-500/50 focus:bg-white/10 transition-all placeholder:text-white/20"
+                                    placeholder="••••••••" required
+                                />
+                                <button
+                                    type="button" onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-white transition-colors"
+                                >
+                                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                                </button>
                             </div>
                         </div>
 
                         <button
                             type="submit" disabled={loading || googleLoading}
-                            className="btn-premium w-full h-16 text-lg group"
+                            className="btn-premium w-full h-14 mt-4 text-sm group"
                         >
-                            {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : <LogIn className="w-6 h-6 group-hover:translate-x-1 transition-transform" />}
+                            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <LogIn className="w-5 h-5 group-hover:translate-x-1 transition-transform" />}
                             <span>{loading ? 'Kirilmoqda...' : 'Tizimga Kirish'}</span>
                         </button>
                     </form>

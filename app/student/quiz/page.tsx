@@ -592,11 +592,11 @@ export default function StudentQuizPage() {
                 </div>
 
                 {/* ── Main area */}
-                <div className="flex-1 flex flex-col items-center justify-center px-4 py-8 pb-12 max-w-xl mx-auto w-full gap-8">
+                <div className="flex-1 flex flex-col items-center justify-center px-2 md:px-4 py-8 pb-12 w-full max-w-xl mx-auto gap-8 min-w-0">
 
                     {/* Question card */}
                     {/* ── Massive Question Display ── */}
-                    <div className="w-full text-center rounded-[3rem] px-6 py-12 md:px-10 md:py-20 flex flex-col items-center gap-6 relative overflow-visible active-scale-up"
+                    <div className="w-full text-center rounded-[2rem] md:rounded-[3rem] px-4 py-10 md:px-10 md:py-20 flex flex-col items-center gap-6 relative overflow-visible active-scale-up min-w-0"
                         style={{
                             background: 'linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)',
                             border: '1px solid rgba(255,255,255,0.08)',
@@ -605,17 +605,17 @@ export default function StudentQuizPage() {
                         {/* Background subtle glow */}
                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[250px] h-[250px] bg-indigo-500/15 rounded-full blur-[100px] pointer-events-none" />
 
-                        <div className="space-y-4">
-                            <p className="text-[11px] font-black uppercase tracking-[0.4em] text-indigo-400 opacity-60 flex items-center justify-center gap-3">
-                                <span className="w-8 h-px bg-indigo-500/30" />
+                        <div className="space-y-4 w-full min-w-0">
+                            <p className="text-[10px] md:text-[11px] font-black uppercase tracking-[0.4em] text-indigo-400 opacity-60 flex items-center justify-center gap-2 md:gap-3 break-words">
+                                <span className="w-4 md:w-8 h-px bg-indigo-500/30" />
                                 {mode === 'EN' ? '🇬🇧 English' : '🇺🇿 O\'zbek'}
-                                <span className="w-8 h-px bg-indigo-500/30" />
+                                <span className="w-4 md:w-8 h-px bg-indigo-500/30" />
                             </p>
-                            <h2 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-white tracking-tight leading-snug break-words drop-shadow-2xl max-w-full">
+                            <h2 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-white tracking-tight leading-snug break-words hyphens-auto w-full drop-shadow-2xl max-w-full">
                                 {promptText}
                             </h2>
                             {prompt2 && (
-                                <p className="text-indigo-300/40 text-xl md:text-2xl font-medium tracking-tight italic">{prompt2}</p>
+                                <p className="text-indigo-300/40 text-lg md:text-2xl font-medium tracking-tight italic break-words w-full">{prompt2}</p>
                             )}
                         </div>
 
@@ -640,14 +640,14 @@ export default function StudentQuizPage() {
                     </div>
 
                     {/* Options ── Grid/List */}
-                    <div className="w-full grid grid-cols-1 gap-4">
+                    <div className="w-full grid grid-cols-1 gap-4 min-w-0">
                         {displayOptions.map((opt, i) => {
                             const s = getOptionStyle(opt.id);
                             return (
                                 <button key={opt.id}
                                     onClick={() => !revealed && !submitting && submitAnswer(opt.id, false)}
                                     disabled={revealed || submitting}
-                                    className="group w-full flex items-center gap-6 p-6 rounded-3xl text-left font-black text-lg transition-all duration-300 disabled:cursor-default relative overflow-hidden"
+                                    className="group w-full flex items-center gap-4 sm:gap-6 p-4 sm:p-6 rounded-[1.5rem] sm:rounded-3xl text-left font-black text-base sm:text-lg transition-all duration-300 disabled:cursor-default relative overflow-hidden min-w-0"
                                     style={{
                                         background: s.bg,
                                         border: `1px solid ${s.border}`,
@@ -658,21 +658,23 @@ export default function StudentQuizPage() {
                                     {/* Glass reflection effect */}
                                     <div className="absolute inset-0 bg-gradient-to-tr from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 
-                                    <span className="w-12 h-12 rounded-2xl flex items-center justify-center text-sm font-black shrink-0 transition-all shadow-inner"
+                                    <span className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center text-xs sm:text-sm font-black shrink-0 transition-all shadow-inner"
                                         style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
                                         {['A', 'B', 'C'][i]}
                                     </span>
-                                    <span className="flex-1 tracking-tight break-words whitespace-normal leading-snug">{opt.text}</span>
+                                    <span className="flex-1 tracking-tight break-words hyphens-auto whitespace-normal leading-snug min-w-0 pr-2">
+                                        {opt.text}
+                                    </span>
 
                                     {revealed && (() => {
                                         if (!resultData) {
-                                            if (opt.id === selectedId) return <div className="p-2 rounded-full bg-indigo-500/20"><Loader2 className="w-6 h-6 text-indigo-400 animate-spin" /></div>;
+                                            if (opt.id === selectedId) return <div className="p-1.5 sm:p-2 rounded-full bg-indigo-500/20 shrink-0"><Loader2 className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-400 animate-spin" /></div>;
                                             return null;
                                         }
 
                                         const isThisCorrectOpt = resultData.correctOptionId === opt.id;
-                                        if (isThisCorrectOpt) return <div className="p-2 rounded-full bg-emerald-500/20"><CheckCircle2 className="w-6 h-6 text-emerald-400" /></div>;
-                                        if (opt.id === selectedId) return <div className="p-2 rounded-full bg-red-500/20"><XCircle className="w-6 h-6 text-red-400" /></div>;
+                                        if (isThisCorrectOpt) return <div className="p-1.5 sm:p-2 rounded-full bg-emerald-500/20 shrink-0"><CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-400" /></div>;
+                                        if (opt.id === selectedId) return <div className="p-1.5 sm:p-2 rounded-full bg-red-500/20 shrink-0"><XCircle className="w-5 h-5 sm:w-6 sm:h-6 text-red-400" /></div>;
                                         return null;
                                     })()}
                                 </button>

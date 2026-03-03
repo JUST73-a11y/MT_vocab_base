@@ -188,29 +188,29 @@ export default function StudentGroupPage() {
                                         ? 'bg-indigo-500/10 border-indigo-500/30 shadow-lg shadow-indigo-500/5 scale-[1.02] transform'
                                         : 'bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10'}`}
                             >
-                                <div className="flex items-center gap-4 md:gap-6">
+                                <div className="flex items-center gap-4 md:gap-6 min-w-0 flex-1 pr-4">
                                     <div className="shrink-0">
                                         {rankBadge}
                                     </div>
-                                    <div className="flex items-center gap-4">
-                                        <div className={`w-12 h-12 rounded-full flex items-center justify-center font-black text-lg ${member.isCurrentUser ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/30' : 'bg-gray-800 text-gray-400'}`}>
+                                    <div className="flex items-center gap-4 min-w-0 flex-1">
+                                        <div className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center font-black text-lg shrink-0 ${member.isCurrentUser ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/30' : 'bg-gray-800 text-gray-400'}`}>
                                             {member.name.charAt(0).toUpperCase()}
                                         </div>
-                                        <div>
-                                            <div className="flex items-center gap-2">
-                                                <h3 className={`font-black text-base md:text-lg ${member.isCurrentUser ? 'text-indigo-300' : 'text-white'}`}>
+                                        <div className="min-w-0 flex-1">
+                                            <div className="flex items-center gap-2 min-w-0">
+                                                <h3 className={`font-black text-sm md:text-lg truncate ${member.isCurrentUser ? 'text-indigo-300' : 'text-white'}`}>
                                                     {member.name}
                                                 </h3>
                                                 {member.isCurrentUser && (
-                                                    <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-indigo-500/20 text-indigo-300">Siz</span>
+                                                    <span className="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-indigo-500/20 text-indigo-300 shrink-0">Siz</span>
                                                 )}
-                                                {isTop1 && <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400 ml-1" />}
+                                                {isTop1 && <Star className="w-3 h-3 md:w-3.5 md:h-3.5 text-amber-400 fill-amber-400 ml-1 shrink-0" />}
                                             </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="flex items-center gap-4 md:gap-8 text-right">
+                                <div className="flex items-center gap-4 md:gap-8 text-right shrink-0">
                                     <div className="hidden sm:block">
                                         <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500/50 mb-0.5">Bugungi so'zlar</p>
                                         <p className="text-sm font-black text-emerald-400">{member.todayWordsSeen || 0} ta</p>

@@ -53,127 +53,126 @@ export default function StudentDashboard() {
     }
 
     return (
-        <div className="flex flex-col items-center w-full min-h-full bg-transparent p-4 md:p-12 overflow-y-auto overflow-x-hidden">
-            <main className="max-w-6xl w-full animate-fade-in flex flex-col gap-8 md:gap-12">
-                <div className="text-center md:text-left">
-                    <h2 className="text-3xl md:text-6xl font-black text-white mb-2 tracking-tighter">
+        <div className="flex flex-col items-center w-full min-h-full bg-transparent p-4 md:p-8 xl:p-12 overflow-y-auto overflow-x-hidden">
+            <main className="max-w-6xl w-full flex flex-col gap-8 md:gap-12 min-w-0">
+                <div className="text-center md:text-left break-words">
+                    <h2 className="text-3xl md:text-5xl lg:text-6xl font-black text-white mb-2 tracking-tighter leading-tight">
                         Xush kelibsiz, <span className="text-indigo-400">{user.name.split(' ')[0]}</span>!
                     </h2>
-                    <p className="text-xs md:text-lg text-white/40 font-bold uppercase tracking-[0.2em]">
+                    <p className="text-xs md:text-sm lg:text-lg text-white/40 font-bold uppercase tracking-[0.2em] mt-2">
                         Mashg'ulotlarni davom ettirishga tayyormisiz?
                     </p>
                 </div>
 
                 {/* Stats Grid */}
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6 min-w-0">
                     {/* Progress Card */}
-                    <div className="glass-card p-4 md:p-8 flex flex-col gap-4 md:gap-6 group hover:border-indigo-500/30 transition-all border-white/5 bg-white/[0.02]">
-                        <div className="flex items-center gap-3 md:gap-4">
-                            <div className="p-2 md:p-3 bg-blue-500/10 rounded-xl md:rounded-2xl border border-blue-500/20 group-hover:scale-110 transition-transform">
+                    <div className="glass-card p-4 md:p-8 flex flex-col gap-4 md:gap-6 group hover:border-indigo-500/30 transition-all border-white/5 bg-white/[0.02] min-w-0">
+                        <div className="flex items-center gap-3 md:gap-4 truncate">
+                            <div className="p-2 md:p-3 bg-blue-500/10 rounded-xl md:rounded-2xl border border-blue-500/20 group-hover:scale-110 transition-transform shrink-0">
                                 <TrendingUp className="w-5 h-5 md:w-6 md:h-6 text-blue-400" />
                             </div>
-                            <h3 className="text-[9px] md:text-sm font-black text-white/40 uppercase tracking-widest">Progress</h3>
+                            <h3 className="text-[9px] md:text-sm font-black text-white/40 uppercase tracking-widest truncate">Progress</h3>
                         </div>
-                        <p className="text-2xl md:text-5xl font-black text-white">
+                        <p className="text-2xl md:text-4xl lg:text-5xl font-black text-white truncate w-full">
                             {loadingData ? '...' : stats?.todayWords || 0}
-                            <span className="text-[10px] text-white/20 uppercase tracking-widest ml-1">so'z</span>
+                            <span className="text-[10px] text-white/20 uppercase tracking-widest ml-1 hidden sm:inline">so'z</span>
                         </p>
                     </div>
 
                     {/* Total Learned */}
-                    <div className="glass-card p-4 md:p-8 flex flex-col gap-4 md:gap-6 group hover:border-emerald-500/30 transition-all border-white/5 bg-white/[0.02]">
-                        <div className="flex items-center gap-3 md:gap-4">
-                            <div className="p-2 md:p-3 bg-emerald-500/10 rounded-xl md:rounded-2xl border border-emerald-500/20 group-hover:scale-110 transition-transform">
+                    <div className="glass-card p-4 md:p-8 flex flex-col gap-4 md:gap-6 group hover:border-emerald-500/30 transition-all border-white/5 bg-white/[0.02] min-w-0">
+                        <div className="flex items-center gap-3 md:gap-4 truncate">
+                            <div className="p-2 md:p-3 bg-emerald-500/10 rounded-xl md:rounded-2xl border border-emerald-500/20 group-hover:scale-110 transition-transform shrink-0">
                                 <BookOpen className="w-5 h-5 md:w-6 md:h-6 text-emerald-400" />
                             </div>
-                            <h3 className="text-[9px] md:text-sm font-black text-white/40 uppercase tracking-widest">Jami</h3>
+                            <h3 className="text-[9px] md:text-sm font-black text-white/40 uppercase tracking-widest truncate">Jami</h3>
                         </div>
-                        <p className="text-2xl md:text-5xl font-black text-white">
+                        <p className="text-2xl md:text-4xl lg:text-5xl font-black text-white truncate w-full">
                             {loadingData ? '...' : stats?.totalWords || 0}
-                            <span className="text-[10px] text-white/20 uppercase tracking-widest ml-1">so'z</span>
+                            <span className="text-[10px] text-white/20 uppercase tracking-widest ml-1 hidden sm:inline">so'z</span>
                         </p>
                     </div>
 
                     {/* Units Card */}
-                    <div className="glass-card p-4 md:p-8 flex flex-col gap-4 md:gap-6 group hover:border-purple-500/30 transition-all border-white/5 bg-white/[0.02]">
-                        <div className="flex items-center gap-3 md:gap-4">
-                            <div className="p-2 md:p-3 bg-purple-500/10 rounded-xl md:rounded-2xl border border-purple-500/20 group-hover:scale-110 transition-transform">
+                    <div className="glass-card p-4 md:p-8 flex flex-col gap-4 md:gap-6 group hover:border-purple-500/30 transition-all border-white/5 bg-white/[0.02] min-w-0">
+                        <div className="flex items-center gap-3 md:gap-4 truncate">
+                            <div className="p-2 md:p-3 bg-purple-500/10 rounded-xl md:rounded-2xl border border-purple-500/20 group-hover:scale-110 transition-transform shrink-0">
                                 <Play className="w-5 h-5 md:w-6 md:h-6 text-purple-400" />
                             </div>
-                            <h3 className="text-[9px] md:text-sm font-black text-white/40 uppercase tracking-widest">Bo'limlar</h3>
+                            <h3 className="text-[9px] md:text-sm font-black text-white/40 uppercase tracking-widest truncate">Bo'limlar</h3>
                         </div>
-                        <p className="text-2xl md:text-5xl font-black text-white">
+                        <p className="text-2xl md:text-4xl lg:text-5xl font-black text-white truncate w-full">
                             {loadingData ? '...' : stats?.availableUnits || 0}
-                            <span className="text-[10px] text-white/20 uppercase tracking-widest ml-1">ta</span>
+                            <span className="text-[10px] text-white/20 uppercase tracking-widest ml-1 hidden sm:inline">ta</span>
                         </p>
                     </div>
 
                     {/* Coins Card */}
-                    <div className="glass-card p-4 md:p-8 flex flex-col gap-4 md:gap-6 group hover:border-amber-500/30 transition-all border-white/5 bg-white/[0.02]">
-                        <div className="flex items-center gap-3 md:gap-4">
-                            <div className="p-2 md:p-3 bg-amber-500/10 rounded-xl md:rounded-2xl border border-amber-500/20 group-hover:scale-110 transition-transform">
+                    <div className="glass-card p-4 md:p-8 flex flex-col gap-4 md:gap-6 group hover:border-amber-500/30 transition-all border-white/5 bg-white/[0.02] min-w-0">
+                        <div className="flex items-center gap-3 md:gap-4 truncate">
+                            <div className="p-2 md:p-3 bg-amber-500/10 rounded-xl md:rounded-2xl border border-amber-500/20 group-hover:scale-110 transition-transform shrink-0">
                                 <TrendingUp className="w-5 h-5 md:w-6 md:h-6 text-amber-400 rotate-90" />
                             </div>
-                            <h3 className="text-[9px] md:text-sm font-black text-white/40 uppercase tracking-widest">MT Coins</h3>
+                            <h3 className="text-[9px] md:text-sm font-black text-white/40 uppercase tracking-widest truncate">MT Coins</h3>
                         </div>
-                        <p className="text-2xl md:text-5xl font-black text-amber-400">
+                        <p className="text-2xl md:text-4xl lg:text-5xl font-black text-amber-400 truncate w-full">
                             {loadingData ? '...' : stats?.mtCoins || 0}
-                            <span className="text-[10px] text-white/20 uppercase tracking-widest ml-1">tangalar</span>
                         </p>
                     </div>
 
                     {/* Correct Card */}
-                    <div className="glass-card p-4 md:p-8 flex flex-col gap-4 md:gap-6 group hover:border-indigo-500/30 transition-all border-white/5 bg-white/[0.02]">
-                        <div className="flex items-center gap-3 md:gap-4">
-                            <div className="p-2 md:p-3 bg-indigo-500/10 rounded-xl md:rounded-2xl border border-indigo-500/20 group-hover:scale-110 transition-transform">
+                    <div className="glass-card p-4 md:p-8 flex flex-col gap-4 md:gap-6 group hover:border-indigo-500/30 transition-all border-white/5 bg-white/[0.02] min-w-0">
+                        <div className="flex items-center gap-3 md:gap-4 truncate">
+                            <div className="p-2 md:p-3 bg-indigo-500/10 rounded-xl md:rounded-2xl border border-indigo-500/20 group-hover:scale-110 transition-transform shrink-0">
                                 <Play className="w-5 h-5 md:w-6 md:h-6 text-indigo-400" />
                             </div>
-                            <h3 className="text-[9px] md:text-sm font-black text-white/40 uppercase tracking-widest">To'gri</h3>
+                            <h3 className="text-[9px] md:text-sm font-black text-white/40 uppercase tracking-widest truncate">To'gri</h3>
                         </div>
-                        <p className="text-2xl md:text-5xl font-black text-white">
+                        <p className="text-2xl md:text-4xl lg:text-5xl font-black text-white truncate w-full">
                             {loadingData ? '...' : stats?.todayCorrect || 0}
-                            <span className="text-[10px] text-white/20 uppercase tracking-widest ml-1">so'z</span>
+                            <span className="text-[10px] text-white/20 uppercase tracking-widest ml-1 hidden sm:inline">so'z</span>
                         </p>
                     </div>
 
                     {/* Accuracy Card */}
-                    <div className="glass-card p-4 md:p-8 flex flex-col gap-4 md:gap-6 group hover:border-red-500/30 transition-all border-white/5 bg-white/[0.02]">
-                        <div className="flex items-center gap-3 md:gap-4">
-                            <div className="p-2 md:p-3 bg-red-500/10 rounded-xl md:rounded-2xl border border-red-500/20 group-hover:scale-110 transition-transform">
+                    <div className="glass-card p-4 md:p-8 flex flex-col gap-4 md:gap-6 group hover:border-red-500/30 transition-all border-white/5 bg-white/[0.02] min-w-0">
+                        <div className="flex items-center gap-3 md:gap-4 truncate">
+                            <div className="p-2 md:p-3 bg-red-500/10 rounded-xl md:rounded-2xl border border-red-500/20 group-hover:scale-110 transition-transform shrink-0">
                                 <TrendingUp className="w-5 h-5 md:w-6 md:h-6 text-red-400" />
                             </div>
-                            <h3 className="text-[9px] md:text-sm font-black text-white/40 uppercase tracking-widest">Aniqlik</h3>
+                            <h3 className="text-[9px] md:text-sm font-black text-white/40 uppercase tracking-widest truncate">Aniqlik</h3>
                         </div>
-                        <p className="text-2xl md:text-5xl font-black text-white">
+                        <p className="text-2xl md:text-4xl lg:text-5xl font-black text-white truncate w-full">
                             {loadingData ? '...' : stats?.todayAccuracy || 0}
-                            <span className="text-[10px] text-white/20 uppercase tracking-widest ml-1">%</span>
+                            <span className="text-[10px] text-white/20 uppercase tracking-widest ml-1 hidden sm:inline">%</span>
                         </p>
                     </div>
                 </div>
 
                 {/* Start Button or Empty State */}
-                <div className="flex flex-col items-center mt-4">
+                <div className="flex flex-col items-center mt-4 w-full min-w-0">
                     {stats?.availableUnits > 0 ? (
-                        <div className="text-center w-full">
+                        <div className="text-center w-full px-2 min-w-0 flex flex-col items-center">
                             <Link
                                 href="/student/random"
-                                className="btn-premium w-full md:w-auto px-16 py-8 text-2xl group"
+                                className="btn-premium w-full md:w-auto px-6 py-6 md:px-16 md:py-8 text-xl md:text-2xl group flex items-center justify-center gap-3 mx-auto max-w-full sm:max-w-[400px] md:max-w-none shadow-[0_20px_40px_-15px_rgba(99,102,241,0.5)] hover:shadow-[0_30px_60px_-15px_rgba(99,102,241,0.6)] min-w-0"
                             >
-                                <Play className="w-8 h-8 fill-current" />
-                                <span>Mashqni boshlash</span>
+                                <Play className="w-6 h-6 md:w-8 md:h-8 fill-current shrink-0" />
+                                <span className="whitespace-normal sm:whitespace-nowrap break-words text-center leading-tight">Mashqni boshlash</span>
                                 <div className="shimmer-active" />
                             </Link>
-                            <p className="text-white/20 mt-8 font-black text-[10px] uppercase tracking-[0.4em]">
+                            <p className="text-white/20 mt-6 font-black text-[9px] md:text-[10px] uppercase tracking-[0.3em] md:tracking-[0.4em] px-4 break-words text-center max-w-full">
                                 RANDOM REJIMIDA SO'ZLARNI TAKRORLASH
                             </p>
                         </div>
                     ) : !loadingData && (
-                        <div className="glass-card p-12 md:p-20 text-center flex flex-col items-center gap-6 border-white/5 opacity-80">
-                            <div className="w-20 h-20 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center mb-4">
-                                <BookOpen className="w-10 h-10 text-white/20" />
+                        <div className="glass-card p-8 md:p-12 lg:p-20 text-center flex flex-col items-center gap-6 border-white/5 opacity-80 w-full min-w-0">
+                            <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl md:rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center mb-2 md:mb-4 shrink-0">
+                                <BookOpen className="w-8 h-8 md:w-10 md:h-10 text-white/20" />
                             </div>
-                            <h3 className="text-2xl font-black text-white tracking-tight">Hali unitlar biriktirilmagan</h3>
-                            <p className="text-white/40 max-w-md leading-relaxed">
+                            <h3 className="text-xl md:text-2xl font-black text-white tracking-tight leading-tight">Hali unitlar biriktirilmagan</h3>
+                            <p className="text-sm md:text-base text-white/40 max-w-md leading-relaxed">
                                 Sizga hali hech qanday o'quv bo'limi biriktirilmagan. Iltimos, o'qituvchingiz bilan bog'laning.
                             </p>
                         </div>

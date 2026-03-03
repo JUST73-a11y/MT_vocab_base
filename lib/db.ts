@@ -62,7 +62,6 @@ async function dbConnect() {
             bufferCommands: false,
             serverSelectionTimeoutMS: 60000,
             socketTimeoutMS: 120000,
-            maxIdleTimeMS: 10000,
             maxPoolSize: 10,
             minPoolSize: 1,
             retryWrites: true,
