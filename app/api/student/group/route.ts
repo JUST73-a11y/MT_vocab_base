@@ -47,8 +47,7 @@ export async function GET(req: Request) {
             Wallet.find({ studentId: { $in: memberIds } }).lean(),
             GroupQuizSession.findOne({
                 groupId: groupId,
-                status: 'ACTIVE',
-                $or: [{ endsAt: { $gt: new Date() } }, { endsAt: { $exists: false } }]
+                status: 'ACTIVE'
             }).lean(),
             DailyStudentStats.find({ studentId: { $in: memberIds }, date: todayDateStr }).lean()
         ]);

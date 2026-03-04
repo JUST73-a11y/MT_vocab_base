@@ -27,11 +27,7 @@ export async function GET(req: Request) {
         // We sort by createdAt -1 to get the most recent one if multiple (though UI prevents multiple active)
         const session = await GroupQuizSession.findOne({
             groupId: { $in: groupIds },
-            status: 'ACTIVE',
-            $or: [
-                { endsAt: { $gt: new Date() } },
-                { endsAt: { $exists: false } }
-            ]
+            status: 'ACTIVE'
         })
             .populate('groupId', 'name')
             .populate('teacherId', 'name')
