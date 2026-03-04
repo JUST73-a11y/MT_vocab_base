@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { apiFetch } from '@/lib/apiFetch';
 import toast from 'react-hot-toast';
-import { ArrowLeft, Play, LayoutGrid, Timer, Users, User, LogOut, CheckCircle2, Target, Trophy, XCircle, Brain, BookOpen, Clock, HeartPulse, Sparkles, Languages, Save, Plus, ArrowRight, Zap, RefreshCw, BarChart2, Star, MessageCircle, AlertCircle, Loader2, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Play, LayoutGrid, Timer, Users, User, LogOut, CheckCircle2, Target, Trophy, XCircle, Brain, BookOpen, Clock, HeartPulse, Sparkles, Languages, Save, Plus, ArrowRight, Zap, RefreshCw, BarChart2, Star, MessageCircle, AlertCircle, Loader2, RotateCcw, FolderOpen } from 'lucide-react';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -73,6 +73,20 @@ export default function StudentQuizPage() {
     const [activeGroupSession, setActiveGroupSession] = useState<any>(null);
     const [checkingSession, setCheckingSession] = useState(false);
     const [coinsEarned, setCoinsEarned] = useState<number | undefined>(undefined);
+
+    const [activeCategory, setActiveCategory] = useState<string | null>(null);
+    const [viewingUnits, setViewingUnits] = useState(false);
+
+    const categoryMap = units.reduce((acc, unit) => {
+        const cat = unit.category || 'Kategoriyasiz';
+        if (!acc[cat]) acc[cat] = [];
+        acc[cat].push(unit);
+        return acc;
+    }, {} as Record<string, AccessibleUnit[]>);
+
+    const categories = Object.keys(categoryMap).sort((a, b) =>
+        a === 'Kategoriyasiz' ? 1 : b === 'Kategoriyasiz' ? -1 : a.localeCompare(b));
+    const displayedUnits = activeCategory ? (categoryMap[activeCategory] || []) : units;
 
     // Quiz state
     const [phase, setPhase] = useState<Phase>('pick');
@@ -147,8 +161,36 @@ export default function StudentQuizPage() {
     const loadUnits = async () => {
         setLoadingUnits(true);
         try {
-            const data = await apiFetch('/api/units');
-            setUnits((data || []).map((u: any) => ({ id: u.id || u._id?.toString(), title: u.title, category: u.category })));
+            const [unitsResWrapper, treeRes] = await Promise.all([
+                apiFetch('/api/units').catch(() => null),
+                fetch('/api/teacher/categories/tree').catch(() => null)
+            ]);
+
+            const unitsRes = unitsResWrapper || [];
+
+            let tree = [];
+            if (treeRes && treeRes.ok) {
+                tree = await treeRes.json();
+            }
+
+            const catIdToPathName: Record<string, string> = {};
+            const flatten = (nodes: any[], depthStr: string) => {
+                nodes.forEach(n => {
+                    catIdToPathName[n._id] = depthStr + n.name;
+                    if (n.children && n.children.length > 0) {
+                        flatten(n.children, depthStr + n.name + ' / ');
+                    }
+                });
+            };
+            flatten(tree, '');
+
+            const mapped = unitsRes.map((u: any) => ({
+                id: u.id || u._id?.toString(),
+                title: u.title,
+                category: (u.categoryId && catIdToPathName[u.categoryId]) ? catIdToPathName[u.categoryId] : (u.category || 'Kategoriyasiz')
+            }));
+
+            setUnits(mapped);
         } catch { } finally { setLoadingUnits(false); }
     };
 
@@ -429,13 +471,19 @@ export default function StudentQuizPage() {
                     {/* Unit picker */}
                     <div className="rounded-2xl p-5 flex flex-col gap-4"
                         style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            {viewingUnits && (
+                                <button onClick={() => { setViewingUnits(false); setActiveCategory(null); }}
+                                    className="p-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">
+                                    <ArrowLeft className="w-4 h-4 text-white" />
+                                </button>
+                            )}
                             <h2 className="font-black text-white text-sm uppercase tracking-widest flex items-center gap-2">
-                                <BookOpen className="w-4 h-4 text-indigo-400" /> Unitlar
+                                <BookOpen className="w-4 h-4 text-indigo-400" /> {viewingUnits ? activeCategory : 'Unitlar (Bo\'limlar)'}
                             </h2>
-                            {selectedUnitIds.size > 0 && (
-                                <span className="text-xs font-black text-indigo-400 px-2.5 py-0.5 rounded-full" style={{ background: 'rgba(99,102,241,0.15)' }}>
-                                    {selectedUnitIds.size} tanlandi
+                            {selectedUnitIds.size > 0 && !viewingUnits && (
+                                <span className="ml-auto text-xs font-black text-indigo-400 px-2.5 py-0.5 rounded-full" style={{ background: 'rgba(99,102,241,0.15)' }}>
+                                    {selectedUnitIds.size} bo'lim tanlandi
                                 </span>
                             )}
                         </div>
@@ -450,25 +498,71 @@ export default function StudentQuizPage() {
                             </div>
                         ) : (
                             <div className="space-y-2 max-h-64 overflow-y-auto custom-scrollbar pr-1">
-                                {units.map(unit => {
-                                    const isSel = selectedUnitIds.has(unit.id);
-                                    return (
-                                        <button key={unit.id} onClick={() => setSelectedUnitIds(prev => {
-                                            const n = new Set(prev); n.has(unit.id) ? n.delete(unit.id) : n.add(unit.id); return n;
+                                {!viewingUnits ? (
+                                    categories.map(cat => {
+                                        const unitsInCat = categoryMap[cat] || [];
+                                        const selectedInCat = unitsInCat.filter(u => selectedUnitIds.has(u.id)).length;
+                                        return (
+                                            <button key={cat} onClick={() => { setActiveCategory(cat); setViewingUnits(true); }}
+                                                className="w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left"
+                                                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                                                <div className="w-10 h-10 rounded-lg bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20 shrink-0">
+                                                    <FolderOpen className="w-5 h-5 text-indigo-400" />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="font-bold text-sm text-white truncate">{cat}</p>
+                                                    <p className="text-[10px] text-white/30 truncate">{unitsInCat.length} bo'lim</p>
+                                                </div>
+                                                {selectedInCat > 0 ? (
+                                                    <div className="px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase">
+                                                        {selectedInCat} ta
+                                                    </div>
+                                                ) : (
+                                                    <ArrowRight className="w-4 h-4 text-white/20" />
+                                                )}
+                                            </button>
+                                        );
+                                    })
+                                ) : (
+                                    <>
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <button onClick={() => {
+                                                const ids = displayedUnits.map(u => u.id);
+                                                setSelectedUnitIds(p => new Set([...p, ...ids]));
+                                            }} className="flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 transition-all active:scale-95">
+                                                Hammasi
+                                            </button>
+                                            <button onClick={() => {
+                                                const ids = displayedUnits.map(u => u.id);
+                                                setSelectedUnitIds(p => {
+                                                    const n = new Set(p);
+                                                    ids.forEach(id => n.delete(id));
+                                                    return n;
+                                                });
+                                            }} className="flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-red-500/10 border border-red-500/20 text-red-400 transition-all active:scale-95">
+                                                Bekor Qilish
+                                            </button>
+                                        </div>
+                                        {displayedUnits.map(unit => {
+                                            const isSel = selectedUnitIds.has(unit.id);
+                                            return (
+                                                <button key={unit.id} onClick={() => setSelectedUnitIds(prev => {
+                                                    const n = new Set(prev); n.has(unit.id) ? n.delete(unit.id) : n.add(unit.id); return n;
+                                                })}
+                                                    className="w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left"
+                                                    style={{ background: isSel ? 'rgba(99,102,241,0.12)' : 'rgba(255,255,255,0.03)', border: `1px solid ${isSel ? 'rgba(99,102,241,0.35)' : 'rgba(255,255,255,0.06)'}` }}>
+                                                    <div className="w-5 h-5 rounded-md flex items-center justify-center shrink-0 transition-all"
+                                                        style={{ background: isSel ? 'rgba(99,102,241,0.8)' : 'rgba(255,255,255,0.08)', border: `1px solid ${isSel ? 'transparent' : 'rgba(255,255,255,0.12)'}` }}>
+                                                        {isSel && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="font-bold text-sm text-white">{unit.title}</p>
+                                                    </div>
+                                                </button>
+                                            );
                                         })}
-                                            className="w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left"
-                                            style={{ background: isSel ? 'rgba(99,102,241,0.12)' : 'rgba(255,255,255,0.03)', border: `1px solid ${isSel ? 'rgba(99,102,241,0.35)' : 'rgba(255,255,255,0.06)'}` }}>
-                                            <div className="w-5 h-5 rounded-md flex items-center justify-center shrink-0 transition-all"
-                                                style={{ background: isSel ? 'rgba(99,102,241,0.8)' : 'rgba(255,255,255,0.08)', border: `1px solid ${isSel ? 'transparent' : 'rgba(255,255,255,0.12)'}` }}>
-                                                {isSel && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="font-bold text-sm text-white truncate">{unit.title}</p>
-                                                {unit.category && <p className="text-[10px] text-white/30 truncate">{unit.category}</p>}
-                                            </div>
-                                        </button>
-                                    );
-                                })}
+                                    </>
+                                )}
                             </div>
                         )}
                     </div>
