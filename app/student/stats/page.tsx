@@ -179,8 +179,8 @@ export default function StudentStatsPage() {
             {stats && stats.unitBreakdown.length > 0 && (
                 <div className="glass-card p-6 space-y-4">
                     <h2 className="text-base font-black text-white/70 uppercase tracking-widest">Unit bo&apos;yicha natijalar</h2>
-                    <div className="space-y-3">
-                        {stats.unitBreakdown.slice(0, 5).map((u, i) => (
+                    <div className="space-y-3 max-h-64 overflow-y-auto custom-scrollbar pr-2">
+                        {stats.unitBreakdown.map((u, i) => (
                             <div key={u.unitId || i} className="space-y-1.5">
                                 <div className="flex justify-between text-sm">
                                     <span className="text-white/60 font-bold">{u.unitId ? `Unit ${i + 1}` : 'Noma\'lum unit'}</span>
@@ -211,8 +211,8 @@ export default function StudentStatsPage() {
                 ) : history?.attempts.length === 0 ? (
                     <p className="text-center text-white/30 py-8 font-bold">Hali quiz ishlanmagan</p>
                 ) : (
-                    <div className="space-y-2">
-                        {history?.attempts.slice(0, 5).map(a => (
+                    <div className="space-y-2 max-h-96 overflow-y-auto custom-scrollbar pr-2">
+                        {history?.attempts.map(a => (
                             <button key={a._id} onClick={() => setSelectedAttempt(a)}
                                 className="w-full flex items-center justify-between p-4 rounded-2xl text-left transition-all hover:scale-[1.01] gap-4"
                                 style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
@@ -268,8 +268,8 @@ export default function StudentStatsPage() {
             {wallet && wallet.transactions.length > 0 && (
                 <div className="glass-card p-6 space-y-4">
                     <h2 className="text-base font-black text-white/70 uppercase tracking-widest">MT Coin Tarixi</h2>
-                    <div className="space-y-2">
-                        {wallet.transactions.slice(0, 5).map(t => (
+                    <div className="space-y-2 max-h-80 overflow-y-auto custom-scrollbar pr-2">
+                        {wallet.transactions.map(t => (
                             <div key={t._id} className="flex items-center justify-between p-3 rounded-xl"
                                 style={{ background: 'rgba(255,255,255,0.03)' }}>
                                 <div className="flex items-center gap-3">
