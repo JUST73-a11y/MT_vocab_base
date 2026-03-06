@@ -113,9 +113,19 @@ function ShareModal({
     const [selected, setSelected] = useState<Set<string>>(new Set());
     const [sharing, setSharing] = useState(false);
     const [errors, setErrors] = useState<string[]>([]);
+    const [expandedCats, setExpandedCats] = useState<Set<string>>(new Set(['__all__']));
 
     const filtered = units.filter(u => u.title.toLowerCase().includes(search.toLowerCase()));
     const allSelected = filtered.length > 0 && filtered.every(u => selected.has(u.id));
+
+    // Group units by category
+    const grouped = filtered.reduce<Record<string, Unit[]>>((acc, unit) => {
+        const cat = unit.category || 'Asosiy';
+        if (!acc[cat]) acc[cat] = [];
+        acc[cat].push(unit);
+        return acc;
+    }, {});
+    const categoryNames = Object.keys(grouped).sort((a, b) => a === 'Asosiy' ? 1 : b === 'Asosiy' ? -1 : a.localeCompare(b));
 
     const toggle = (id: string) => {
         setSelected(prev => {
@@ -139,6 +149,28 @@ function ShareModal({
                 return next;
             });
         }
+    };
+
+    const toggleCategory = (catName: string) => {
+        const catUnits = grouped[catName] || [];
+        const allCatSelected = catUnits.every(u => selected.has(u.id));
+        setSelected(prev => {
+            const next = new Set(prev);
+            if (allCatSelected) {
+                catUnits.forEach(u => next.delete(u.id));
+            } else {
+                catUnits.forEach(u => next.add(u.id));
+            }
+            return next;
+        });
+    };
+
+    const toggleExpand = (catName: string) => {
+        setExpandedCats(prev => {
+            const next = new Set(prev);
+            next.has(catName) ? next.delete(catName) : next.add(catName);
+            return next;
+        });
     };
 
     const handleShare = async () => {
@@ -215,11 +247,11 @@ function ShareModal({
                         </div>
                     </div>
 
-                    {/* Units list */}
+                    {/* Units list grouped by category */}
                     <div className="p-10 flex-1 overflow-hidden flex flex-col gap-5">
                         <div className="flex items-center justify-between">
                             <h3 className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] flex items-center gap-2">
-                                <BookOpen className="w-3.5 h-3.5" /> Unit ro'yxati
+                                <FolderOpen className="w-3.5 h-3.5" /> Kategoriyalar bo'yicha
                             </h3>
                             <button onClick={toggleAll} className="px-3 py-1.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-[10px] font-black text-indigo-400 hover:bg-indigo-500/20 uppercase tracking-widest transition-all">
                                 {allSelected ? 'Barchasini bekor qilish' : 'Barchasini tanlash'}
@@ -237,27 +269,60 @@ function ShareModal({
                             />
                         </div>
 
-                        <div className="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
-                            {filtered.map(unit => (
-                                <button
-                                    key={unit.id}
-                                    onClick={() => toggle(unit.id)}
-                                    className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all text-left group/item border ${selected.has(unit.id)
-                                        ? 'bg-indigo-500/10 border-indigo-500/30 shadow-lg shadow-indigo-500/5'
-                                        : 'bg-white/[0.01] border-white/5 hover:bg-white/[0.04] hover:border-white/10'}`}
-                                >
-                                    <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center shrink-0 transition-all duration-300 ${selected.has(unit.id)
-                                        ? 'bg-indigo-500 border-indigo-500 scale-110'
-                                        : 'border-white/10 group-hover/item:border-white/30'}`}>
-                                        {selected.has(unit.id) && <Check className="w-4 h-4 text-white stroke-[4px]" />}
+                        <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
+                            {categoryNames.map(catName => {
+                                const catUnits = grouped[catName];
+                                const isExpanded = expandedCats.has(catName) || expandedCats.has('__all__');
+                                const allCatSelected = catUnits.every(u => selected.has(u.id));
+                                const someCatSelected = catUnits.some(u => selected.has(u.id));
+
+                                return (
+                                    <div key={catName} className="rounded-2xl border border-white/5 overflow-hidden bg-white/[0.01]">
+                                        {/* Category Header */}
+                                        <div className="flex items-center gap-3 px-5 py-3.5 bg-white/[0.02] border-b border-white/5">
+                                            <button onClick={() => toggleExpand(catName)} className="shrink-0 text-white/30 hover:text-white/60 transition-colors">
+                                                <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isExpanded ? '' : '-rotate-90'}`} />
+                                            </button>
+                                            <FolderOpen className="w-4 h-4 text-indigo-400/60 shrink-0" />
+                                            <span className="text-[12px] font-black text-white/60 uppercase tracking-wider flex-1 truncate">{catName}</span>
+                                            <span className="text-[10px] font-black text-white/20 mr-2">{catUnits.length}</span>
+                                            <button
+                                                onClick={() => toggleCategory(catName)}
+                                                className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all border ${allCatSelected
+                                                    ? 'bg-indigo-500/20 border-indigo-500/30 text-indigo-400'
+                                                    : someCatSelected
+                                                        ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400/60'
+                                                        : 'bg-white/5 border-white/10 text-white/30 hover:text-white/50'}`}
+                                            >
+                                                {allCatSelected ? 'Bekor' : 'Tanlash'}
+                                            </button>
+                                        </div>
+
+                                        {/* Category Units */}
+                                        {isExpanded && (
+                                            <div className="p-2 space-y-1">
+                                                {catUnits.map(unit => (
+                                                    <button
+                                                        key={unit.id}
+                                                        onClick={() => toggle(unit.id)}
+                                                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-left group/item ${selected.has(unit.id)
+                                                            ? 'bg-indigo-500/10'
+                                                            : 'hover:bg-white/[0.03]'}`}
+                                                    >
+                                                        <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all duration-300 ${selected.has(unit.id)
+                                                            ? 'bg-indigo-500 border-indigo-500 scale-110'
+                                                            : 'border-white/10 group-hover/item:border-white/30'}`}>
+                                                            {selected.has(unit.id) && <Check className="w-3 h-3 text-white stroke-[4px]" />}
+                                                        </div>
+                                                        <p className="text-[13px] font-black text-white truncate group-hover/item:text-indigo-200 transition-colors uppercase tracking-tight flex-1">{unit.title}</p>
+                                                        <BookOpen className={`w-4 h-4 shrink-0 transition-colors ${selected.has(unit.id) ? 'text-indigo-400' : 'text-white/5'}`} />
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-[15px] font-black text-white truncate group-hover/item:text-indigo-200 transition-colors uppercase tracking-tight">{unit.title}</p>
-                                        <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em] mt-0.5">{unit.category || 'Asosiy'}</p>
-                                    </div>
-                                    <BookOpen className={`w-5 h-5 transition-colors ${selected.has(unit.id) ? 'text-indigo-400' : 'text-white/5 group-hover/item:text-white/20'}`} />
-                                </button>
-                            ))}
+                                );
+                            })}
                             {filtered.length === 0 && (
                                 <div className="py-20 text-center flex flex-col items-center gap-4 opacity-20">
                                     <Search className="w-12 h-12" />
@@ -478,6 +543,12 @@ export default function UnitsPage() {
                                 className="btn-secondary h-14 px-6 text-xs"
                             >
                                 <Share2 className="w-4 h-4" /> Ulashish
+                            </button>
+                            <button
+                                onClick={() => { setShowNewFolder(true); setTimeout(() => newFolderInputRef.current?.focus(), 100); }}
+                                className="btn-secondary h-14 px-6 text-xs"
+                            >
+                                <FolderPlus className="w-4 h-4" /> Yangi Papka
                             </button>
                             <Link href={`/teacher/units/new${currentCatId ? `?categoryId=${currentCatId}` : ''}`}
                                 className="btn-premium h-14 px-8 text-xs font-black shadow-indigo-500/20">

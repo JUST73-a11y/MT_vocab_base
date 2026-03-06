@@ -2,9 +2,9 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import { getServerSession } from '@/lib/serverAuth';
 import User from '@/models/User';
+import Unit from '@/models/Unit';
 import TeacherProfile from '@/models/TeacherProfile';
 import UnitShare from '@/models/UnitShare';
-import { getUnits } from '@/lib/firestore';
 import { createApiError } from '@/lib/apiError';
 
 export async function POST(req: Request) {
@@ -52,9 +52,9 @@ export async function POST(req: Request) {
             return createApiError('BAD_REQUEST', "O'zingizga yubora olmaysiz", 400);
         }
 
-        // 2. Jo'natuvchining barcha unitlarini Firestore'dan olish (faqat o'ziga tegishlilarini yuborishi kerak)
-        const myUnits = await getUnits(fromTeacherId);
-        const myUnitIds = myUnits.map((u: any) => u.id);
+        // 2. Jo'natuvchining barcha unitlarini MongoDB'dan to'g'ridan-to'g'ri olish
+        const myUnits = await Unit.find({ createdBy: fromTeacherId }).lean();
+        const myUnitIds = myUnits.map((u: any) => u._id.toString());
 
         const successfulUnitIds: string[] = [];
         const failed: { unitId: string, reason: string }[] = [];
@@ -79,12 +79,12 @@ export async function POST(req: Request) {
                 continue;
             }
 
-            // Yangi share yaratish
+            // Yangi share yaratish (PENDING - uppercase matching schema enum)
             await UnitShare.create({
                 unitId: unitId,
                 fromTeacherId: fromTeacherId,
                 toTeacherId: toTeacherId,
-                status: 'pending'
+                status: 'PENDING'
             });
 
             successfulUnitIds.push(unitId);
@@ -101,3 +101,4 @@ export async function POST(req: Request) {
         return createApiError('SERVER_ERROR', error.message || 'Serverda xatolik yuz berdi', 500);
     }
 }
+
