@@ -33,6 +33,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
         { name: 'Dashboard', href: '/student/dashboard', icon: LayoutDashboard },
         { name: 'Mashq', href: '/student/random', icon: Play },
         { name: 'Quiz', href: '/student/quiz', icon: Brain },
+        { name: 'Yodlash', href: '/student/mistakes', icon: BookOpen },
         { name: 'Statistika', href: '/student/stats', icon: BarChart2 },
         { name: 'Mening guruhim', href: '/student/group', icon: Users },
     ];
@@ -73,19 +74,21 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
                             </div>
 
                             {/* Desktop Links */}
-                            <div className="hidden md:flex items-center gap-2">
+                            <div className="hidden md:flex items-center gap-2 p-1.5 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', backdropFilter: 'blur(20px)' }}>
                                 {navItems.map(item => {
                                     const active = pathname === item.href || (item.href !== '/student/dashboard' && pathname.startsWith(item.href));
                                     return (
                                         <Link key={item.href} href={item.href}
-                                            className="flex items-center gap-2 px-5 py-2.5 rounded-2xl text-sm font-black transition-all"
+                                            className={`flex items-center gap-2.5 px-5 lg:px-6 py-2.5 rounded-lg text-[13px] lg:text-sm font-black transition-all duration-300 group relative overflow-hidden ${active ? 'text-white' : 'text-white/50 hover:text-white hover:bg-white/5'}`}
                                             style={{
-                                                background: active ? 'rgba(99,102,241,0.1)' : 'transparent',
-                                                color: active ? '#ffffff' : 'rgba(255,255,255,0.4)',
-                                                border: active ? '1px solid rgba(99,102,241,0.2)' : '1px solid transparent',
+                                                background: active ? 'linear-gradient(135deg, rgba(99,102,241,0.15), rgba(168,85,247,0.15))' : 'transparent',
+                                                border: active ? '1px solid rgba(168,85,247,0.3)' : '1px solid transparent',
+                                                boxShadow: active ? '0 0 20px rgba(168,85,247,0.15), inset 0 0 10px rgba(99,102,241,0.1)' : 'none',
                                             }}>
-                                            <item.icon className="w-4 h-4" />
-                                            {item.name}
+                                            {/* Active Glow Accent */}
+                                            {active && <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 blur-xl z-0" />}
+                                            <item.icon className={`w-4 h-4 z-10 transition-all duration-300 ${active ? 'text-purple-400 drop-shadow-[0_0_8px_rgba(168,85,247,0.8)] scale-110' : 'group-hover:text-white group-hover:scale-110 group-hover:-rotate-3'}`} />
+                                            <span className="z-10 tracking-wide" style={{ textShadow: active ? '0 0 10px rgba(255,255,255,0.3)' : 'none' }}>{item.name}</span>
                                         </Link>
                                     );
                                 })}
@@ -133,26 +136,35 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
                             </button>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto px-4 space-y-2">
+                        <div className="flex-1 overflow-y-auto px-4 space-y-3 mt-4">
                             {navItems.map(item => {
                                 const active = pathname === item.href || (item.href !== '/student/dashboard' && pathname.startsWith(item.href));
                                 return (
                                     <Link key={item.href} href={item.href}
                                         onClick={() => setIsMobileMenuOpen(false)}
-                                        className={`flex items-center gap-3 p-4 rounded-2xl transition-all ${active ? 'bg-indigo-500/10 border border-indigo-500/20 shadow-lg shadow-indigo-500/10' : 'border border-transparent hover:bg-white/5 hover:border-white/5'}`}>
-                                        <div className={`p-2 rounded-xl ${active ? 'bg-indigo-500 text-white' : 'bg-white/5 text-white/40'}`}>
+                                        className={`flex items-center gap-4 p-4 rounded-xl transition-all duration-300 group relative overflow-hidden ${active ? 'border border-purple-500/30' : 'border border-transparent hover:bg-white/5'}`}
+                                        style={{ background: active ? 'rgba(168,85,247,0.1)' : 'transparent' }}>
+                                        {/* Active background glow */}
+                                        {active && <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 blur-md z-0" />}
+
+                                        <div className={`z-10 p-3 rounded-lg transition-all duration-300 ${active ? 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-[0_0_15px_rgba(168,85,247,0.6)] scale-110' : 'bg-white/5 text-white/40 group-hover:bg-white/10 group-hover:text-white/90 group-hover:scale-110 group-hover:-rotate-3'}`}>
                                             <item.icon className="w-5 h-5" />
                                         </div>
-                                        <span className={`font-black text-sm ${active ? 'text-white' : 'text-white/60'}`}>{item.name}</span>
+                                        <div className="flex flex-col z-10">
+                                            <span className={`font-black text-[15px] transition-all duration-300 ${active ? 'text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]' : 'text-white/60 group-hover:text-white group-hover:translate-x-1'}`}>
+                                                {item.name}
+                                            </span>
+                                            {active && <span className="text-[9px] font-black tracking-[0.2em] uppercase text-purple-400 mt-0.5">Faol sahifa</span>}
+                                        </div>
                                     </Link>
                                 );
                             })}
                         </div>
 
                         <div className="p-4 mt-auto border-t border-white/5">
-                            <button onClick={() => { setIsMobileMenuOpen(false); setShowLogoutModal(true); }} className="w-full flex items-center gap-3 p-4 rounded-2xl border border-red-500/10 bg-red-500/5 text-red-400">
-                                <div className="p-2 rounded-xl bg-red-500/10"><LogOut className="w-5 h-5" /></div>
-                                <span className="font-black text-sm">Tizimdan chiqish</span>
+                            <button onClick={() => { setIsMobileMenuOpen(false); setShowLogoutModal(true); }} className="w-full flex items-center gap-4 p-4 rounded-xl border border-red-500/10 bg-red-500/5 text-red-400 transition-all hover:bg-red-500/10 group">
+                                <div className="p-3 rounded-lg bg-red-500/10 group-hover:bg-red-500/20 transition-colors"><LogOut className="w-5 h-5" /></div>
+                                <span className="font-black text-[15px]">Tizimdan chiqish</span>
                             </button>
                         </div>
                     </div>

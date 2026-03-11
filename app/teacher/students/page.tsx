@@ -6,7 +6,7 @@ import { useAuth } from '@/lib/auth/AuthContext';
 import {
     Users, Loader2, Search, Settings2, CheckCircle2, XCircle,
     Copy, Check, FolderOpen, ChevronRight, ChevronDown,
-    Coins, BarChart2, Info, Target, TrendingUp, GraduationCap
+    Coins, BarChart2, Info, Target, TrendingUp, GraduationCap, AlertCircle, Trash2
 } from 'lucide-react';
 import { getUnits } from '@/lib/firestore';
 import { Unit } from '@/lib/types';
@@ -51,6 +51,22 @@ const formatTime = (seconds: number) => {
     return `${m}daq`;
 };
 
+interface MistakeWord {
+    _id: string;
+    studentId: string;
+    wordId: {
+        _id: string;
+        englishWord: string;
+        uzbekTranslation: string;
+        phonetic?: string;
+    };
+    unitId?: string;
+    wrongCount: number;
+    lastWrongAt: string;
+    isLearned: boolean;
+    createdAt: string;
+}
+
 export default function TeacherStudentsPage() {
     const { user, loading } = useAuth();
     const router = useRouter();
@@ -82,6 +98,12 @@ export default function TeacherStudentsPage() {
     const [redeemReason, setRedeemReason] = useState('');
     const [redeemBalance, setRedeemBalance] = useState<number | null>(null);
     const [redeeming, setRedeeming] = useState(false);
+
+    // Mistakes Modal
+    const [mistakesStudent, setMistakesStudent] = useState<Student | null>(null);
+    const [studentMistakes, setStudentMistakes] = useState<MistakeWord[]>([]);
+    const [loadingMistakes, setLoadingMistakes] = useState(false);
+
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
@@ -177,6 +199,41 @@ export default function TeacherStudentsPage() {
             setRedeemBalance(wallet?.balance ?? 0);
         } catch {
             setRedeemBalance(0);
+        }
+    };
+
+    const openMistakesModal = async (student: Student) => {
+        setMistakesStudent(student);
+        setStudentMistakes([]);
+        setLoadingMistakes(true);
+        try {
+            const data = await apiFetch(`/api/teacher/students/${student._id}/mistakes`);
+            setStudentMistakes(data.mistakes || []);
+        } catch (error) {
+            console.error('Error fetching mistakes:', error);
+            toast.error('Xatoliklarni yuklashda muammo yuz berdi');
+        } finally {
+            setLoadingMistakes(false);
+        }
+    };
+
+    const handleDeleteMistake = async (mistakeId: string) => {
+        if (!mistakesStudent) return;
+        
+        // Optimistic delete
+        const prevMistakes = [...studentMistakes];
+        setStudentMistakes(prev => prev.filter(m => m._id !== mistakeId));
+        
+        try {
+            await apiFetch(`/api/teacher/students/${mistakesStudent._id}/mistakes/${mistakeId}`, {
+                method: 'DELETE',
+            });
+            toast.success("Xato o'chirildi");
+        } catch (error: any) {
+            console.error('Error deleting mistake:', error);
+            toast.error(error.message || "Xatolik yuz berdi");
+            // Revert optimism on error
+            setStudentMistakes(prevMistakes);
         }
     };
 
@@ -319,6 +376,11 @@ export default function TeacherStudentsPage() {
                                                     onClick={() => openRedeemModal(student)}
                                                     className="px-3 py-1 bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-yellow-500/20 transition-all flex items-center gap-1">
                                                     <Coins className="w-3 h-3" /> Coin
+                                                </button>
+                                                <button
+                                                    onClick={() => openMistakesModal(student)}
+                                                    className="px-3 py-1 bg-rose-500/10 text-rose-500 dark:text-rose-400 rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-rose-500/20 transition-all flex items-center gap-1">
+                                                    <AlertCircle className="w-3 h-3" /> Xatolar
                                                 </button>
                                                 <button
                                                     onClick={() => openStatsModal(student)}
@@ -601,6 +663,98 @@ export default function TeacherStudentsPage() {
                                 className="py-4 rounded-2xl font-black text-white flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all"
                                 style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', boxShadow: '0 4px 20px rgba(99,102,241,0.3)' }}>
                                 {savingAccess ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Saqlash'}
+                            </button>
+                        </footer>
+                    </div>
+                </div>,
+                document.body
+            )}
+
+            {mounted && mistakesStudent && createPortal(
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fade-in">
+                    <div className="w-full max-w-2xl rounded-3xl p-8 flex flex-col gap-6 max-h-[90vh] overflow-hidden"
+                        style={{ background: 'linear-gradient(160deg,#13111f,#0f0d1e)', border: '1px solid rgba(225,29,72,0.2)' }}>
+                        <header className="flex items-center justify-between shrink-0">
+                            <div className="flex items-center gap-4">
+                                <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-rose-400"
+                                    style={{ background: 'rgba(225,29,72,0.1)', border: '1px solid rgba(225,29,72,0.3)' }}>
+                                    <AlertCircle className="w-7 h-7" />
+                                </div>
+                                <div>
+                                    <h2 className="text-2xl font-black text-white tracking-tight">Xatolar</h2>
+                                    <p className="text-sm text-rose-400 font-bold">{mistakesStudent.name}</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setMistakesStudent(null)} className="p-2 text-white/20 hover:text-white transition-colors">
+                                <XCircle className="w-8 h-8" />
+                            </button>
+                        </header>
+
+                        <div className="flex-grow overflow-y-auto pr-2" style={{ scrollbarWidth: 'thin' }}>
+                            {loadingMistakes ? (
+                                <div className="flex items-center justify-center py-20">
+                                    <Loader2 className="w-8 h-8 text-rose-500 animate-spin" />
+                                </div>
+                            ) : studentMistakes.length === 0 ? (
+                                <p className="text-center py-10 text-white/40 font-black uppercase tracking-widest">
+                                    Bu studentda hozircha xatolar yo&apos;q
+                                </p>
+                            ) : (
+                                <div className="grid grid-cols-1 gap-3">
+                                    {studentMistakes.map(mistake => (
+                                        <div key={mistake._id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl border transition-all hover:bg-white/5"
+                                            style={{
+                                                background: mistake.isLearned ? 'rgba(16,185,129,0.05)' : 'rgba(255,255,255,0.03)',
+                                                borderColor: mistake.isLearned ? 'rgba(16,185,129,0.2)' : 'rgba(255,255,255,0.07)'
+                                            }}>
+                                            <div className="flex-1 min-w-0 pr-4">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <p className="text-lg font-black text-white truncate">{mistake.wordId?.englishWord || '?'}</p>
+                                                    {mistake.wordId?.phonetic && (
+                                                        <span className="text-xs font-mono text-white/40">[{mistake.wordId.phonetic}]</span>
+                                                    )}
+                                                </div>
+                                                <p className="text-sm font-medium text-white/60 truncate">{mistake.wordId?.uzbekTranslation || '?'}</p>
+                                                <p className="text-[10px] text-white/30 mt-2 font-bold uppercase">
+                                                    Oxirgi marta: {new Date(mistake.lastWrongAt).toLocaleDateString()}
+                                                </p>
+                                            </div>
+
+                                            <div className="flex items-center gap-4 mt-4 sm:mt-0 shrink-0">
+                                                <div className="flex flex-col items-center justify-center p-2 rounded-xl bg-black/20 min-w-[60px]">
+                                                    <span className="text-xs text-rose-400 font-bold uppercase tracking-wider mb-0.5">Xato</span>
+                                                    <span className="text-xl font-black text-rose-500">{mistake.wrongCount}x</span>
+                                                </div>
+                                                
+                                                {mistake.isLearned ? (
+                                                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 text-emerald-400 rounded-lg text-xs font-bold border border-emerald-500/20">
+                                                        <CheckCircle2 className="w-4 h-4" /> Yodlangan
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-500/10 text-rose-400 rounded-lg text-xs font-bold border border-rose-500/20">
+                                                        <AlertCircle className="w-4 h-4" /> Yodlanmagan
+                                                    </div>
+                                                )}
+
+                                                <button 
+                                                    onClick={() => handleDeleteMistake(mistake._id)}
+                                                    className="p-2 ml-1 text-white/20 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors"
+                                                    title="O'chirish"
+                                                >
+                                                    <Trash2 className="w-5 h-5" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        <footer className="pt-6 border-t border-white/5">
+                            <button onClick={() => setMistakesStudent(null)}
+                                className="w-full py-4 rounded-2xl font-black text-white/50 hover:text-white transition-all"
+                                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                                Yopish
                             </button>
                         </footer>
                     </div>

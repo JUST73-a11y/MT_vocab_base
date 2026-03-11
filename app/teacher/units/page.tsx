@@ -546,9 +546,9 @@ export default function UnitsPage() {
                             </button>
                             <button
                                 onClick={() => { setShowNewFolder(true); setTimeout(() => newFolderInputRef.current?.focus(), 100); }}
-                                className="btn-secondary h-14 px-6 text-xs"
+                                className="btn-secondary h-14 px-6 text-xs shadow-purple-500/10"
                             >
-                                <FolderPlus className="w-4 h-4" /> Yangi Papka
+                                <Plus className="w-5 h-5" /> Yangi Papka
                             </button>
                             <Link href={`/teacher/units/new${currentCatId ? `?categoryId=${currentCatId}` : ''}`}
                                 className="btn-premium h-14 px-8 text-xs font-black shadow-indigo-500/20">
@@ -569,9 +569,9 @@ export default function UnitsPage() {
                             </h3>
                             <button
                                 onClick={() => { setShowNewFolder(true); setTimeout(() => newFolderInputRef.current?.focus(), 100); }}
-                                className="p-2 rounded-xl bg-white/5 border border-white/10 text-white/30 hover:text-indigo-400 hover:border-indigo-400/30 transition-all hover:bg-indigo-400/10"
+                                className="p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 hover:text-white hover:border-purple-500/40 hover:bg-purple-500/20 transition-all active:scale-95 shadow-lg shadow-purple-500/5 group/add"
                             >
-                                <FolderPlus className="w-4 h-4" />
+                                <Plus className="w-5 h-5 group-hover/add:rotate-90 transition-transform duration-300" />
                             </button>
                         </div>
 

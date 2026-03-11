@@ -5,10 +5,12 @@ const QuizAttemptSchema = new Schema({
     teacherId: { type: Schema.Types.ObjectId, ref: 'User' },
     groupId: { type: Schema.Types.ObjectId, ref: 'Group' },
     sessionId: { type: Schema.Types.ObjectId, ref: 'GroupQuizSession' },
+    sourceAttemptId: { type: Schema.Types.ObjectId, ref: 'QuizAttempt' }, // Stage 2 links to original
     unitIds: [{ type: Schema.Types.ObjectId, ref: 'Unit' }],
-    mode: { type: String, enum: ['STUDENT_SELF', 'GROUP_SESSION'], required: true },
+    mode: { type: String, enum: ['STUDENT_SELF', 'GROUP_SESSION', 'GROUP_ASSIGNED', 'REVIEW_WRONGS'], required: true },
     correctCount: { type: Number, default: 0 },
     answeredCount: { type: Number, default: 0 },
+    coinsEarned: { type: Number, default: 0 },
     wordIds: [{ type: Schema.Types.ObjectId, ref: 'Word' }],
     usedWordIds: [{ type: Schema.Types.ObjectId, ref: 'Word' }],
     // Server-side correctOptionId memo: { wordId: correctOptionId }

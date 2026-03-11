@@ -23,7 +23,6 @@ async function run() {
             name: String,
             email: String,
             role: String,
-            plainTextPassword: String,
         }, { strict: false });
 
         const User = mongoose.models.User || mongoose.model('User', userSchema);
@@ -47,7 +46,6 @@ async function run() {
                     name: 'Admin',
                     email: email,
                     password: hashed,
-                    plainTextPassword: pass,
                     role: 'admin',
                     status: 'active',
                     isVerified: true
@@ -61,7 +59,6 @@ async function run() {
             admins.forEach(admin => {
                 console.log(`Ism: ${admin.name}`);
                 console.log(`Email: ${admin.email}`);
-                console.log(`Parol (plain): ${admin.plainTextPassword || 'Noma\'lum (encrypted)'}`);
                 console.log('-------------------------');
             });
 

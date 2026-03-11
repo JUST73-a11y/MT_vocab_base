@@ -22,13 +22,13 @@ export async function GET(req: Request) {
         const studentObjId = new mongoose.Types.ObjectId(student.id);
 
         const [attempts, total] = await Promise.all([
-            QuizAttempt.find({ studentId: studentObjId, endedAt: { $exists: true } })
+            QuizAttempt.find({ studentId: studentObjId, endedAt: { $exists: true }, abandoned: { $ne: true } })
                 .sort({ endedAt: -1 })
                 .skip(skip)
                 .limit(limit)
                 .select('mode correctCount answeredCount questionCountPlanned coinsEarned unitIds startedAt endedAt')
                 .lean(),
-            QuizAttempt.countDocuments({ studentId: studentObjId, endedAt: { $exists: true } }),
+            QuizAttempt.countDocuments({ studentId: studentObjId, endedAt: { $exists: true }, abandoned: { $ne: true } }),
         ]);
 
         return NextResponse.json({

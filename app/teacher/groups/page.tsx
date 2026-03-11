@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth/AuthContext';
-import { UsersRound, Loader2, Plus, ChevronRight, Trash2, UserPlus, BookOpen, BarChart3, XCircle, CheckCircle2, Info, FolderOpen, ChevronDown, Trophy, Activity, Zap, PlayCircle, StopCircle, Medal, RefreshCw } from 'lucide-react';
+import { UsersRound, Loader2, Plus, ChevronRight, Trash2, UserPlus, BookOpen, BarChart3, XCircle, CheckCircle2, Info, FolderOpen, ChevronDown, Trophy, Activity, Zap, PlayCircle, StopCircle, Medal, RefreshCw, Megaphone, Send } from 'lucide-react';
 import { getUnits } from '@/lib/firestore';
 import { Unit } from '@/lib/types';
 import { apiFetch } from '@/lib/apiFetch';
@@ -86,6 +86,14 @@ export default function TeacherGroupsPage() {
     const [quizSelectedUnits, setQuizSelectedUnits] = useState<string[]>([]);
     const [resettingCoins, setResettingCoins] = useState(false);
     const leaderboardPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    // Quiz Announcement
+    const [showAnnounceForm, setShowAnnounceForm] = useState(false);
+    const [announceTitle, setAnnounceTitle] = useState('');
+    const [announceDescription, setAnnounceDescription] = useState('');
+    const [announceMode, setAnnounceMode] = useState<'EN' | 'UZ'>('EN');
+    const [announceQuestionCount, setAnnounceQuestionCount] = useState(20);
+    const [publishingQuiz, setPublishingQuiz] = useState(false);
 
     useEffect(() => {
         if (!loading && (!user || (user.role !== 'teacher' && user.role !== 'admin'))) {
@@ -314,6 +322,42 @@ export default function TeacherGroupsPage() {
             }, 8000);
         } finally {
             setStartingSession(false);
+        }
+    };
+
+    const publishQuizSession = async () => {
+        if (!selectedGroup) return;
+        if (quizSelectedUnits.length === 0) {
+            toast.error("Kamida 1 ta bo'lim tanlang!");
+            return;
+        }
+        if (!announceTitle.trim()) {
+            toast.error('Quiz sarlavhasi kiriting!');
+            return;
+        }
+        setPublishingQuiz(true);
+        try {
+            await apiFetch(`/api/teacher/groups/${selectedGroup.id}/quiz-session`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    unitIds: quizSelectedUnits,
+                    questionCount: announceQuestionCount,
+                    timeLimitSec: quizTimerSec,
+                    status: 'PUBLISHED',
+                    title: announceTitle.trim(),
+                    description: announceDescription.trim(),
+                    mode: announceMode,
+                }),
+            });
+            toast.success("Quiz e'lon qilindi! ✅");
+            setAnnounceTitle('');
+            setAnnounceDescription('');
+            setShowAnnounceForm(false);
+        } catch (err: any) {
+            toast.error(err?.message || 'Xatolik yuz berdi');
+        } finally {
+            setPublishingQuiz(false);
         }
     };
 
@@ -875,6 +919,83 @@ export default function TeacherGroupsPage() {
                                                         <p className="text-[10px] items-center text-amber-400 opacity-60">Guruhda hech qanday bo'limga ruxsat yo'q. Dastlab 'Ruxsatlar' bo'limidan unit qo'shing.</p>
                                                     )}
                                                 </div>
+                                            </div>
+                                        )}
+
+                                        {/* ── Quiz Announcement Section ── */}
+                                        {!activeSession && (
+                                            <div className="mt-4">
+                                                <button
+                                                    onClick={() => setShowAnnounceForm(prev => !prev)}
+                                                    className="w-full flex items-center justify-between p-4 rounded-xl transition-all"
+                                                    style={{ background: 'rgba(139,92,246,0.07)', border: '1px solid rgba(139,92,246,0.2)' }}>
+                                                    <div className="flex items-center gap-3">
+                                                        <Megaphone className="w-5 h-5 text-purple-400" />
+                                                        <span className="text-sm font-black text-purple-300">Quiz E&apos;lon Qilish</span>
+                                                    </div>
+                                                    <ChevronDown className={`w-4 h-4 text-purple-400 transition-transform ${showAnnounceForm ? 'rotate-180' : ''}`} />
+                                                </button>
+
+                                                {showAnnounceForm && (
+                                                    <div className="mt-3 p-5 rounded-xl space-y-4 animate-fade-in"
+                                                        style={{ background: 'rgba(139,92,246,0.05)', border: '1px solid rgba(139,92,246,0.15)' }}>
+                                                        <div>
+                                                            <label className="text-[10px] font-black uppercase tracking-widest text-purple-400/60 mb-1 block">Quiz sarlavhasi</label>
+                                                            <input
+                                                                type="text"
+                                                                value={announceTitle}
+                                                                onChange={e => setAnnounceTitle(e.target.value)}
+                                                                placeholder="Masalan: 1-Unit bo'yicha test"
+                                                                className="w-full h-11 rounded-xl px-4 bg-white/5 border border-white/10 text-white font-bold text-sm outline-none focus:border-purple-500 transition-all"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label className="text-[10px] font-black uppercase tracking-widest text-purple-400/60 mb-1 block">Tavsif (ixtiyoriy)</label>
+                                                            <textarea
+                                                                value={announceDescription}
+                                                                onChange={e => setAnnounceDescription(e.target.value)}
+                                                                placeholder="Bu test haqida qisqacha ma'lumot..."
+                                                                rows={2}
+                                                                className="w-full rounded-xl px-4 py-3 bg-white/5 border border-white/10 text-white font-bold text-sm outline-none focus:border-purple-500 transition-all resize-none"
+                                                            />
+                                                        </div>
+                                                        <div className="grid grid-cols-2 gap-4">
+                                                            <div>
+                                                                <label className="text-[10px] font-black uppercase tracking-widest text-purple-400/60 mb-1 block">Til</label>
+                                                                <div className="flex bg-white/5 p-1 rounded-xl border border-white/10">
+                                                                    <button onClick={() => setAnnounceMode('EN')}
+                                                                        className={`flex-1 py-2 text-xs font-black rounded-lg transition-all ${announceMode === 'EN' ? 'bg-purple-600 text-white' : 'text-white/30'}`}>
+                                                                        EN → UZ
+                                                                    </button>
+                                                                    <button onClick={() => setAnnounceMode('UZ')}
+                                                                        className={`flex-1 py-2 text-xs font-black rounded-lg transition-all ${announceMode === 'UZ' ? 'bg-purple-600 text-white' : 'text-white/30'}`}>
+                                                                        UZ → EN
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                            <div>
+                                                                <label className="text-[10px] font-black uppercase tracking-widest text-purple-400/60 mb-1 block">Savol soni</label>
+                                                                <div className="flex items-center gap-2">
+                                                                    {[10, 15, 20, 30].map(n => (
+                                                                        <button key={n} onClick={() => setAnnounceQuestionCount(n)}
+                                                                            className="px-3 py-2 rounded-lg text-xs font-black transition-all"
+                                                                            style={announceQuestionCount === n
+                                                                                ? { background: 'rgba(139,92,246,0.5)', color: '#fff', border: '1px solid rgba(139,92,246,0.5)' }
+                                                                                : { background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.3)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                                                                            {n}
+                                                                        </button>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <button onClick={publishQuizSession} disabled={publishingQuiz || !announceTitle.trim()}
+                                                            className="w-full py-3 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-40"
+                                                            style={{ background: 'rgba(139,92,246,0.3)', border: '1px solid rgba(139,92,246,0.5)', color: '#c4b5fd' }}>
+                                                            {publishingQuiz ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                                                            E&apos;lon Qilish
+                                                        </button>
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
 

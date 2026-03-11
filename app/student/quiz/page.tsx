@@ -58,6 +58,68 @@ function TimerRing({ remaining, total }: { remaining: number; total: number }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Main component
 // ─────────────────────────────────────────────────────────────────────────────
+// Global AudioContext to avoid browser restrictions on multiple contexts
+let sharedAudioCtx: AudioContext | null = null;
+
+function playSound(type: 'correct' | 'wrong') {
+    try {
+        const AudioCtor = window.AudioContext || (window as any).webkitAudioContext;
+        if (!AudioCtor) return;
+
+        // Initialize once
+        if (!sharedAudioCtx) {
+            sharedAudioCtx = new AudioCtor();
+        }
+
+        const ctx = sharedAudioCtx;
+
+        // Resume if suspended (browser auto-play policy)
+        if (ctx.state === 'suspended') {
+            ctx.resume();
+        }
+
+        if (type === 'correct') {
+            // Bright, ascending chime (C5, E5, G5, C6)
+            [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => {
+                const osc = ctx.createOscillator();
+                const g = ctx.createGain();
+                osc.connect(g);
+                g.connect(ctx.destination);
+                osc.type = 'sine';
+                osc.frequency.value = freq;
+
+                const t = ctx.currentTime + (i * 0.08); // fast arpeggio
+                g.gain.setValueAtTime(0, t);
+                g.gain.linearRampToValueAtTime(0.15, t + 0.02);
+                g.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+
+                osc.start(t);
+                osc.stop(t + 0.4);
+            });
+        } else {
+            // Low, dull double-buzzer (dissonant)
+            [150, 110].forEach((freq, i) => {
+                const osc = ctx.createOscillator();
+                const g = ctx.createGain();
+                osc.connect(g);
+                g.connect(ctx.destination);
+                osc.type = 'sawtooth';
+                osc.frequency.value = freq;
+
+                const t = ctx.currentTime + (i * 0.15);
+                g.gain.setValueAtTime(0, t);
+                g.gain.linearRampToValueAtTime(0.1, t + 0.02);
+                g.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+
+                osc.start(t);
+                osc.stop(t + 0.3);
+            });
+        }
+    } catch (e) {
+        console.warn('Audio play failed:', e);
+    }
+}
+
 export default function StudentQuizPage() {
     const { user, loading } = useAuth();
     const router = useRouter();
@@ -113,6 +175,19 @@ export default function StudentQuizPage() {
     const [timeLeft, setTimeLeft] = useState(10);
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const hasTimedOut = useRef(false);
+
+    // Leave confirmation modal
+    const [showLeaveModal, setShowLeaveModal] = useState(false);
+    const [pendingLeaveAction, setPendingLeaveAction] = useState<(() => void) | null>(null);
+
+    const requestLeave = (action: () => void) => {
+        if (phase === 'quiz') {
+            setPendingLeaveAction(() => action);
+            setShowLeaveModal(true);
+        } else {
+            action();
+        }
+    };
 
     // Overall stats — fetched from new stats API (today + all-time)
     const [overallStats, setOverallStats] = useState<{
@@ -327,6 +402,9 @@ export default function StudentQuizPage() {
                 correctUzText: data.correctUzText,
                 correctOptionId: data.correctOptionId
             });
+
+            // Play sound effect based on correctness
+            playSound(data.isCorrect ? 'correct' : 'wrong');
             setStats({ correct: data.stats.correct, answered: data.stats.answered, total: stats.total });
 
             // Auto advance after reveal
@@ -623,7 +701,7 @@ export default function StudentQuizPage() {
                     style={{ background: 'rgba(10,12,25,0.85)' }}>
 
                     <div className="flex items-center gap-6">
-                        <button onClick={resetQuiz}
+                        <button onClick={() => requestLeave(resetQuiz)}
                             className="p-3.5 rounded-2xl bg-white/5 border border-white/10 text-white/40 hover:text-white hover:bg-white/10 transition-all active:scale-95 shadow-lg shadow-black/20">
                             <ArrowLeft className="w-6 h-6" />
                         </button>
@@ -785,8 +863,37 @@ export default function StudentQuizPage() {
                     </div>
                 </div>
 
+                {/* Abandon Confirmation Modal */}
+                {showLeaveModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm bg-black/60">
+                        <div className="w-full max-w-sm rounded-[24px] bg-[#1a1c2e] border border-white/10 p-6 shadow-2xl overflow-hidden relative">
+                            {/* decorative background glow */}
+                            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-32 bg-red-500/20 blur-[50px] pointer-events-none rounded-full" />
 
+                            <div className="relative z-10 text-center">
+                                <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-5">
+                                    <AlertCircle className="w-8 h-8 text-red-500" />
+                                </div>
+                                <h3 className="text-xl font-black text-white mb-2 tracking-tight">Qaroringiz qat'iymi?</h3>
+                                <p className="text-sm text-white/60 mb-8 whitespace-pre-wrap">Quizni hozir tark etsangiz, sizning natijangiz yakunlanadi va saqlanmaydi.</p>
 
+                                <div className="flex gap-3">
+                                    <button onClick={() => setShowLeaveModal(false)}
+                                        className="flex-1 py-3.5 rounded-xl font-bold text-sm bg-white/5 hover:bg-white/10 text-white transition-colors border border-white/10 tracking-widest uppercase">
+                                        Davom etish
+                                    </button>
+                                    <button onClick={() => {
+                                        setShowLeaveModal(false);
+                                        if (pendingLeaveAction) pendingLeaveAction();
+                                    }}
+                                        className="flex-1 py-3.5 rounded-xl font-black text-sm text-white bg-red-500 hover:bg-red-600 transition-colors shadow-lg shadow-red-500/20 tracking-widest uppercase">
+                                        Chiqish
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         );
     }

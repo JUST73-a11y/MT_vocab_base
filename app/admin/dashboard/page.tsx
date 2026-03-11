@@ -826,20 +826,7 @@ function AdminDashboardInner() {
                                                                 )}
                                                             </div>
                                                         )}
-                                                        {/* Password display (for both student and teacher) */}
-                                                        {(u.plainTextPassword || u.password) ? (
-                                                            <div className="flex items-center gap-2">
-                                                                {u.role === 'teacher' && <span className="text-[8px] font-black text-white/20 uppercase tracking-tighter">PW:</span>}
-                                                                <code className={`text-[10px] font-mono px-2 py-0.5 rounded-md bg-white/5 ${u.plainTextPassword ? 'text-white/60' : 'text-white/20'}`}>
-                                                                    {visiblePasswords.has(u._id)
-                                                                        ? (u.plainTextPassword || u.password)
-                                                                        : '••••••••••'}
-                                                                </code>
-                                                                <button onClick={() => togglePasswordVisibility(u._id)} className="text-white/20 hover:text-white transition-colors">
-                                                                    {visiblePasswords.has(u._id) ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                                                                </button>
-                                                            </div>
-                                                        ) : <span className="text-[9px] text-white/10">—</span>}
+                                                        <span className="text-[9px] text-white/10">—</span>
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-5">

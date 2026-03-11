@@ -3,11 +3,14 @@ import mongoose, { Schema, model, models } from 'mongoose';
 const GroupQuizSessionSchema = new Schema({
     teacherId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     groupId: { type: Schema.Types.ObjectId, ref: 'Group', required: true },
+    title: { type: String, default: '' },
+    description: { type: String, default: '' },
     unitIds: [{ type: Schema.Types.ObjectId, ref: 'Unit' }],
     questionCount: { type: Number, default: 20 },
     durationMin: { type: Number, default: 10 },
     timeLimitSec: { type: Number, default: 10 }, // per-question timer (seconds)
-    status: { type: String, enum: ['ACTIVE', 'ENDED'], default: 'ACTIVE' },
+    mode: { type: String, enum: ['EN', 'UZ'], default: 'EN' },
+    status: { type: String, enum: ['ACTIVE', 'ENDED', 'PUBLISHED'], default: 'ACTIVE' },
     startsAt: { type: Date, default: Date.now },
     endsAt: { type: Date },
     createdAt: { type: Date, default: Date.now },

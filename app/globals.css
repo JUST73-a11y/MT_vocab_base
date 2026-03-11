@@ -86,6 +86,33 @@ body {
   transform: translateY(0) scale(0.98);
 }
 
+.btn-secondary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-weight: 900;
+  transition: all 0.2s ease;
+  background: rgba(168, 85, 247, 0.1);
+  border: 1px solid rgba(168, 85, 247, 0.2);
+  color: #a855f7 !important;
+  border-radius: 1rem;
+  padding: 0.75rem 1.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.btn-secondary:hover {
+  background: rgba(168, 85, 247, 0.15);
+  border-color: rgba(168, 85, 247, 0.4);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px -5px rgba(168, 85, 247, 0.2);
+}
+
+.btn-secondary:active {
+  transform: translateY(0);
+}
+
 .btn-accent {
   position: relative;
   overflow: hidden;

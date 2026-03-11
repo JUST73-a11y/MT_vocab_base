@@ -13,7 +13,6 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
     const pathname = usePathname();
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-    const [showContactModal, setShowContactModal] = useState(false);
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
@@ -92,10 +91,6 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
 
                         {/* Right Actions */}
                         <div className="flex items-center gap-4 md:gap-6">
-                            <button onClick={() => setShowContactModal(true)} className="hidden md:flex btn-glass text-[11px] uppercase tracking-widest px-4 py-2">
-                                <MessageCircle className="w-4 h-4" /> Bog'lanish
-                            </button>
-
                             <div className="flex items-center gap-3 md:gap-4 md:pl-6 md:border-l md:border-white/10">
                                 <Link href={user?.role === 'admin' ? '/admin/dashboard' : '/teacher/settings'} className="flex items-center gap-3 md:gap-4 group cursor-pointer">
                                     <div className="hidden md:block text-right">
@@ -149,13 +144,23 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
                                     </Link>
                                 );
                             })}
+
+                            {/* Pro Tip Card */}
+                            <div className="mt-6 p-5 rounded-3xl bg-gradient-to-br from-indigo-500/10 to-purple-600/10 border border-indigo-500/20 relative overflow-hidden group">
+                                <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/10 blur-3xl -mr-12 -mt-12" />
+                                <div className="flex items-center gap-3 mb-3">
+                                    <div className="w-8 h-8 rounded-xl bg-indigo-500/20 flex items-center justify-center border border-indigo-500/30">
+                                        <BookOpen className="w-4 h-4 text-indigo-400" />
+                                    </div>
+                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400">Pro Tip</span>
+                                </div>
+                                <p className="text-xs font-bold text-white/60 leading-relaxed">
+                                    Use the <span className="text-white">Smart Bulk Import</span> in your unit details to quickly add hundreds of words at once from your existing lists.
+                                </p>
+                            </div>
                         </div>
 
                         <div className="p-4 mt-auto border-t border-white/5 space-y-2">
-                            <button onClick={() => { setIsMobileMenuOpen(false); setShowContactModal(true); }} className="w-full flex items-center gap-3 p-4 rounded-2xl border border-transparent hover:bg-white/5 hover:border-white/5 transition-all text-white/60">
-                                <div className="p-2 rounded-xl bg-white/5"><MessageCircle className="w-5 h-5" /></div>
-                                <span className="font-black text-sm">Bog'lanish</span>
-                            </button>
                             <button onClick={() => { setIsMobileMenuOpen(false); setShowLogoutModal(true); }} className="w-full flex items-center gap-3 p-4 rounded-2xl border border-red-500/10 bg-red-500/5 text-red-400">
                                 <div className="p-2 rounded-xl bg-red-500/10"><LogOut className="w-5 h-5" /></div>
                                 <span className="font-black text-sm">Tizimdan chiqish</span>
@@ -185,60 +190,6 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
                                 Ha, chiqish
                             </button>
                         </div>
-                    </div>
-                </div>,
-                document.body
-            )}
-
-            {/* Contact Modal */}
-            {mounted && showContactModal && createPortal(
-                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh' }}>
-                    <div className="w-[95%] max-w-md rounded-[2.5rem] p-8 relative shadow-2xl animate-fade-in"
-                        style={{ background: 'linear-gradient(160deg,#13111f,#0f0d1e)', border: '1px solid rgba(255,255,255,0.15)' }}>
-                        <button onClick={() => setShowContactModal(false)} className="absolute top-6 right-6 p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors">
-                            <X className="w-5 h-5 text-white/50" />
-                        </button>
-                        <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6 mx-auto"
-                            style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)' }}>
-                            <MessageCircle className="w-8 h-8 text-indigo-400" />
-                        </div>
-                        <h2 className="text-2xl font-black text-center mb-2" style={{ color: '#ffffff' }}>Bog'lanish</h2>
-                        <p className="text-center text-sm mb-8" style={{ color: 'rgba(255,255,255,0.4)' }}>Biz bilan quyidagi tarmoqlar orqali bog'lanishingiz mumkin</p>
-                        <div className="space-y-3">
-                            <a href="tel:+998889893631" className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/10 transition-all group">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20"><Phone className="w-5 h-5 text-emerald-400" /></div>
-                                    <div>
-                                        <p className="text-[10px] uppercase font-bold tracking-widest" style={{ color: 'rgba(255,255,255,0.3)' }}>Telefon</p>
-                                        <p className="text-sm font-black" style={{ color: '#ffffff' }}>+998 88 989 36 31</p>
-                                    </div>
-                                </div>
-                                <X className="w-4 h-4 text-white/20 rotate-45" />
-                            </a>
-                            <a href="https://t.me/muhamadali_oo1" target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/10 transition-all group">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-xl bg-sky-500/10 flex items-center justify-center border border-sky-500/20"><Send className="w-5 h-5 text-sky-400" /></div>
-                                    <div>
-                                        <p className="text-[10px] uppercase font-bold tracking-widest" style={{ color: 'rgba(255,255,255,0.3)' }}>Telegram</p>
-                                        <p className="text-sm font-black" style={{ color: '#ffffff' }}>@muhamadali_oo1</p>
-                                    </div>
-                                </div>
-                                <X className="w-4 h-4 text-white/20 rotate-45" />
-                            </a>
-                            <a href="https://www.instagram.com/_just_ali.__?igsh=cHYwb3J5dHdyb3hk" target="_blank" rel="noopener noreferrer" className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/10 transition-all group">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-xl bg-pink-500/10 flex items-center justify-center border border-pink-500/20"><Instagram className="w-5 h-5 text-pink-400" /></div>
-                                    <div>
-                                        <p className="text-[10px] uppercase font-bold tracking-widest" style={{ color: 'rgba(255,255,255,0.3)' }}>Instagram</p>
-                                        <p className="text-sm font-black" style={{ color: '#ffffff' }}>just_ali</p>
-                                    </div>
-                                </div>
-                                <X className="w-4 h-4 text-white/20 rotate-45" />
-                            </a>
-                        </div>
-                        <button onClick={() => setShowContactModal(false)} className="w-full mt-8 py-4 rounded-2xl font-black text-white text-sm bg-indigo-600/20 border border-indigo-500/30 hover:bg-indigo-600/30 transition-all">
-                            Yopish
-                        </button>
                     </div>
                 </div>,
                 document.body

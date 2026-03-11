@@ -83,19 +83,36 @@ export async function POST(req: Request, { params }: { params: Params }) {
             return NextResponse.json({ message: 'Forbidden' }, { status: 403 });
         }
 
-        // End any existing active sessions first
-        await GroupQuizSession.updateMany(
-            { groupId: id, status: 'ACTIVE' },
-            { status: 'ENDED', endsAt: new Date() }
-        );
-
         const body = await req.json().catch(() => ({}));
-        let { unitIds, questionCount = 20, durationMin = 10, timeLimitSec = 10 } = body;
+        let { unitIds, questionCount = 20, durationMin = 10, timeLimitSec = 10, status: requestedStatus, title, description, mode: quizMode } = body;
 
         if (!unitIds || unitIds.length === 0) {
             const accesses = await GroupUnitAccess.find({ groupId: id }).lean() as any[];
             unitIds = accesses.map((a: any) => a.unitId.toString());
         }
+
+        // PUBLISHED = announced quiz (students take at own pace)
+        if (requestedStatus === 'PUBLISHED') {
+            const session = await GroupQuizSession.create({
+                teacherId: teacher.id,
+                groupId: id,
+                unitIds,
+                questionCount: Number(questionCount),
+                timeLimitSec,
+                status: 'PUBLISHED',
+                title: title || 'Guruh Quiz',
+                description: description || '',
+                mode: quizMode || 'EN',
+            });
+            return NextResponse.json({ session });
+        }
+
+        // ACTIVE = live real-time session (original behavior)
+        // End any existing active sessions first
+        await GroupQuizSession.updateMany(
+            { groupId: id, status: 'ACTIVE' },
+            { status: 'ENDED', endsAt: new Date() }
+        );
 
         const startsAt = new Date();
         const endsAt = new Date(startsAt.getTime() + durationMin * 60000);

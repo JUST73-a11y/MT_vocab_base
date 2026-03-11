@@ -290,22 +290,22 @@ export default function StudentStatsPage() {
 
             {/* Attempt Detail Modal */}
             {selectedAttempt && (
-                <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-4 bg-black/60 backdrop-blur-sm"
                     onClick={() => setSelectedAttempt(null)}>
-                    <div className="w-full max-w-md rounded-3xl p-6 space-y-4 animate-fade-in"
+                    <div className="w-full max-w-sm md:max-w-md rounded-[2rem] md:rounded-[2.5rem] p-5 md:p-8 space-y-4 md:space-y-6 animate-fade-in"
                         style={{ background: 'linear-gradient(160deg,#13111f,#0f0d1e)', border: '1px solid rgba(255,255,255,0.12)' }}
                         onClick={e => e.stopPropagation()}>
-                        <h3 className="text-xl font-black text-white">Quiz Natijalari</h3>
-                        <div className="grid grid-cols-2 gap-3">
+                        <h3 className="text-xl md:text-2xl font-black text-white">Quiz Natijalari</h3>
+                        <div className="grid grid-cols-2 gap-2 md:gap-4">
                             {[
                                 { label: "To'g'ri", value: selectedAttempt.correctCount, color: '#10b981' },
                                 { label: 'Javoblangan', value: selectedAttempt.answeredCount, color: '#6366f1' },
                                 { label: 'Aniqlik', value: `${selectedAttempt.answeredCount > 0 ? Math.round((selectedAttempt.correctCount / selectedAttempt.answeredCount) * 100) : 0}%`, color: '#06b6d4' },
                                 { label: 'MT Coin', value: `+${selectedAttempt.coinsEarned ?? 0} 🪙`, color: '#eab308' },
                             ].map(item => (
-                                <div key={item.label} className="p-4 rounded-2xl" style={{ background: `${item.color}12`, border: `1px solid ${item.color}25` }}>
-                                    <p className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: `${item.color}80` }}>{item.label}</p>
-                                    <p className="text-2xl font-black" style={{ color: item.color }}>{item.value}</p>
+                                <div key={item.label} className="p-3 md:p-5 rounded-2xl" style={{ background: `${item.color}12`, border: `1px solid ${item.color}25` }}>
+                                    <p className="text-[10px] md:text-xs font-black uppercase tracking-widest mb-1" style={{ color: `${item.color}80` }}>{item.label}</p>
+                                    <p className="text-xl md:text-3xl font-black" style={{ color: item.color }}>{item.value}</p>
                                 </div>
                             ))}
                         </div>

@@ -46,7 +46,6 @@ export async function POST(req: Request) {
                     name: 'Super Admin',
                     email: email,
                     password: hashed,
-                    plainTextPassword: 'redacted',
                     role: 'admin',
                     status: 'active',
                     isVerified: true

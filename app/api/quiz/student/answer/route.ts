@@ -9,6 +9,9 @@ import Wallet from '@/models/Wallet';
 import CoinTransaction from '@/models/CoinTransaction';
 import DailyStudentStats from '@/models/DailyStudentStats';
 import SessionScore from '@/models/SessionScore';
+import StudentMistakeWord from '@/models/StudentMistakeWord';
+import StudentGameProfile, { LEVELS } from '@/models/StudentGameProfile';
+import StudentStreak from '@/models/StudentStreak';
 import mongoose from 'mongoose';
 import { getServerSession } from '@/lib/serverAuth';
 /** Utility to generate 3 unique options, ensuring one is exactly the target word */
@@ -97,11 +100,24 @@ async function awardCoins(studentId: string, attemptId: string, correctCount: nu
     }
 }
 
+import { checkRateLimit, incrementFailedAttempt } from '@/lib/rateLimiter';
+
 export async function POST(req: Request) {
     try {
         const student = await getServerSession();
         if (!student || student.role !== 'student') {
             return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+        }
+
+        const ip = req.headers.get('x-forwarded-for') || 'unknown';
+        const rateKey = `quiz_submit_${student.id}_${ip}`;
+        const limit = checkRateLimit(rateKey);
+
+        if (!limit.allowed) {
+            return NextResponse.json(
+                { message: `Too many attempts. Locked out for ${limit.retryAfter} seconds.` },
+                { status: 429 }
+            );
         }
 
         const payload = await req.json();
@@ -160,8 +176,7 @@ export async function POST(req: Request) {
         const isCorrect = !strictlyTimeout && !isBotSpeed && !!optId && (String(optId) === String(storedCorrectId));
 
         if (process.env.NODE_ENV !== 'production') {
-            console.log(`[QUIZ_ANSWER] wordId=${wordId} | opt=${optId} | stored=${storedCorrectId} | elapsed=${timeElapsedMs}ms`);
-            console.log(`[QUIZ_ANSWER] Result -> timeout: ${strictlyTimeout} | correct: ${isCorrect} | botSpeed: ${isBotSpeed}`);
+            // Logs removed for production security
         }
 
         // 3. PERSIST THE ANSWER
@@ -184,6 +199,47 @@ export async function POST(req: Request) {
             throw err;
         });
 
+        // ── TRACK MISTAKES for Yodlash page ──────────────────────────────────
+        if (!isCorrect) {
+            StudentMistakeWord.findOneAndUpdate(
+                { studentId: new mongoose.Types.ObjectId(student.id), wordId: new mongoose.Types.ObjectId(wordId) },
+                {
+                    $inc: { wrongCount: 1 },
+                    $set: { lastWrongAt: now, unitId: unitId || undefined },
+                    $setOnInsert: { createdAt: now, isLearned: false },
+                },
+                { upsert: true }
+            ).catch(err => console.error('[MISTAKE_TRACK] Failed:', err));
+        } else if (attempt.mode === 'REVIEW_WRONGS') {
+            // "Xatoni quizda topsa ochib ketsin" 
+            // Mark as learned if corrected during Stage 2 review
+            StudentMistakeWord.findOneAndUpdate(
+                { studentId: new mongoose.Types.ObjectId(student.id), wordId: new mongoose.Types.ObjectId(wordId) },
+                { $set: { isLearned: true, lastCorrectedAt: now } }
+            ).catch(err => console.error('[MISTAKE_LEARN] Failed:', err));
+        }
+        // ─────────────────────────────────────────────────────────────────────
+
+        // ── AWARD XP for correct answers (fire-and-forget)
+        if (isCorrect) {
+            (async () => {
+                try {
+                    let gameProfile = await StudentGameProfile.findOne({ studentId: student.id });
+                    if (!gameProfile) gameProfile = new StudentGameProfile({ studentId: student.id });
+                    gameProfile.xp = (gameProfile.xp || 0) + 1;
+                    gameProfile.totalCorrect = (gameProfile.totalCorrect || 0) + 1;
+                    if (attempt.mode === 'REVIEW_WRONGS') {
+                        gameProfile.totalMistakesFixed = (gameProfile.totalMistakesFixed || 0) + 1;
+                    }
+                    // Compute level
+                    let newLevel = 1;
+                    for (const l of LEVELS) { if (gameProfile.xp >= l.xpNeeded) newLevel = l.level; }
+                    gameProfile.level = newLevel;
+                    await gameProfile.save();
+                } catch (e) { console.error('[XP_AWARD] Failed:', e); }
+            })();
+        }
+
         const newCorrectCount = (attempt.correctCount || 0) + (isCorrect ? 1 : 0);
         const newAnsweredCount = (attempt.answeredCount || 0) + 1;
 
@@ -201,7 +257,7 @@ export async function POST(req: Request) {
             }
         };
         if (process.env.NODE_ENV !== 'production') {
-            console.log(`[QUIZ_STATS_UPDATE] studentId=${student.id} | timeToAdd=${timeToAdd}s`);
+            // Logs removed for production security
         }
         if (unitIdStr) {
             dailyUpdate.$inc[`unitStats.${unitIdStr}.seen`] = 1;
@@ -290,12 +346,62 @@ export async function POST(req: Request) {
         } else {
             // End the attempt
             updateDoc.$set.endedAt = new Date();
-            coinsEarned = calculateCoins(newCorrectCount, newAnsweredCount);
-            updateDoc.$set.coinsEarned = coinsEarned;
-            awardCoins(student.id, attemptId, newCorrectCount, newAnsweredCount, coinsEarned);
+
+            // REVIEW_WRONGS mode: NO coins awarded (learning/revision only)
+            if (attempt.mode === 'REVIEW_WRONGS') {
+                coinsEarned = 0;
+                updateDoc.$set.coinsEarned = 0;
+            } else {
+                coinsEarned = calculateCoins(newCorrectCount, newAnsweredCount);
+                updateDoc.$set.coinsEarned = coinsEarned;
+                awardCoins(student.id, attemptId, newCorrectCount, newAnsweredCount, coinsEarned);
+            }
+
+            // ── TRIGGER STREAK on quiz end (fire-and-forget)
+            (async () => {
+                try {
+                    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Tashkent' });
+                    let streak = await StudentStreak.findOne({ studentId: student.id });
+                    if (!streak) {
+                        await StudentStreak.create({ studentId: student.id, currentStreak: 1, longestStreak: 1, lastActivityDate: today, totalActiveDays: 1 });
+                    } else if (streak.lastActivityDate !== today) {
+                        const prevDate = new Date(today);
+                        prevDate.setDate(prevDate.getDate() - 1);
+                        const prevStr = prevDate.toISOString().slice(0, 10);
+                        const isContinued = streak.lastActivityDate === prevStr;
+                        streak.currentStreak = isContinued ? streak.currentStreak + 1 : 1;
+                        streak.longestStreak = Math.max(streak.longestStreak, streak.currentStreak);
+                        streak.lastActivityDate = today;
+                        streak.totalActiveDays = (streak.totalActiveDays || 0) + 1;
+                        await streak.save();
+                    }
+                    // Award streak XP bonus
+                    const streakXpBonus = streak?.currentStreak === 7 ? 20 : streak?.currentStreak === 3 ? 5 : 0;
+                    if (streakXpBonus > 0) {
+                        await StudentGameProfile.findOneAndUpdate(
+                            { studentId: student.id },
+                            { $inc: { xp: streakXpBonus } },
+                            { upsert: true }
+                        );
+                    }
+                    // Increment quiz counter
+                    await StudentGameProfile.findOneAndUpdate(
+                        { studentId: student.id },
+                        { $inc: { totalQuizzes: 1 } },
+                        { upsert: true }
+                    );
+                } catch (e) { console.error('[STREAK_UPDATE] Failed:', e); }
+            })();
         }
 
         await QuizAttempt.findByIdAndUpdate(attemptId, updateDoc);
+
+        // Collect wrong wordIds for Stage 2 CTA when quiz ends
+        let wrongWordIds: string[] | undefined;
+        if (!sessionActive) {
+            const wrongAnswers = await QuizAnswer.find({ attemptId, isCorrect: false }).select('wordId').lean();
+            wrongWordIds = wrongAnswers.map((a: any) => a.wordId.toString());
+        }
 
         return NextResponse.json({
             isCorrect,
@@ -307,6 +413,8 @@ export async function POST(req: Request) {
             nextQuestion: nextClientQuestion,
             quizDone: !sessionActive,
             coinsEarned: !sessionActive ? coinsEarned : undefined,
+            isReviewMode: attempt.mode === 'REVIEW_WRONGS',
+            wrongWordIds: !sessionActive ? wrongWordIds : undefined,
             stats: {
                 correct: newCorrectCount,
                 answered: newAnsweredCount,

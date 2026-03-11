@@ -66,19 +66,54 @@ export default function TeacherSettings() {
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    </div>
 
-                            <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
-                                <div className="flex items-center gap-4">
-                                    <div className="p-2.5 bg-gray-800 rounded-xl text-gray-400">
-                                        <BookOpen className="w-5 h-5" />
-                                    </div>
-                                    <div>
-                                        <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-0.5">Teaching Tools</p>
-                                        <p className="text-white font-medium">Smart bulk import enabled</p>
-                                    </div>
+                    {/* Support & Contact Section */}
+                    <div className="card space-y-6 !p-8">
+                        <div className="flex items-center justify-between border-b border-gray-800 pb-4">
+                            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                                <Shield className="w-5 h-5 text-indigo-400" />
+                                Bog'lanish & Qo'llab-quvvatlash
+                            </h3>
+                        </div>
+
+                        <div className="p-4 rounded-2xl bg-indigo-500/5 border border-indigo-500/10 mb-4">
+                            <p className="text-sm text-indigo-300 font-medium">
+                                Muammo chiqsa va sayt qatib qolsa, quyidagi manzillar orqali bog'lanishingiz mumkin:
+                            </p>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <a href="tel:+998889893631" className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-indigo-500/30 transition-all group">
+                                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 group-hover:scale-110 transition-transform">
+                                    <User className="w-5 h-5 text-emerald-400" />
                                 </div>
-                                <div className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[0_0_8px_rgba(var(--primary-rgb),0.5)]" />
-                            </div>
+                                <div>
+                                    <p className="text-[10px] uppercase font-bold tracking-widest text-gray-500">Telefon</p>
+                                    <p className="text-sm font-black text-white">+998 88 989 36 31</p>
+                                </div>
+                            </a>
+
+                            <a href="https://t.me/muhamadali_oo1" target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-sky-500/30 transition-all group">
+                                <div className="w-10 h-10 rounded-xl bg-sky-500/10 flex items-center justify-center border border-sky-500/20 group-hover:scale-110 transition-transform">
+                                    <Mail className="w-5 h-5 text-sky-400" />
+                                </div>
+                                <div>
+                                    <p className="text-[10px] uppercase font-bold tracking-widest text-gray-500">Telegram</p>
+                                    <p className="text-sm font-black text-white">@muhamadali_oo1</p>
+                                </div>
+                            </a>
+
+                            <a href="https://www.instagram.com/_just_ali.__?igsh=cHYwb3J5dHdyb3hk" target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-pink-500/30 transition-all group">
+                                <div className="w-10 h-10 rounded-xl bg-pink-500/10 flex items-center justify-center border border-pink-500/20 group-hover:scale-110 transition-transform">
+                                    <User className="w-5 h-5 text-pink-400" />
+                                </div>
+                                <div>
+                                    <p className="text-[10px] uppercase font-bold tracking-widest text-gray-500">Instagram</p>
+                                    <p className="text-sm font-black text-white">just_ali</p>
+                                </div>
+                            </a>
                         </div>
                     </div>
 

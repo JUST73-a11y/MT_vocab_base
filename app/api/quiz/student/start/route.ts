@@ -4,6 +4,7 @@ import dbConnect from '@/lib/db';
 import Word from '@/models/Word';
 import QuizAttempt from '@/models/QuizAttempt';
 import GroupQuizSession from '@/models/GroupQuizSession';
+import StudentEnergy, { MAX_ENERGY, ENERGY_REFILL_HOURS } from '@/models/StudentEnergy';
 import { getServerSession } from '@/lib/serverAuth';
 
 /** Utility to generate 3 unique options, ensuring one is exactly the target word */
@@ -69,18 +70,94 @@ export async function POST(req: Request) {
             return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
         }
 
-        let { unitIds, sessionId, mode = 'STUDENT_SELF', timeLimitSec = 10, questionCount } = await req.json();
+        let { unitIds, sessionId, mode = 'STUDENT_SELF', timeLimitSec = 10, questionCount, wrongWordIds, sourceAttemptId } = await req.json();
 
         await dbConnect();
 
-        // If GROUP_SESSION, override units and timer strictly based on the session record
-        if (sessionId && mode === 'GROUP_SESSION') {
+        // ── ENERGY CHECK (self-study only, not group or review modes)
+        if (mode === 'STUDENT_SELF') {
+            let energyDoc = await StudentEnergy.findOne({ studentId: student.id });
+            if (!energyDoc) {
+                energyDoc = await StudentEnergy.create({ studentId: student.id, energy: MAX_ENERGY, lastRefilledAt: new Date() });
+            } else {
+                const refillMs = ENERGY_REFILL_HOURS * 3600000;
+                if (Date.now() - energyDoc.lastRefilledAt.getTime() >= refillMs) {
+                    energyDoc.energy = MAX_ENERGY;
+                    energyDoc.lastRefilledAt = new Date();
+                    await energyDoc.save();
+                }
+            }
+            if (energyDoc.energy <= 0) {
+                const nextMs = Math.max(0, ENERGY_REFILL_HOURS * 3600000 - (Date.now() - energyDoc.lastRefilledAt.getTime()));
+                const secs = Math.ceil(nextMs / 1000);
+                return NextResponse.json({
+                    message: 'Energiya tugadi',
+                    error: 'NO_ENERGY',
+                    nextRefillSec: secs,
+                    nextRefillHours: Math.floor(secs / 3600),
+                    nextRefillMins: Math.floor((secs % 3600) / 60),
+                }, { status: 429 });
+            }
+            energyDoc.energy -= 1;
+            energyDoc.totalUsed = (energyDoc.totalUsed || 0) + 1;
+            await energyDoc.save();
+        }
+
+        // ── REVIEW_WRONGS (Stage 2) ──────────────────────────────────────────
+        if (mode === 'REVIEW_WRONGS' && wrongWordIds && wrongWordIds.length > 0) {
+            const reviewWords = await Word.find({ _id: { $in: wrongWordIds } }).lean();
+            if (reviewWords.length === 0) {
+                return NextResponse.json({ message: 'No words found for review' }, { status: 400 });
+            }
+
+            // Collect unique unitIds from the wrong words
+            const reviewUnitIds = [...new Set(reviewWords.map((w: any) => w.unitId?.toString()).filter(Boolean))];
+            const allWordsForOptions = await Word.find({ unitId: { $in: reviewUnitIds } }).lean();
+
+            const shuffledReview = [...reviewWords].sort(() => Math.random() - 0.5);
+            const wordIdsList = shuffledReview.map(w => w._id);
+
+            const attempt = await QuizAttempt.create({
+                studentId: student.id,
+                sourceAttemptId: sourceAttemptId || undefined,
+                unitIds: reviewUnitIds,
+                mode: 'REVIEW_WRONGS',
+                wordIds: wordIdsList,
+                usedWordIds: [],
+                correctCount: 0,
+                answeredCount: 0,
+                coinsEarned: 0,
+                _qMemo: {},
+            });
+
+            const startingWord = shuffledReview[0];
+            const { clientQuestion, correctOptionId } = buildQuestionData(startingWord, allWordsForOptions.length >= 3 ? allWordsForOptions : reviewWords);
+            const servedAt = new Date();
+
+            await QuizAttempt.findByIdAndUpdate(attempt._id, {
+                $set: { [`_qMemo.${clientQuestion.wordId}`]: { opt: correctOptionId, servedAt: servedAt.getTime() } }
+            });
+
+            return NextResponse.json({
+                attemptId: attempt._id.toString(),
+                question: { ...clientQuestion, servedAt: servedAt.toISOString(), timeLimitSec },
+                total: wordIdsList.length,
+                timeLimitSec,
+                isReviewMode: true,
+            });
+        }
+
+        // ── GROUP_SESSION / GROUP_ASSIGNED ────────────────────────────────────
+        if (sessionId && (mode === 'GROUP_SESSION' || mode === 'GROUP_ASSIGNED')) {
             const session = await GroupQuizSession.findById(sessionId).lean() as any;
             if (!session) {
                 return NextResponse.json({ message: 'Session not found' }, { status: 404 });
             }
-            if (session.status !== 'ACTIVE') {
+            if (mode === 'GROUP_SESSION' && session.status !== 'ACTIVE') {
                 return NextResponse.json({ message: 'Session is no longer active' }, { status: 400 });
+            }
+            if (mode === 'GROUP_ASSIGNED' && !['PUBLISHED', 'ACTIVE'].includes(session.status)) {
+                return NextResponse.json({ message: 'Quiz is not available' }, { status: 400 });
             }
             timeLimitSec = session.timeLimitSec || 10;
             questionCount = session.questionCount || 20;
@@ -89,6 +166,7 @@ export async function POST(req: Request) {
             }
         }
 
+        // ── Standard flow (STUDENT_SELF / GROUP) ─────────────────────────────
         if (!unitIds || !Array.isArray(unitIds) || unitIds.length === 0) {
             return NextResponse.json({ message: 'Valid unitIds required' }, { status: 400 });
         }

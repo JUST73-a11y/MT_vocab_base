@@ -79,7 +79,6 @@ export async function PATCH(req: Request) {
 
         await user.updateOne({
             password: hashed,
-            plainTextPassword: newPassword,
             otp: null,
             otpExpiry: null,
             isVerified: true,
