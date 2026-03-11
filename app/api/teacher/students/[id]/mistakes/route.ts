@@ -25,6 +25,12 @@ export async function GET(
 
         await dbConnect();
 
+        // Prevent Next.js from tree-shaking unused Mongoose models
+        // needed for .populate() in serverless environments
+        Word.init();
+        Unit.init();
+        User.init();
+
         // Fetch mistakes and populate the word details
         const mistakes = await StudentMistakeWord.find({ studentId })
             .populate('wordId', 'englishWord uzbekTranslation phonetic')
