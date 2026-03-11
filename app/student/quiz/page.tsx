@@ -180,14 +180,48 @@ export default function StudentQuizPage() {
     const [showLeaveModal, setShowLeaveModal] = useState(false);
     const [pendingLeaveAction, setPendingLeaveAction] = useState<(() => void) | null>(null);
 
-    const requestLeave = (action: () => void) => {
+    const requestLeave = useCallback((action: () => void) => {
         if (phase === 'quiz') {
             setPendingLeaveAction(() => action);
             setShowLeaveModal(true);
         } else {
             action();
         }
-    };
+    }, [phase]);
+
+    // ── Tab/Window Close Interceptor
+    useEffect(() => {
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            if (phase === 'quiz') {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        };
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    }, [phase]);
+
+    // ── Browser Back Interceptor
+    useEffect(() => {
+        // We push a dummy state so the browser has something to "go back" from without actually leaving
+        if (phase === 'quiz') {
+            window.history.pushState({ isQuizActive: true }, '');
+        }
+
+        const handlePopState = (e: PopStateEvent) => {
+            if (phase === 'quiz') {
+                // Prevent actual navigation by pushing the state back immediately
+                window.history.pushState({ isQuizActive: true }, '');
+                requestLeave(() => {
+                    // Actual leave logic will be handled by the modal buttons
+                    window.history.back(); // allows the subsequent back call to actually work if confirmed
+                });
+            }
+        };
+
+        window.addEventListener('popstate', handlePopState);
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, [phase, requestLeave]);
 
     // Overall stats — fetched from new stats API (today + all-time)
     const [overallStats, setOverallStats] = useState<{
@@ -882,7 +916,19 @@ export default function StudentQuizPage() {
                                         className="flex-1 py-3.5 rounded-xl font-bold text-sm bg-white/5 hover:bg-white/10 text-white transition-colors border border-white/10 tracking-widest uppercase">
                                         Davom etish
                                     </button>
-                                    <button onClick={() => {
+                                    <button onClick={async () => {
+                                        // Auto-abandon immediately on confirm
+                                        if (attemptId && question) {
+                                            try {
+                                                await apiFetch('/api/quiz/student/abandon', {
+                                                    method: 'POST',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({ attemptId, wrongWordIds: [question.wordId] })
+                                                });
+                                            } catch (e) {
+                                                console.error('Failed to notify abandon', e);
+                                            }
+                                        }
                                         setShowLeaveModal(false);
                                         if (pendingLeaveAction) pendingLeaveAction();
                                     }}

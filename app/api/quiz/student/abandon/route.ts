@@ -4,6 +4,7 @@ import { getServerSession } from "@/lib/serverAuth";
 import QuizAttempt from "@/models/QuizAttempt";
 import Word from "@/models/Word";
 import StudentMistakeWord from "@/models/StudentMistakeWord";
+import StudentEnergy from "@/models/StudentEnergy";
 
 // POST /api/quiz/student/abandon
 // Called when a student navigates away mid-quiz.
@@ -35,6 +36,14 @@ export async function POST(req: NextRequest) {
     await QuizAttempt.findByIdAndUpdate(attemptId, {
         $set: { endedAt: new Date(), coinsEarned: 0, abandoned: true },
     });
+
+    // Deduct 1 energy for abandoning the quiz (if applicable)
+    if (attempt.mode === 'STUDENT_SELF') {
+        await StudentEnergy.findOneAndUpdate(
+            { studentId: session.id },
+            { $inc: { energy: -1, totalUsed: 1 } }
+        ).catch(e => console.error("Abandon: failed to deduct energy", e));
+    }
 
     // Save incorrect words to StudentMistakeWord (if any)
     const badIds: string[] = Array.isArray(wrongWordIds) ? wrongWordIds : [];
