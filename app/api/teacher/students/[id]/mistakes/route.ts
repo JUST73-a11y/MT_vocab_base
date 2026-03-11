@@ -3,6 +3,8 @@ export const dynamic = 'force-dynamic';
 import dbConnect from '@/lib/db';
 import StudentMistakeWord from '@/models/StudentMistakeWord';
 import Word from '@/models/Word';
+import Unit from '@/models/Unit';
+import User from '@/models/User';
 import { getServerSession } from '@/lib/serverAuth';
 import mongoose from 'mongoose';
 
