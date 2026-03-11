@@ -32,8 +32,8 @@ export async function GET(
             .lean();
 
         return NextResponse.json({ mistakes });
-    } catch (error) {
+    } catch (error: any) {
         console.error('[TEACHER_STUDENT_MISTAKES]', error);
-        return NextResponse.json({ message: 'Error fetching mistakes' }, { status: 500 });
+        return NextResponse.json({ message: error.message || 'Error fetching mistakes' }, { status: 500 });
     }
 }

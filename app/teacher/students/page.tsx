@@ -209,9 +209,9 @@ export default function TeacherStudentsPage() {
         try {
             const data = await apiFetch(`/api/teacher/students/${student._id}/mistakes`);
             setStudentMistakes(data.mistakes || []);
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error fetching mistakes:', error);
-            toast.error('Xatoliklarni yuklashda muammo yuz berdi');
+            toast.error(error.message || 'Xatoliklarni yuklashda muammo yuz berdi');
         } finally {
             setLoadingMistakes(false);
         }
