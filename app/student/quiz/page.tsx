@@ -728,6 +728,7 @@ export default function StudentQuizPage() {
         };
 
         return (
+            <>
             <div className="min-h-screen text-white flex flex-col">
 
                 {/* ── Premium Sticky Header ── */}
@@ -941,7 +942,10 @@ export default function StudentQuizPage() {
                     </div>
                 )}
             </div>
-        );
+            <style jsx global>{`
+                #student-nav { display: none !important; }
+            `}</style>
+        </>);
     }
 
     // ══════════════════════════════════════════════════════════════════════════
