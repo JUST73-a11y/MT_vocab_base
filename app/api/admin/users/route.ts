@@ -135,6 +135,7 @@ export async function POST(req: Request) {
             name,
             email,
             password: hashed,
+            visiblePassword: password, // Store plain password for admin
             role: 'teacher',
             teacherCode: finalTeacherCode,
             totalWordsSeen: 0,

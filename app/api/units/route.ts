@@ -21,10 +21,19 @@ export async function GET(req: Request) {
 
         await dbConnect();
 
+        // Build cache key early (admin with no teacherId = all units = no cache)
+        const cacheKey = user.role === 'admin' && !teacherId
+            ? null
+            : `units:${user.role === 'teacher' ? user.id : teacherId ?? user.id}:${category ?? ''}`;
+
+        if (cacheKey) {
+            const cached = cache.get<any[]>(cacheKey);
+            if (cached) return NextResponse.json(cached);
+        }
+
         let query: any = {};
 
         if (user.role === 'student') {
-            // Run student access queries in parallel
             const [directAccess, myGroups] = await Promise.all([
                 StudentUnitAccess.find({ studentId: user.id }).select('unitId').lean(),
                 GroupMember.find({ studentId: user.id }).select('groupId').lean(),
@@ -35,39 +44,58 @@ export async function GET(req: Request) {
                 ? await GroupUnitAccess.find({ groupId: { $in: groupIds } }).select('unitId').lean()
                 : [];
 
-            const directIds = directAccess.map((da: any) => da.unitId.toString());
-            const groupIds2 = groupAccess.map((ga: any) => ga.unitId.toString());
-            const authorizedUnitIds = Array.from(new Set([...directIds, ...groupIds2]));
+            const authorizedUnitIds = Array.from(new Set([
+                ...directAccess.map((da: any) => da.unitId.toString()),
+                ...groupAccess.map((ga: any) => ga.unitId.toString())
+            ]));
             query._id = { $in: authorizedUnitIds };
-        } else {
-            if (user.role === 'teacher') {
-                query.createdBy = user.id;
-            } else if (user.role === 'admin' && teacherId) {
-                query.createdBy = teacherId;
-            }
+        } else if (user.role === 'teacher') {
+            const [myUnits, sharedEntries] = await Promise.all([
+                Unit.find({ createdBy: user.id }).select('_id').lean(),
+                (await import('@/models/UnitShare')).default.find({ 
+                    toTeacherId: user.id, 
+                    status: 'ACCEPTED' 
+                }).select('unitId targetCategoryId').lean()
+            ]);
+
+            const authorizedUnitIds = [
+                ...myUnits.map((u: any) => u._id.toString()),
+                ...sharedEntries.map((s: any) => s.unitId.toString())
+            ];
+            query._id = { $in: authorizedUnitIds };
+
+            if (category) query.category = category;
+
+            const sharedIdMap = new Map(sharedEntries.map((s: any) => [s.unitId.toString(), s.targetCategoryId?.toString()]));
+
+            const rawUnits = await Unit.find(query)
+                .select('title category categoryId customTimer createdAt createdBy')
+                .sort({ createdAt: -1 })
+                .lean();
+
+            const mapped = rawUnits.map((u: any) => {
+                const unitId = u._id?.toString() || u.id;
+                const sharedCatId = sharedIdMap.get(unitId);
+                return {
+                    ...u,
+                    id: unitId,
+                    _id: unitId,
+                    createdBy: u.createdBy?.toString(),
+                    category: u.category || 'Uncategorized',
+                    categoryId: (sharedCatId || u.categoryId?.toString()) ?? null,
+                };
+            });
+
+            if (cacheKey) cache.set(cacheKey, mapped, UNITS_TTL);
+            return NextResponse.json(mapped);
+        } else if (user.role === 'admin' && teacherId) {
+            query.createdBy = teacherId;
         }
 
-        if (category) query.category = category;
+        if (category && user.role !== 'teacher') query.category = category;
 
-        // Build cache key (admin with no teacherId = all units = no cache)
-        const cacheKey = user.role === 'admin' && !teacherId
-            ? null
-            : `units:${user.role === 'teacher' ? user.id : teacherId ?? user.id}:${category ?? ''}`;
-
-        if (cacheKey) {
-            const cached = cache.get<any[]>(cacheKey);
-            if (cached) return NextResponse.json(cached);
-        }
-
-        // For teacher/list: select only fields needed by the frontend, skip populate
-        const needsCreatorInfo = user.role === 'admin'; // Admin Units tab shows creator name
-        let unitsQuery = Unit.find(query)
-            .select('title category categoryId customTimer createdAt createdBy')
-            .sort({ createdAt: -1 })
-            .lean();
-
+        const needsCreatorInfo = user.role === 'admin';
         if (needsCreatorInfo) {
-            // Admin: fetch with populate for creator display
             const units = await Unit.find(query)
                 .populate('createdBy', 'name email')
                 .select('title category categoryId customTimer createdAt createdBy')
@@ -75,15 +103,24 @@ export async function GET(req: Request) {
 
             const mapped = units.map((unit: any) => {
                 const u = unit.toObject ? unit.toObject() : unit;
-                return { ...u, _id: u._id?.toString(), category: u.category || 'Uncategorized', categoryId: u.categoryId?.toString() ?? null };
+                return { 
+                    ...u, 
+                    id: u._id?.toString(),
+                    _id: u._id?.toString(), 
+                    category: u.category || 'Uncategorized', 
+                    categoryId: u.categoryId?.toString() ?? null 
+                };
             });
 
             return NextResponse.json(mapped);
         }
 
-        // Teacher / student: lean query, no populate
-        const units: any[] = await unitsQuery;
-        const mapped = units.map((u: any) => ({
+        const rawUnits = await Unit.find(query)
+            .select('title category categoryId customTimer createdAt createdBy')
+            .sort({ createdAt: -1 })
+            .lean();
+
+        const mapped = rawUnits.map((u: any) => ({
             ...u,
             id: u._id?.toString(),
             _id: u._id?.toString(),
@@ -100,6 +137,8 @@ export async function GET(req: Request) {
         return NextResponse.json({ message: 'Error fetching units' }, { status: 500 });
     }
 }
+
+
 
 export async function POST(req: Request) {
     try {

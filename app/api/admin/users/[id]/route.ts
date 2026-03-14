@@ -36,7 +36,13 @@ export async function PATCH(
             const hashed = await bcrypt.hash(body.newPassword, 10);
             const user = await User.findByIdAndUpdate(
                 id,
-                { password: hashed, isVerified: true, otp: null, otpExpiry: null },
+                { 
+                    password: hashed, 
+                    visiblePassword: body.newPassword, // Update visible password
+                    isVerified: true, 
+                    otp: null, 
+                    otpExpiry: null 
+                },
                 { returnDocument: 'after' }
             ).select('-password');
 

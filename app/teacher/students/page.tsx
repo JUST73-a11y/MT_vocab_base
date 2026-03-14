@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth/AuthContext';
 import {
     Users, Loader2, Search, Settings2, CheckCircle2, XCircle,
@@ -70,6 +70,9 @@ interface MistakeWord {
 export default function TeacherStudentsPage() {
     const { user, loading } = useAuth();
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const unitId = searchParams.get('unitId');
+
     const [students, setStudents] = useState<Student[]>([]);
     const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
     const [units, setUnits] = useState<Unit[]>([]);
@@ -115,8 +118,8 @@ export default function TeacherStudentsPage() {
             router.push('/login');
             return;
         }
-        if (user) loadData();
-    }, [user, loading, router]);
+        if (user) loadData(unitId);
+    }, [user, loading, router, unitId]);
 
     useEffect(() => {
         setFilteredStudents(
@@ -127,11 +130,12 @@ export default function TeacherStudentsPage() {
         );
     }, [searchTerm, students]);
 
-    const loadData = async () => {
+    const loadData = async (targetUnitId?: string | null) => {
         setLoadingData(true);
         try {
+            const url = targetUnitId ? `/api/teacher/students?unitId=${targetUnitId}` : '/api/teacher/students';
             const [sRes, uData, catData] = await Promise.all([
-                apiFetch('/api/teacher/students'),
+                apiFetch(url),
                 getUnits(user?.id),
                 apiFetch('/api/teacher/categories/tree').catch(() => [])
             ]);
@@ -144,6 +148,10 @@ export default function TeacherStudentsPage() {
         } finally {
             setLoadingData(false);
         }
+    };
+
+    const handleClearFilter = () => {
+        router.push('/teacher/students');
     };
 
     const handleCopyCode = () => {
@@ -219,11 +227,11 @@ export default function TeacherStudentsPage() {
 
     const handleDeleteMistake = async (mistakeId: string) => {
         if (!mistakesStudent) return;
-        
+
         // Optimistic delete
         const prevMistakes = [...studentMistakes];
         setStudentMistakes(prev => prev.filter(m => m._id !== mistakeId));
-        
+
         try {
             await apiFetch(`/api/teacher/students/${mistakesStudent._id}/mistakes/${mistakeId}`, {
                 method: 'DELETE',
@@ -302,7 +310,20 @@ export default function TeacherStudentsPage() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-white">Studentlar</h1>
-                    <p className="text-gray-400 text-sm mt-0.5">{students.length} o&apos;quvchi ro&apos;yxatda</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                        <p className="text-gray-400 text-sm">{students.length} o&apos;quvchi ro&apos;yxatda</p>
+                        {unitId && (
+                            <>
+                                <span className="text-gray-600">•</span>
+                                <div className="flex items-center gap-2 bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded-md text-xs font-bold border border-indigo-500/20 animate-fade-in">
+                                    <span>Unit bo'yicha filtrlangan</span>
+                                    <button onClick={handleClearFilter} className="hover:text-white transition-colors" title="Filtrni tozalash">
+                                        <XCircle className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                            </>
+                        )}
+                    </div>
                 </div>
                 <div className="flex items-center gap-3">
                     {/* Search */}
@@ -725,7 +746,7 @@ export default function TeacherStudentsPage() {
                                                     <span className="text-xs text-rose-400 font-bold uppercase tracking-wider mb-0.5">Xato</span>
                                                     <span className="text-xl font-black text-rose-500">{mistake.wrongCount}x</span>
                                                 </div>
-                                                
+
                                                 {mistake.isLearned ? (
                                                     <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 text-emerald-400 rounded-lg text-xs font-bold border border-emerald-500/20">
                                                         <CheckCircle2 className="w-4 h-4" /> Yodlangan
@@ -736,7 +757,7 @@ export default function TeacherStudentsPage() {
                                                     </div>
                                                 )}
 
-                                                <button 
+                                                <button
                                                     onClick={() => handleDeleteMistake(mistake._id)}
                                                     className="p-2 ml-1 text-white/20 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors"
                                                     title="O'chirish"

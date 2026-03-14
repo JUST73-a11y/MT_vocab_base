@@ -109,11 +109,29 @@ function ShareModal({
     onSuccess: () => void;
 }) {
     const [teacherCode, setTeacherCode] = useState('');
+    const [teachers, setTeachers] = useState<any[]>([]);
+    const [loadingTeachers, setLoadingTeachers] = useState(false);
     const [search, setSearch] = useState('');
     const [selected, setSelected] = useState<Set<string>>(new Set());
     const [sharing, setSharing] = useState(false);
     const [errors, setErrors] = useState<string[]>([]);
     const [expandedCats, setExpandedCats] = useState<Set<string>>(new Set(['__all__']));
+
+    // Fetch teachers for selection
+    useEffect(() => {
+        const fetchTeachers = async () => {
+            setLoadingTeachers(true);
+            try {
+                const data = await apiFetch('/api/teacher/list') as any[];
+                setTeachers(data || []);
+            } catch (e) {
+                console.error('Failed to fetch teachers:', e);
+            } finally {
+                setLoadingTeachers(false);
+            }
+        };
+        fetchTeachers();
+    }, []);
 
     const filtered = units.filter(u => u.title.toLowerCase().includes(search.toLowerCase()));
     const allSelected = filtered.length > 0 && filtered.every(u => selected.has(u.id));
@@ -181,7 +199,7 @@ function ShareModal({
             const res = await apiFetch('/api/teacher/unit-shares/bulk', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ toTeacherCode: teacherCode.trim(), unitIds: Array.from(selected) }),
+                body: JSON.stringify({ toTeacherCode: teacherCode.trim().toUpperCase(), unitIds: Array.from(selected) }),
             }) as any;
 
             const failed: string[] = (res.failed || []).map((f: any) => `${f.unitId}: ${f.reason}`);
@@ -230,16 +248,45 @@ function ShareModal({
                 </div>
 
                 <div className="flex-1 overflow-hidden flex flex-col">
-                    {/* Teacher Code Section */}
-                    <div className="px-10 py-6 bg-white/[0.02] border-b border-white/5">
-                        <label className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mb-3 block">Qabul qiluvchi o'qituvchi kodi</label>
+                    {/* Teacher Selection Section */}
+                    <div className="px-10 py-6 bg-white/[0.02] border-b border-white/5 space-y-4">
+                        <div>
+                            <label className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mb-3 block">Qabul qiluvchi o'qituvchini tanlang</label>
+                            <div className="relative group/select">
+                                <div className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20 group-focus-within/select:text-indigo-400 transition-colors">
+                                    <Users className="w-full h-full" />
+                                </div>
+                                <select 
+                                    className="w-full h-14 bg-white/[0.03] border border-white/10 rounded-2xl pl-12 pr-10 text-base font-black text-white outline-none focus:border-indigo-500/40 focus:bg-white/[0.06] transition-all appearance-none cursor-pointer"
+                                    onChange={(e) => setTeacherCode(e.target.value)}
+                                    value={teachers.some(t => t.teacherCode === teacherCode) ? teacherCode : ''}
+                                >
+                                    <option value="" className="bg-gray-900">O'qituvchini tanlang...</option>
+                                    {teachers.map(t => (
+                                        <option key={t.teacherCode} value={t.teacherCode} className="bg-gray-900">
+                                            {t.name} ({t.teacherCode})
+                                        </option>
+                                    ))}
+                                </select>
+                                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                                    <ChevronDown className="w-5 h-5 text-white/20" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-4">
+                            <div className="h-px bg-white/5 flex-1" />
+                            <span className="text-[8px] font-black text-white/10 uppercase tracking-[0.3em]">yoki kod kiritish</span>
+                            <div className="h-px bg-white/5 flex-1" />
+                        </div>
+
                         <div className="relative group/input">
                             <div className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20 group-focus-within/input:text-indigo-400 transition-colors">
                                 <Users className="w-full h-full" />
                             </div>
                             <input
                                 type="text"
-                                placeholder="Masalan: TEACHER_ALI_2024"
+                                placeholder="O'qituvchi kodi (ixtiyoriy)"
                                 value={teacherCode}
                                 onChange={e => setTeacherCode(e.target.value)}
                                 className="w-full h-14 bg-white/[0.03] border border-white/10 rounded-2xl pl-12 pr-4 text-base font-black text-white placeholder:text-white/10 outline-none focus:border-indigo-500/40 focus:bg-white/[0.06] transition-all"
@@ -366,6 +413,216 @@ function ShareModal({
     );
 }
 
+// ── Units Grid Component (with Select & Move) ────────────────────
+function UnitsGrid({ 
+    units, 
+    onDelete,
+    selectedUnits = new Set(),
+    onToggleSelect,
+    onMove
+}: { 
+    units: any[], 
+    onDelete: (id: string, title: string) => void,
+    selectedUnits?: Set<string>,
+    onToggleSelect?: (id: string, e?: React.MouseEvent) => void,
+    onMove?: (unit: any) => void
+}) {
+    if (units.length === 0) return null;
+
+    return (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+            {units.map((unit) => {
+                const isSelected = selectedUnits.has(unit.id);
+                return (
+                    <motion.div
+                        key={unit.id}
+                        layout
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        className={`glass-card group flex flex-col items-stretch overflow-hidden relative ${
+                            isSelected ? '!border-emerald-500/50 !bg-emerald-500/10 shadow-[0_0_30px_rgba(16,185,129,0.15)]' : '!bg-white/[0.02]'
+                        }`}
+                        onClick={(e) => {
+                            if (onToggleSelect) {
+                                onToggleSelect(unit.id, e as any);
+                            }
+                        }}
+                    >
+                        {/* Selection Checkbox Overlay */}
+                        {onToggleSelect && (
+                            <div className="absolute top-4 left-4 z-20">
+                                <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${
+                                    isSelected 
+                                        ? 'bg-emerald-500 border-emerald-500 text-white' 
+                                        : 'border-white/20 bg-black/50 text-transparent group-hover:border-white/40'
+                                }`}>
+                                    <Check className="w-4 h-4" strokeWidth={3} />
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="p-5 sm:p-6 flex-1 flex flex-col">
+                            <div className="flex items-start justify-between gap-4 mb-4 sm:mb-6">
+                                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center shadow-inner shrink-0 ${
+                                    isSelected ? 'bg-emerald-500/20 text-emerald-400' : 'bg-indigo-500/20 text-indigo-400'
+                                }`}>
+                                    <BookOpen className="w-5 h-5 sm:w-6 sm:h-6" />
+                                </div>
+                                <div className="flex items-center gap-1 shrink-0 bg-black/50 p-1 rounded-xl backdrop-blur-md" onClick={e => e.stopPropagation()}>
+                                    <Link
+                                        href={`/teacher/units/${unit.id}`}
+                                        className="w-8 h-8 rounded-lg flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-all"
+                                        title="Tahrirlash"
+                                    >
+                                        <Edit className="w-4 h-4" />
+                                    </Link>
+                                    <Link
+                                        href={`/teacher/students?unitId=${unit.id}`}
+                                        className="w-8 h-8 rounded-lg flex items-center justify-center text-indigo-400/60 hover:text-indigo-400 hover:bg-indigo-500/10 transition-all"
+                                        title="O'quvchilar"
+                                    >
+                                        <Users className="w-4 h-4" />
+                                    </Link>
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); onDelete(unit.id, unit.title); }}
+                                        className="w-8 h-8 rounded-lg flex items-center justify-center text-red-400/60 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                                        title="O'chirish"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <h4 className={`text-lg sm:text-lg font-black uppercase tracking-tight line-clamp-2 leading-tight break-words mb-2 ${
+                                isSelected ? 'text-emerald-400' : 'text-white group-hover:text-indigo-200'
+                            } transition-colors`}>
+                                {unit.title}
+                            </h4>
+                            <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] line-clamp-1 mb-4">
+                                {typeof unit.category === 'string' ? unit.category : (unit.category?.name || 'Asosiy')}
+                            </p>
+                            
+                            <div className="mt-auto pt-4 sm:pt-6 border-t border-white/5 flex gap-2" onClick={e => e.stopPropagation()}>
+                                <Link
+                                    href={`/teacher/units/${unit.id}`}
+                                    className="btn-secondary flex-1 py-2 sm:py-2.5 text-[10px] sm:text-xs font-black uppercase tracking-widest text-center"
+                                >
+                                    Boshqarish
+                                </Link>
+                                {onMove && (
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); onMove(unit); }}
+                                        className="btn-secondary py-2 sm:py-2.5 px-3 text-[10px] sm:text-xs font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20"
+                                        title="Boshqa paktaga ko'chirish"
+                                    >
+                                        <FolderOpen className="w-4 h-4" />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    </motion.div>
+                );
+            })}
+        </div>
+    );
+}
+
+// ── Move Modal ────────────────────────────────────────────────────────────
+function MoveModal({
+    units,
+    categoriesTree,
+    onClose,
+    onSuccess,
+}: {
+    units: Unit[];
+    categoriesTree: CategoryNode[];
+    onClose: () => void;
+    onSuccess: () => void;
+}) {
+    const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+    const [moving, setMoving] = useState(false);
+
+    const handleMove = async () => {
+        setMoving(true);
+        try {
+            const res = await apiFetch('/api/teacher/units/move', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    unitIds: units.map(u => u.id), 
+                    targetCategoryId: selectedCategoryId 
+                }),
+            });
+            toast.success((res as any).message || 'Unitlar ko\'chirildi');
+            onSuccess();
+            onClose();
+        } catch (e: any) {
+            toast.error(e?.message || 'Ko\'chirishda xatolik yuz berdi');
+        } finally {
+            setMoving(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xl animate-fade-in">
+            <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="glass-card w-full max-w-md flex flex-col max-h-[90vh] relative !bg-gray-950/80"
+            >
+                <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-500" />
+
+                <div className="px-8 py-6 border-b border-white/5 flex items-center justify-between">
+                    <div>
+                        <h2 className="text-xl font-black text-white uppercase tracking-tight">Ko&apos;chirish</h2>
+                        <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mt-1">
+                            {units.length} ta unit tanlandi
+                        </p>
+                    </div>
+                    <button onClick={onClose} className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center text-white/40 hover:text-white transition-all">
+                        <X className="w-5 h-5" />
+                    </button>
+                </div>
+
+                <div className="p-6 flex-1 overflow-y-auto custom-scrollbar">
+                    <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] mb-4">Maqsadli kategoriyani tanlang</p>
+                    <div className="space-y-1 bg-white/[0.02] p-4 rounded-xl border border-white/5">
+                        <button
+                            onClick={() => setSelectedCategoryId(null)}
+                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-left text-sm font-bold ${selectedCategoryId === null ? 'bg-emerald-500/20 text-emerald-400' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
+                        >
+                            <FolderOpen className="w-4 h-4 shrink-0" />
+                            Asosiy (Kategoriyasiz)
+                        </button>
+                        
+                        {categoriesTree.map(node => (
+                            <TreeNode
+                                key={node._id}
+                                node={node}
+                                selectedId={selectedCategoryId}
+                                onSelect={(n) => setSelectedCategoryId(n._id)}
+                                onDelete={() => {}} // Disabled in move modal
+                            />
+                        ))}
+                    </div>
+                </div>
+
+                <div className="p-6 border-t border-white/5 flex gap-3 bg-white/[0.01]">
+                    <button onClick={onClose} className="btn-secondary flex-1 h-12 uppercase tracking-widest text-xs font-black">Bekor</button>
+                    <button
+                        onClick={handleMove}
+                        disabled={moving}
+                        className="btn-premium flex-1 h-12 uppercase tracking-widest text-xs font-black disabled:opacity-50 !bg-gradient-to-r !from-emerald-500 !to-teal-500 !shadow-emerald-500/20"
+                    >
+                        {moving ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Shu yerga ko\'chirish'}
+                    </button>
+                </div>
+            </motion.div>
+        </div>
+    );
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────
 export default function UnitsPage() {
     const { user, loading: authLoading } = useAuth();
@@ -387,6 +644,12 @@ export default function UnitsPage() {
     const [newFolderName, setNewFolderName] = useState('');
     const [creatingFolder, setCreatingFolder] = useState(false);
     const [showShareModal, setShowShareModal] = useState(false);
+
+    // Multi-select & Move State
+    const [selectedUnits, setSelectedUnits] = useState<Set<string>>(new Set());
+    const [showMoveModal, setShowMoveModal] = useState(false);
+    const [unitsToMove, setUnitsToMove] = useState<Unit[]>([]);
+
     const newFolderInputRef = useRef<HTMLInputElement>(null);
 
     const currentCatId = currentPath.length > 0 ? currentPath[currentPath.length - 1]._id : null;
@@ -423,6 +686,40 @@ export default function UnitsPage() {
         ? units.filter(u => u.title.toLowerCase().includes(search.toLowerCase())) // Search across all units if searching
         : baseUnits;
 
+    // Selection Handlers
+    const toggleUnitSelection = (id: string, e?: React.MouseEvent) => {
+        if (e) e.stopPropagation();
+        setSelectedUnits(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+    };
+
+    const toggleAllCurrentUnits = () => {
+        if (selectedUnits.size === currentUnits.length && currentUnits.length > 0) {
+            setSelectedUnits(new Set()); // Deselect all currently visible
+        } else {
+            const next = new Set(selectedUnits);
+            currentUnits.forEach(u => next.add(u.id));
+            setSelectedUnits(next);
+        }
+    };
+
+    const handleInitiateBulkMove = () => {
+        const toMove = units.filter(u => selectedUnits.has(u.id));
+        if (toMove.length > 0) {
+            setUnitsToMove(toMove);
+            setShowMoveModal(true);
+        }
+    };
+
+    const handleInitiateSingleMove = (unit: Unit) => {
+        setUnitsToMove([unit]);
+        setShowMoveModal(true);
+    };
+
     const handleDeleteFolder = async (id: string, name: string) => {
         if (!confirm(`"${name}" papkasini o'chirasizmi?\nDIQQAT: Ichidagi barcha papkalar va unitlar ham o'chib ketadi!`)) return;
         await apiFetch(`/api/teacher/categories/${id}`, { method: 'DELETE' });
@@ -457,6 +754,11 @@ export default function UnitsPage() {
         if (!confirm(`"${title}" bo'limini o'chirasizmi?`)) return;
         try {
             await deleteUnit(unitId);
+            setSelectedUnits(prev => {
+                const next = new Set(prev);
+                next.delete(unitId);
+                return next;
+            });
             refetch();
             toast.success('Unit o\'chirildi');
         } catch {
@@ -674,7 +976,13 @@ export default function UnitsPage() {
                                         <p className="text-lg font-black tracking-widest uppercase text-center break-words max-w-full">Hech narsa topilmadi</p>
                                     </div>
                                 ) : (
-                                    <UnitsGrid units={currentUnits} onDelete={handleDeleteUnit} />
+                                    <UnitsGrid 
+                                        units={currentUnits} 
+                                        selectedUnits={selectedUnits} 
+                                        onToggleSelect={toggleUnitSelection} 
+                                        onDelete={handleDeleteUnit} 
+                                        onMove={handleInitiateSingleMove}
+                                    />
                                 )}
                             </motion.div>
                         )}
@@ -740,15 +1048,29 @@ export default function UnitsPage() {
 
                                 {/* Units */}
                                 <div className="space-y-6">
-                                    <div className="flex items-center justify-between">
+                                    <div className="flex items-center justify-between flex-wrap gap-4">
                                         <div className="flex items-center gap-3">
                                             <BookOpen className="w-5 h-5 text-indigo-400" />
                                             <h3 className="text-sm font-black text-white/30 uppercase tracking-[0.4em]">Bo'limlar (Units)</h3>
                                         </div>
-                                        <Link href={`/teacher/units/new?categoryId=${currentCatId}`}
-                                            className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-[10px] font-black text-white/40 hover:text-indigo-400 hover:border-indigo-400/30 uppercase tracking-widest transition-all">
-                                            <Plus className="w-3.5 h-3.5 inline mr-1" /> Unit qo'shish
-                                        </Link>
+                                        {currentUnits.length > 0 && (
+                                            <div className="flex items-center gap-3">
+                                                 <button
+                                                    onClick={toggleAllCurrentUnits}
+                                                    className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-[10px] font-black text-white/40 hover:text-white hover:bg-white/10 uppercase tracking-widest transition-all"
+                                                >
+                                                    {selectedUnits.size > 0 && selectedUnits.size >= currentUnits.length ? (
+                                                        <>Bekor qilish</>
+                                                    ) : (
+                                                        <>Barchasini tanlash</>
+                                                    )}
+                                                </button>
+                                                <Link href={`/teacher/units/new?categoryId=${currentCatId}`}
+                                                    className="px-4 py-2 rounded-xl bg-indigo-500/20 border border-indigo-500/30 text-[10px] font-black text-indigo-300 hover:text-indigo-200 hover:bg-indigo-500/30 uppercase tracking-widest transition-all">
+                                                    <Plus className="w-3.5 h-3.5 inline mr-1" /> Unit qo'shish
+                                                </Link>
+                                            </div>
+                                        )}
                                     </div>
 
                                     {currentUnits.length === 0 ? (
@@ -765,7 +1087,13 @@ export default function UnitsPage() {
                                             </Link>
                                         </div>
                                     ) : (
-                                        <UnitsGrid units={currentUnits} onDelete={handleDeleteUnit} />
+                                        <UnitsGrid 
+                                            units={currentUnits} 
+                                            selectedUnits={selectedUnits} 
+                                            onToggleSelect={toggleUnitSelection} 
+                                            onDelete={handleDeleteUnit} 
+                                            onMove={handleInitiateSingleMove}
+                                        />
                                     )}
                                 </div>
                             </motion.div>
@@ -811,6 +1139,40 @@ export default function UnitsPage() {
                 </main>
             </div>
 
+            {/* Selection Action Bar (Floating) */}
+            <AnimatePresence>
+                {selectedUnits.size > 0 && (
+                    <motion.div
+                        initial={{ y: 100, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        exit={{ y: 100, opacity: 0 }}
+                        className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] glass-card px-6 py-4 flex items-center gap-6 shadow-2xl shadow-emerald-500/20 !border-emerald-500/30 !bg-gray-950/90"
+                    >
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400 font-black">
+                                {selectedUnits.size}
+                            </div>
+                            <span className="text-sm font-black text-white uppercase tracking-widest">tanlandi</span>
+                        </div>
+                        <div className="h-8 w-px bg-white/10" />
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={() => setSelectedUnits(new Set())}
+                                className="px-4 py-2 rounded-xl text-xs font-black text-white/40 hover:text-white hover:bg-white/10 uppercase tracking-widest transition-all"
+                            >
+                                Bekor
+                            </button>
+                            <button
+                                onClick={handleInitiateBulkMove}
+                                className="px-6 py-2.5 rounded-xl text-xs font-black text-black bg-emerald-400 hover:bg-emerald-300 uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-emerald-500/20"
+                            >
+                                Ko'chirish
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* Share Modal */}
             <AnimatePresence>
                 {showShareModal && (
@@ -821,66 +1183,24 @@ export default function UnitsPage() {
                     />
                 )}
             </AnimatePresence>
+
+            {/* Move Modal */}
+            <AnimatePresence>
+                {showMoveModal && (
+                    <MoveModal
+                        units={unitsToMove}
+                        categoriesTree={categoriesTree}
+                        onClose={() => setShowMoveModal(false)}
+                        onSuccess={() => {
+                            setSelectedUnits(new Set());
+                            refetch();
+                            treeRefetch();
+                        }}
+                    />
+                )}
+            </AnimatePresence>
         </div>
     );
 }
 
-// ── Units Grid Component ──────────────────────────────────────────────────
-function UnitsGrid({ units, onDelete }: { units: Unit[]; onDelete: (id: string, title: string) => void }) {
-    return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-            {units.map((unit, idx) => (
-                <motion.div
-                    key={unit.id}
-                    layout
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: (idx % 10) * 0.05 }}
-                >
-                    <div className="glass-card p-8 group flex flex-col gap-6 !bg-white/[0.015] hover:!bg-indigo-500/[0.03] transition-all duration-500 h-full relative overflow-hidden">
-                        {/* Glow orb */}
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-[60px] -mr-16 -mt-16 group-hover:bg-indigo-500/10 transition-colors pointer-events-none" />
 
-                        <div className="flex items-start justify-between relative z-10">
-                            <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-indigo-500/20 transition-all duration-500 shadow-inner">
-                                <BookOpen className="w-6 h-6 text-indigo-400" />
-                            </div>
-                            <div className="text-right">
-                                <p className="text-[9px] font-black text-white/20 uppercase tracking-widest mb-1">Created</p>
-                                <p className="px-3 py-1 rounded-lg bg-white/5 border border-white/5 text-[10px] font-black text-white/40 uppercase tracking-tighter">
-                                    {new Date(unit.createdAt).toLocaleDateString('uz-UZ')}
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="flex-1 relative z-10">
-                            <h3 className="text-lg font-black text-white uppercase tracking-tight leading-tight group-hover:text-indigo-200 transition-colors line-clamp-2">
-                                {unit.title}
-                            </h3>
-                            <div className="flex items-center gap-2 mt-3">
-                                <div className="w-1.5 h-1.5 rounded-full bg-white/10" />
-                                <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em] truncate">
-                                    {unit.category || 'Categorized'}
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="flex items-stretch gap-3 pt-6 border-t border-white/5 relative z-10">
-                            <Link href={`/teacher/units/${unit.id}`}
-                                className="flex-1 flex items-center justify-center gap-2.5 h-12 rounded-xl bg-white/[0.03] border border-white/5 text-[10px] font-black uppercase tracking-widest text-white/60 hover:bg-indigo-500/10 hover:border-indigo-500/20 hover:text-indigo-400 transition-all active:scale-95"
-                            >
-                                <Edit className="w-4 h-4" /> Tahrirlash
-                            </Link>
-                            <button
-                                onClick={() => onDelete(unit.id, unit.title)}
-                                className="w-12 h-12 rounded-xl bg-red-500/5 border border-red-500/10 flex items-center justify-center text-red-500/30 hover:bg-red-500/10 hover:border-red-500/30 hover:text-red-500 transition-all active:scale-90"
-                            >
-                                <Trash2 className="w-4 h-4" />
-                            </button>
-                        </div>
-                    </div>
-                </motion.div>
-            ))}
-        </div>
-    );
-}

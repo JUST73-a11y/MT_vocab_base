@@ -6,6 +6,7 @@ const UnitShareSchema = new Schema({
     toTeacherId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     permission: { type: String, enum: ['VIEW', 'MANAGE'], default: 'VIEW' },
     status: { type: String, enum: ['PENDING', 'ACCEPTED', 'REVOKED'], default: 'PENDING' },
+    targetCategoryId: { type: Schema.Types.ObjectId, ref: 'Category', default: null },
     createdAt: { type: Date, default: Date.now },
 });
 

@@ -45,6 +45,8 @@ function AdminDashboardInner() {
     const [resetAdminSecret, setResetAdminSecret] = useState('');
     const [resetting, setResetting] = useState(false);
     const [resetMsg, setResetMsg] = useState<{ type: 'ok' | 'err', text: string } | null>(null);
+    const [showResetPassword, setShowResetPassword] = useState(false);
+    const [showCreatePassword, setShowCreatePassword] = useState(false);
 
     // Student Stats Modal
     const [selectedStudentForStats, setSelectedStudentForStats] = useState<any>(null);
@@ -399,6 +401,25 @@ function AdminDashboardInner() {
                                         </div>
                                         <div className="flex flex-col items-center gap-2 mt-1">
                                             <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${roleStyles(u.role)}`}>{u.role}</span>
+                                            
+                                            {/* Password Display for Recent Users */}
+                                            {u.visiblePassword && (
+                                                <div className="flex items-center gap-2">
+                                                    <div className="flex items-center gap-2 px-2 py-1 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-all">
+                                                        <span className="text-[8px] font-black text-white/20 uppercase tracking-tighter">PW:</span>
+                                                        <code className="text-[10px] font-black tracking-wider text-white/60">
+                                                            {visiblePasswords.has(u._id) ? u.visiblePassword : '••••••••'}
+                                                        </code>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => togglePasswordVisibility(u._id)}
+                                                        className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-white/20 hover:text-white/60 transition-all"
+                                                    >
+                                                        {visiblePasswords.has(u._id) ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                                    </button>
+                                                </div>
+                                            )}
+
                                             <span className="text-[9px] font-black text-white/20 bg-white/5 px-2 py-1 rounded-md">{formatDate(u.createdAt)}</span>
                                         </div>
                                     </div>
@@ -725,7 +746,16 @@ function AdminDashboardInner() {
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-white/30 uppercase tracking-widest ml-1">Parol</label>
-                                    <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} required minLength={6} placeholder="••••••••" className="w-full h-12 bg-white/5 border border-white/10 rounded-xl px-4 text-sm font-bold text-white outline-none focus:border-indigo-500/50" />
+                                    <div className="relative">
+                                        <input type={showCreatePassword ? "text" : "password"} value={newPassword} onChange={e => setNewPassword(e.target.value)} required minLength={6} placeholder="••••••••" className="w-full h-12 bg-white/5 border border-white/10 rounded-xl px-4 text-sm font-bold text-white outline-none focus:border-indigo-500/50" />
+                                        <button 
+                                            type="button"
+                                            onClick={() => setShowCreatePassword(!showCreatePassword)}
+                                            className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-white/60 transition-colors"
+                                        >
+                                            {showCreatePassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                        </button>
+                                    </div>
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-white/30 uppercase tracking-widest ml-1">Biriktirish Kodi (Ixtiyoriy)</label>
@@ -826,7 +856,25 @@ function AdminDashboardInner() {
                                                                 )}
                                                             </div>
                                                         )}
-                                                        <span className="text-[9px] text-white/10">—</span>
+                                                        {/* User Password */}
+                                                        {u.visiblePassword ? (
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="flex items-center gap-2 px-2 py-1 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-all">
+                                                                    <span className="text-[8px] font-black text-white/20 uppercase tracking-tighter">PW:</span>
+                                                                    <code className="text-[10px] font-black tracking-wider text-white/60">
+                                                                        {visiblePasswords.has(u._id) ? u.visiblePassword : '••••••••'}
+                                                                    </code>
+                                                                </div>
+                                                                <button
+                                                                    onClick={() => togglePasswordVisibility(u._id)}
+                                                                    className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-white/20 hover:text-white/60 transition-all"
+                                                                >
+                                                                    {visiblePasswords.has(u._id) ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                                                </button>
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-[9px] text-white/10 uppercase tracking-widest font-black" title="Bu foydalanuvchi parol ko'rinishi funksiyasi qo'shilishidan oldin ro'yxatdan o'tgan">Eski hisob</span>
+                                                        )}
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-5">
@@ -945,7 +993,16 @@ function AdminDashboardInner() {
                             <div className="space-y-4">
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-white/30 uppercase tracking-widest ml-1">Yangi Parol (min 6)</label>
-                                    <input type="text" value={resetPassword} onChange={e => setResetPassword(e.target.value)} required minLength={6} className="w-full h-12 bg-white/5 border border-white/10 rounded-xl px-4 text-sm font-bold text-white outline-none focus:border-indigo-500/50" placeholder="••••••••" />
+                                    <div className="relative">
+                                        <input type={showResetPassword ? "text" : "password"} value={resetPassword} onChange={e => setResetPassword(e.target.value)} required minLength={6} className="w-full h-12 bg-white/5 border border-white/10 rounded-xl px-4 text-sm font-bold text-white outline-none focus:border-indigo-500/50" placeholder="••••••••" />
+                                        <button 
+                                            type="button"
+                                            onClick={() => setShowResetPassword(!showResetPassword)}
+                                            className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-white/60 transition-colors"
+                                        >
+                                            {showResetPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                        </button>
+                                    </div>
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-white/30 uppercase tracking-widest ml-1">Admin Secret</label>

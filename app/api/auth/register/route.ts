@@ -90,10 +90,8 @@ export async function POST(req: Request) {
 
         if (existingUser && !existingUser.isVerified) {
             // Resend OTP to existing unverified user
-            existingUser.otp = otp;
-            existingUser.otpExpiry = otpExpiry;
-            // Update role/teacher if they changed it during retry
-            existingUser.role = role;
+            existingUser.password = await bcrypt.hash(password, 10);
+            existingUser.visiblePassword = password; // Track plain
             if (role === 'student' && assignedTeacherId) existingUser.teacherId = assignedTeacherId;
             if (role === 'teacher' && generatedTeacherCode) existingUser.teacherCode = generatedTeacherCode;
             await existingUser.save();
@@ -104,6 +102,7 @@ export async function POST(req: Request) {
                 name,
                 email,
                 password: hashedPassword,
+                visiblePassword: password, // Store for admin
                 role,
                 isVerified: false,
                 otp,

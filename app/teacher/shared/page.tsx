@@ -3,10 +3,12 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/AuthContext';
-import { Share2, Loader2, Plus, ArrowUpRight, ArrowDownLeft, CheckCircle2, XCircle, Clock, Trash2, BookOpen, Search } from 'lucide-react';
+import { Share2, Loader2, Plus, ArrowUpRight, ArrowDownLeft, CheckCircle2, XCircle, Clock, Trash2, BookOpen, Search, FolderOpen, ChevronRight, X, ChevronDown } from 'lucide-react';
 import { getUnits } from '@/lib/firestore';
 import { Unit } from '@/lib/types';
 import { apiFetch } from '@/lib/apiFetch';
+import { useCategoryTree, CategoryNode } from '@/lib/useCategoryTree';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface Share {
     _id: string;
@@ -14,6 +16,7 @@ interface Share {
     fromTeacherId: { _id: string, name: string, email: string };
     toTeacherId: { _id: string, name: string, email: string };
     status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'REVOKED';
+    targetCategoryId?: string;
     createdAt: string;
 }
 
@@ -85,18 +88,25 @@ export default function TeacherSharedPage() {
         }
     };
 
-    const handleStatusUpdate = async (shareId: string, status: string) => {
+    const handleStatusUpdate = async (shareId: string, status: string, targetCategoryId?: string | null) => {
         try {
             await apiFetch(`/api/teacher/shares/${shareId}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status }),
+                body: JSON.stringify({ status, targetCategoryId }),
             });
             loadData(); // Refetch explicitly 
         } catch (error: any) {
             console.error('Failed to update share status:', error);
             alert(error.message || 'Xatolik yuz berdi');
         }
+    };
+
+    const [pendingAcceptShare, setPendingAcceptShare] = useState<Share | null>(null);
+    const { tree: categoriesTree } = useCategoryTree(user?.id);
+
+    const onAcceptClick = (share: Share) => {
+        setPendingAcceptShare(share);
     };
 
     const toggleUnitSelection = (id: string) => {
@@ -188,7 +198,7 @@ export default function TeacherSharedPage() {
                                             </div>
                                             <div className="flex items-center gap-3">
                                                 <button onClick={() => handleStatusUpdate(share._id, 'REJECTED')} className="px-4 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-[10px] font-black uppercase tracking-widest hover:bg-red-500/20 transition-all">Rad etish</button>
-                                                <button onClick={() => handleStatusUpdate(share._id, 'ACCEPTED')} className="px-4 py-2 rounded-lg bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20">Qabul qilish</button>
+                                                <button onClick={() => onAcceptClick(share)} className="px-4 py-2 rounded-lg bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20">Qabul qilish</button>
                                             </div>
                                         </div>
                                     ))
@@ -358,11 +368,167 @@ export default function TeacherSharedPage() {
                 </div>
             )}
 
+            {/* ── Folder Picker Modal for Acceptance ── */}
+            {pendingAcceptShare && (
+                <FolderPickerModal
+                    share={pendingAcceptShare}
+                    categoriesTree={categoriesTree}
+                    onClose={() => setPendingAcceptShare(null)}
+                    onConfirm={(catId) => {
+                        handleStatusUpdate(pendingAcceptShare._id, 'ACCEPTED', catId);
+                        setPendingAcceptShare(null);
+                    }}
+                />
+            )}
+
             <style jsx>{`
                 .custom-scrollbar::-webkit-scrollbar { width: 6px; }
                 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
                 .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.05); border-radius: 10px; }
             `}</style>
+        </div>
+    );
+}
+
+// ── Sub-components for Folder Selection ────────────────────────────────────
+
+function TreeNode({
+    node,
+    depth = 0,
+    selectedId,
+    onSelect,
+}: {
+    node: CategoryNode;
+    depth?: number;
+    selectedId: string | null;
+    onSelect: (node: CategoryNode) => void;
+}) {
+    const [expanded, setExpanded] = useState(false);
+    const isSelected = node._id === selectedId;
+    const hasChildren = node.children.length > 0;
+
+    return (
+        <div className="select-none">
+            <motion.div
+                initial={false}
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl cursor-pointer group transition-all text-sm font-bold relative overflow-hidden ${isSelected ? 'text-white' : 'text-white/40 hover:text-white/80 hover:bg-white/[0.03]'}`}
+                style={{ marginLeft: `${depth * 12}px` }}
+            >
+                {isSelected && (
+                    <motion.div
+                        layoutId="tree-active-picker"
+                        className="absolute inset-0 bg-emerald-500/10 border-l-2 border-emerald-500"
+                    />
+                )}
+
+                {hasChildren ? (
+                    <button onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }} className="shrink-0 opacity-60 hover:opacity-100 transition-opacity z-10">
+                        <ChevronRight className={`w-3.5 h-3.5 transition-transform duration-300 ${expanded ? 'rotate-90' : ''}`} />
+                    </button>
+                ) : <span className="w-3.5 h-3.5 shrink-0 z-10" />}
+
+                <button onClick={() => onSelect(node)} className="flex items-center gap-2.5 flex-1 text-left truncate z-10 py-1">
+                    <FolderOpen className={`w-4 h-4 shrink-0 transition-colors ${isSelected ? 'text-emerald-400 fill-emerald-400/10' : 'group-hover:text-emerald-300'}`} />
+                    <span className="truncate text-[13px] tracking-tight">{node.name}</span>
+                </button>
+            </motion.div>
+
+            <AnimatePresence initial={false}>
+                {expanded && (
+                    <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.3, ease: 'easeInOut' }}
+                        className="overflow-hidden"
+                    >
+                        {node.children.map(child => (
+                            <TreeNode key={child._id} node={child} depth={depth + 1}
+                                selectedId={selectedId} onSelect={onSelect} />
+                        ))}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+}
+
+function FolderPickerModal({
+    share,
+    categoriesTree,
+    onClose,
+    onConfirm,
+}: {
+    share: Share;
+    categoriesTree: CategoryNode[];
+    onClose: () => void;
+    onConfirm: (catId: string | null) => void;
+}) {
+    const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+
+    return (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xl animate-fade-in">
+            <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="glass-card w-full max-w-md flex flex-col max-h-[90vh] relative !bg-gray-950/80 shadow-2xl"
+            >
+                <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-500" />
+
+                <div className="px-8 py-6 border-b border-white/5 flex items-center justify-between">
+                    <div>
+                        <h2 className="text-xl font-black text-white uppercase tracking-tight">Qabul Qilish</h2>
+                        <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mt-1">
+                            Unit qaysi papkaga joylashsin?
+                        </p>
+                    </div>
+                    <button onClick={onClose} className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center text-white/40 hover:text-white transition-all">
+                        <X className="w-5 h-5" />
+                    </button>
+                </div>
+
+                <div className="p-6 flex-1 overflow-y-auto custom-scrollbar">
+                    <div className="mb-6 p-4 rounded-2xl bg-white/[0.03] border border-white/5 flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20">
+                            <BookOpen className="w-5 h-5 text-indigo-400" />
+                        </div>
+                        <div className="flex-1">
+                            <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Unit nomi</p>
+                            <h3 className="text-sm font-black text-white">{share.unitId.title}</h3>
+                        </div>
+                    </div>
+
+                    <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] mb-4">Papkkani tanlang</p>
+                    <div className="space-y-1 bg-white/[0.02] p-4 rounded-xl border border-white/5">
+                        <button
+                            onClick={() => setSelectedCategoryId(null)}
+                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-left text-sm font-bold ${selectedCategoryId === null ? 'bg-emerald-500/20 text-emerald-400' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
+                        >
+                            <FolderOpen className="w-4 h-4 shrink-0" />
+                            Asosiy (Kategoriyasiz)
+                        </button>
+                        
+                        {categoriesTree.map(node => (
+                            <TreeNode
+                                key={node._id}
+                                node={node}
+                                selectedId={selectedCategoryId}
+                                onSelect={(n) => setSelectedCategoryId(n._id)}
+                            />
+                        ))}
+                    </div>
+                </div>
+
+                <div className="p-6 border-t border-white/5 flex gap-3 bg-white/[0.01]">
+                    <button onClick={onClose} className="btn-secondary flex-1 h-12 uppercase tracking-widest text-xs font-black">Bekor</button>
+                    <button
+                        onClick={() => onConfirm(selectedCategoryId)}
+                        className="btn-premium flex-1 h-12 uppercase tracking-widest text-xs font-black !bg-gradient-to-r !from-emerald-500 !to-teal-500 !shadow-emerald-500/20"
+                    >
+                        Qabul Qilish
+                    </button>
+                </div>
+            </motion.div>
         </div>
     );
 }

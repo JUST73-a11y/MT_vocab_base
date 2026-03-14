@@ -14,7 +14,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
             return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
         }
 
-        const { status } = await req.json(); // ACCEPTED, REJECTED, REVOKED
+        const { status, targetCategoryId } = await req.json(); // ACCEPTED, REJECTED, REVOKED
         if (!['ACCEPTED', 'REJECTED', 'REVOKED'].includes(status)) {
             return NextResponse.json({ message: 'Invalid status' }, { status: 400 });
         }
@@ -36,6 +36,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         }
 
         share.status = status;
+        if (status === 'ACCEPTED' && targetCategoryId) {
+            share.targetCategoryId = targetCategoryId;
+        }
         await share.save();
 
         return NextResponse.json({ message: `Share ${status.toLowerCase()} successfully` });
