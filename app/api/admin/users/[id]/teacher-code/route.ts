@@ -63,7 +63,7 @@ export async function PATCH(
         });
 
     } catch (error) {
-        console.error('Error updating teacher code:', error);
+        
         return NextResponse.json({ message: 'Server error' }, { status: 500 });
     }
 }

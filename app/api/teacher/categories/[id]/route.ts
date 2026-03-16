@@ -54,7 +54,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
 
         return NextResponse.json({ message: 'Papkalar va barcha unitlar muvaffaqiyatli o\'chirildi' });
     } catch (error: any) {
-        console.error('Error deleting category:', error);
+        
         return NextResponse.json({ message: error.message || 'Server error' }, { status: 500 });
     }
 }

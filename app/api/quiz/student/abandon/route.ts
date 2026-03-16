@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
         await StudentEnergy.findOneAndUpdate(
             { studentId: session.id },
             { $inc: { energy: -1, totalUsed: 1 } }
-        ).catch(e => console.error("Abandon: failed to deduct energy", e));
+        ).catch(() => {});
     }
 
     // Save incorrect words to StudentMistakeWord (if any)
@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
                 )
             ));
         } catch (e) {
-            console.error("Abandon: failed to save mistakes", e);
+            
         }
     }
 

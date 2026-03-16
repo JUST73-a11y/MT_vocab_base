@@ -68,7 +68,7 @@ export async function PATCH(
 
         return NextResponse.json(user);
     } catch (error) {
-        console.error('Error updating user:', error);
+        
         return NextResponse.json({ message: 'Error updating user' }, { status: 500 });
     }
 }
@@ -105,7 +105,7 @@ export async function DELETE(
 
         return NextResponse.json({ message: 'User and related data deleted successfully' });
     } catch (error) {
-        console.error('Error deleting user:', error);
+        
         return NextResponse.json({ message: 'Error deleting user' }, { status: 500 });
     }
 }

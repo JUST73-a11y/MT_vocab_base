@@ -56,7 +56,7 @@ export default function NewUnitPage() {
                 setCategories(flatList);
             }
         } catch (err) {
-            console.error('Failed to load categories', err);
+            
         }
     };
 
@@ -122,13 +122,13 @@ export default function NewUnitPage() {
 
             if (!res.ok) {
                 const errData = await res.json();
-                console.error('SERVER ERROR RESP:', errData);
+                
                 throw new Error(errData.message || 'Failed to create');
             }
             const data = await res.json();
             router.push(`/teacher/units/${data._id}`);
         } catch (error) {
-            console.error('Failed to create unit:', error);
+            
             alert('Fayl yaratishda xatolik yuz berdi. Iltimos tekshiring.');
             setSaving(false);
         }

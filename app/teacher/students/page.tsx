@@ -144,7 +144,7 @@ export default function TeacherStudentsPage() {
             setUnits(uData);
             setCategoriesTree(catData || []);
         } catch (error) {
-            console.error('Failed to load students:', error);
+            
         } finally {
             setLoadingData(false);
         }
@@ -218,7 +218,7 @@ export default function TeacherStudentsPage() {
             const data = await apiFetch(`/api/teacher/students/${student._id}/mistakes`);
             setStudentMistakes(data.mistakes || []);
         } catch (error: any) {
-            console.error('Error fetching mistakes:', error);
+            
             toast.error(error.message || 'Xatoliklarni yuklashda muammo yuz berdi');
         } finally {
             setLoadingMistakes(false);
@@ -238,7 +238,7 @@ export default function TeacherStudentsPage() {
             });
             toast.success("Xato o'chirildi");
         } catch (error: any) {
-            console.error('Error deleting mistake:', error);
+            
             toast.error(error.message || "Xatolik yuz berdi");
             // Revert optimism on error
             setStudentMistakes(prevMistakes);

@@ -38,7 +38,7 @@ export async function POST(req: Request) {
 
         return NextResponse.json({ message: 'Email muvaffaqiyatli tasdiqlandi!' }, { status: 200 });
     } catch (error: any) {
-        console.error('OTP verify error:', error);
+        
         return NextResponse.json({ message: 'Server error' }, { status: 500 });
     }
 }

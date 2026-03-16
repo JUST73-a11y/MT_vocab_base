@@ -31,7 +31,7 @@ export async function DELETE(req: Request) {
             updatedCount: result.modifiedCount
         });
     } catch (error) {
-        console.error('Error deleting category:', error);
+        
         return NextResponse.json({ message: 'Error deleting category' }, { status: 500 });
     }
 }

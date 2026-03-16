@@ -3,12 +3,13 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/AuthContext';
-import { Share2, Loader2, Plus, ArrowUpRight, ArrowDownLeft, CheckCircle2, XCircle, Clock, Trash2, BookOpen, Search, FolderOpen, ChevronRight, X, ChevronDown } from 'lucide-react';
+import { Share2, Loader2, Plus, ArrowUpRight, ArrowDownLeft, CheckCircle2, XCircle, Clock, Trash2, BookOpen, FolderOpen, ChevronRight, X, ChevronDown } from 'lucide-react';
 import { getUnits } from '@/lib/firestore';
 import { Unit } from '@/lib/types';
 import { apiFetch } from '@/lib/apiFetch';
 import { useCategoryTree, CategoryNode } from '@/lib/useCategoryTree';
 import { motion, AnimatePresence } from 'framer-motion';
+import ShareModal from '@/components/teacher/ShareModal';
 
 interface Share {
     _id: string;
@@ -31,12 +32,7 @@ export default function TeacherSharedPage() {
     const [loadingData, setLoadingData] = useState(true);
     const [activeTab, setActiveTab] = useState<TabType>('incoming');
 
-    // Share Modal State
     const [showShareModal, setShowShareModal] = useState(false);
-    const [shareTargetCode, setShareTargetCode] = useState('');
-    const [selectedUnitIds, setSelectedUnitIds] = useState<string[]>([]);
-    const [sharing, setSharing] = useState(false);
-    const [searchTerm, setSearchTerm] = useState('');
 
     useEffect(() => {
         if (!loading && (!user || (user.role !== 'teacher' && user.role !== 'admin'))) {
@@ -58,35 +54,12 @@ export default function TeacherSharedPage() {
             setOutgoingShares(outRes);
             setUnits(uData);
         } catch (error) {
-            console.error('Failed to load shares:', error);
+            
         } finally {
             setLoadingData(false);
         }
     };
 
-    const handleBulkShare = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (selectedUnitIds.length === 0 || !shareTargetCode.trim()) return;
-        setSharing(true);
-        try {
-            const data = await apiFetch('/api/teacher/unit-shares/bulk', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ unitIds: selectedUnitIds, toTeacherCode: shareTargetCode }),
-            });
-
-            setShowShareModal(false);
-            setShareTargetCode('');
-            setSelectedUnitIds([]);
-            loadData();
-            alert(data.message); // Todo: replace with toast
-        } catch (error: any) {
-            console.error('Failed to share:', error);
-            alert(error.message || 'Xatolik yuz berdi');
-        } finally {
-            setSharing(false);
-        }
-    };
 
     const handleStatusUpdate = async (shareId: string, status: string, targetCategoryId?: string | null) => {
         try {
@@ -97,7 +70,7 @@ export default function TeacherSharedPage() {
             });
             loadData(); // Refetch explicitly 
         } catch (error: any) {
-            console.error('Failed to update share status:', error);
+            
             alert(error.message || 'Xatolik yuz berdi');
         }
     };
@@ -109,11 +82,6 @@ export default function TeacherSharedPage() {
         setPendingAcceptShare(share);
     };
 
-    const toggleUnitSelection = (id: string) => {
-        setSelectedUnitIds(prev =>
-            prev.includes(id) ? prev.filter(uid => uid !== id) : [...prev, id]
-        );
-    };
 
     if (loading || !user) {
         return (
@@ -123,7 +91,6 @@ export default function TeacherSharedPage() {
         );
     }
 
-    const filteredUnits = units.filter(u => u.title.toLowerCase().includes(searchTerm.toLowerCase()));
 
     // Filtrlar
     const pendingIncoming = incomingShares.filter(s => s.status === 'PENDING');
@@ -278,94 +245,13 @@ export default function TeacherSharedPage() {
                 )}
             </div>
 
-            {/* ── Bulk Share Modal ── */}
             {showShareModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-                    <div className="glass-card max-w-2xl w-full p-8 flex flex-col gap-8 max-h-[90vh] overflow-hidden">
-                        <header className="flex items-center justify-between shrink-0">
-                            <div>
-                                <h2 className="text-2xl font-black text-white tracking-tight">Materiallarni Ulashish</h2>
-                                <p className="text-sm text-white/40 font-medium hover:text-white transition-colors">Hamkasbingiz bilan bo'lishmoqchi bo'lgan unitlarni tanlang</p>
-                            </div>
-                            <button onClick={() => setShowShareModal(false)} className="p-2 text-white/20 hover:text-white transition-colors">
-                                <XCircle className="w-8 h-8" />
-                            </button>
-                        </header>
-
-                        <form onSubmit={handleBulkShare} className="flex flex-col gap-6 flex-grow overflow-hidden">
-                            {/* Teacher Code Input */}
-                            <div className="shrink-0 bg-white/5 p-4 rounded-2xl border border-white/10">
-                                <label className="text-[10px] font-black text-white/40 uppercase tracking-widest ml-1 mb-2 block">Qabul Qiluvchi Kodi</label>
-                                <div className="flex gap-2">
-                                    <input
-                                        type="text"
-                                        value={shareTargetCode}
-                                        onChange={e => setShareTargetCode(e.target.value.toUpperCase())}
-                                        placeholder="T-XXXXXX"
-                                        className="w-full h-12 bg-black/20 border border-white/5 rounded-xl px-4 text-sm font-bold text-white outline-none focus:border-indigo-500/50"
-                                        required
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Unit Selection */}
-                            <div className="flex flex-col flex-grow overflow-hidden space-y-3">
-                                <div className="flex gap-2 shrink-0">
-                                    <div className="relative flex-1">
-                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-                                        <input
-                                            type="text"
-                                            placeholder="Unit qidirish..."
-                                            value={searchTerm}
-                                            onChange={e => setSearchTerm(e.target.value)}
-                                            className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-sm text-white focus:border-indigo-500/50 outline-none"
-                                        />
-                                    </div>
-                                    <div className="flex items-center justify-center px-4 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-xl text-xs font-bold font-mono">
-                                        {selectedUnitIds.length} tanlangan
-                                    </div>
-                                </div>
-
-                                <div className="overflow-y-auto pr-2 custom-scrollbar flex-grow space-y-2">
-                                    {filteredUnits.length === 0 ? (
-                                        <p className="text-center py-6 text-white/20 text-xs font-bold uppercase tracking-widest">Unitlar topilmadi</p>
-                                    ) : (
-                                        filteredUnits.map(unit => {
-                                            const isSelected = selectedUnitIds.includes(unit.id);
-                                            return (
-                                                <button
-                                                    key={unit.id}
-                                                    type="button"
-                                                    onClick={() => toggleUnitSelection(unit.id)}
-                                                    className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all text-left ${isSelected
-                                                        ? 'bg-indigo-500/10 border-indigo-500/50 text-white'
-                                                        : 'bg-white/5 border-white/10 text-white/40 hover:bg-white/10'
-                                                        }`}
-                                                >
-                                                    <div className="flex-1 truncate pr-4">
-                                                        <p className="text-sm font-black truncate">{unit.title}</p>
-                                                        <p className="text-[10px] font-bold uppercase tracking-widest opacity-40">{unit.category}</p>
-                                                    </div>
-                                                    {isSelected ? <CheckCircle2 className="w-5 h-5 text-indigo-400 shrink-0" /> : <div className="w-5 h-5 rounded-md border-2 border-white/10 shrink-0" />}
-                                                </button>
-                                            )
-                                        })
-                                    )}
-                                </div>
-                            </div>
-
-                            <footer className="pt-4 border-t border-white/5 shrink-0">
-                                <button
-                                    type="submit"
-                                    disabled={sharing || selectedUnitIds.length === 0 || !shareTargetCode}
-                                    className="btn-premium w-full h-14"
-                                >
-                                    {sharing ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'Yuborish'}
-                                </button>
-                            </footer>
-                        </form>
-                    </div>
-                </div>
+                <ShareModal
+                    units={units}
+                    categoriesTree={categoriesTree}
+                    onClose={() => setShowShareModal(false)}
+                    onSuccess={loadData}
+                />
             )}
 
             {/* ── Folder Picker Modal for Acceptance ── */}

@@ -87,14 +87,14 @@ function AdminDashboardInner() {
         try {
             const res = await fetch('/api/teacher/groups', { cache: 'no-store' });
             if (res.ok) setAllGroups(await res.json());
-        } catch (e) { console.error(e); }
+        } catch (e) {  }
     };
 
     const fetchAdminUnits = async () => {
         try {
             const res = await fetch('/api/units', { cache: 'no-store' });
             if (res.ok) setAllUnits(await res.json());
-        } catch (e) { console.error(e); }
+        } catch (e) {  }
     };
 
     const fetchStats = async () => {
@@ -102,7 +102,7 @@ function AdminDashboardInner() {
             const res = await fetch('/api/admin/stats', { cache: 'no-store' });
             if (res.ok) setData(await res.json());
         } catch (e) {
-            console.error(e);
+            
         } finally {
             setLoading(false);
         }
@@ -113,7 +113,7 @@ function AdminDashboardInner() {
             const res = await fetch('/api/admin/users', { cache: 'no-store' });
             if (res.ok) setAllUsers(await res.json());
         } catch (e) {
-            console.error(e);
+            
         }
     };
 
@@ -127,7 +127,7 @@ function AdminDashboardInner() {
                 body: JSON.stringify({ status: newStatus }),
             });
             if (res.ok) setAllUsers(allUsers.map(u => u._id === userId ? { ...u, status: newStatus } : u));
-        } catch (e) { console.error(e); }
+        } catch (e) {  }
         finally { setActionLoading(null); }
     };
 
@@ -137,7 +137,7 @@ function AdminDashboardInner() {
         try {
             const res = await fetch(`/api/admin/users/${userId}`, { method: 'DELETE' });
             if (res.ok) { setAllUsers(allUsers.filter(u => u._id !== userId)); fetchStats(); }
-        } catch (e) { console.error(e); }
+        } catch (e) {  }
         finally { setActionLoading(null); }
     };
 
@@ -182,7 +182,7 @@ function AdminDashboardInner() {
                 alert(data.message || 'Xato yuz berdi');
             }
         } catch (error) {
-            console.error('Failed to assign teacher:', error);
+            
         }
     };
 
@@ -221,7 +221,7 @@ function AdminDashboardInner() {
                 alert(data.message || 'Xato yuz berdi');
             }
         } catch (error) {
-            console.error('Failed to update teacher code:', error);
+            
         }
     };
 
@@ -236,7 +236,7 @@ function AdminDashboardInner() {
             if (!res.ok) { setStatsError(d.message || 'Statistikani yuklab bo\'lmadi'); }
             else { setStudentSessionStats(d); }
         } catch (e) {
-            console.error('Stats fetch error:', e);
+            
             setStatsError('Server bilan bog\'lanishda xato');
         } finally {
             setLoadingStudentStats(false);

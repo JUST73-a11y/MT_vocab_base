@@ -81,7 +81,7 @@ export async function POST(req: Request, { params }: { params: Params }) {
             redeemed: amount,
         });
     } catch (error) {
-        console.error('[WALLET_REDEEM]', error);
+        
         return NextResponse.json({ message: 'Error processing redemption' }, { status: 500 });
     }
 }

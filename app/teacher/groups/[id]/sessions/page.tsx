@@ -81,7 +81,7 @@ export default function GroupSessionsPage({ params }: { params: Promise<{ id: st
             const [sessData, activeData] = await Promise.all([sessRes.json(), activeRes.json()]);
             setSessions(sessData.sessions || []);
             setActiveSession(activeData.session || null);
-        } catch (e) { console.error(e); }
+        } catch (e) {  }
         finally { setLoading(false); }
     }
 
@@ -104,7 +104,7 @@ export default function GroupSessionsPage({ params }: { params: Promise<{ id: st
             const data = await res.json();
             setResults(prev => ({ ...prev, [sessionId]: data }));
             setExpandedId(sessionId);
-        } catch (e) { console.error(e); }
+        } catch (e) {  }
     }
 
     const formatDate = (d: string) => new Date(d).toLocaleDateString('uz-UZ', { day: '2-digit', month: 'short', year: 'numeric' });

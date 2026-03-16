@@ -50,7 +50,7 @@ export default function StudentDashboard() {
             setGameProfile(gameData);
             setEnergyData(energy);
         } catch (error) {
-            console.error('Failed to load data:', error);
+            
         } finally {
             setLoadingData(false);
         }

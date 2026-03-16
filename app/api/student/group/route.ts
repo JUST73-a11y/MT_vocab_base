@@ -160,7 +160,7 @@ export async function GET(req: Request) {
         });
 
     } catch (error: any) {
-        console.error('Error fetching student group details:', error);
+        
         return createApiError('SERVER_ERROR', error.message || 'Server xatosi', 500);
     }
 }

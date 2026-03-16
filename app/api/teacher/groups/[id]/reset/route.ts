@@ -46,7 +46,7 @@ export async function POST(req: Request, { params }: { params: Params }) {
 
         return NextResponse.json({ success: true, count: result.modifiedCount });
     } catch (error: any) {
-        console.error('[GROUP_RESET]', error);
+        
         return NextResponse.json({ message: 'Reytingni nollashda xatolik yuz berdi' }, { status: 500 });
     }
 }

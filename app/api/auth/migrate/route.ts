@@ -19,7 +19,7 @@ export async function GET() {
             modifiedCount: result.modifiedCount
         });
     } catch (error) {
-        console.error('Migration error:', error);
+        
         return NextResponse.json({ success: false, error: 'Migration failed' }, { status: 500 });
     }
 }

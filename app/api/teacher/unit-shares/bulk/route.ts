@@ -97,7 +97,7 @@ export async function POST(req: Request) {
         });
 
     } catch (error: any) {
-        console.error('Bulk share xatoligi:', error);
+        
         return createApiError('SERVER_ERROR', error.message || 'Serverda xatolik yuz berdi', 500);
     }
 }

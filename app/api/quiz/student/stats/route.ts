@@ -178,7 +178,7 @@ export async function GET(req: Request) {
             unitBreakdown
         });
     } catch (error) {
-        console.error('[STUDENT_STATS]', error);
+        
         return NextResponse.json({ message: 'Error fetching stats' }, { status: 500 });
     }
 }

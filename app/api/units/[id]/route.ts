@@ -77,12 +77,13 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         }
 
         const { id } = await params;
-        const { title, category, customTimer } = await req.json();
+        const { title, category, categoryId, customTimer } = await req.json();
         await dbConnect();
 
         const updates: any = {
             title,
-            category: category || 'Uncategorized'
+            category: category || 'Uncategorized',
+            categoryId: categoryId === 'uncategorized' ? null : categoryId
         };
         // Allow setting customTimer to a number or null (to clear it)
         if (customTimer !== undefined) {

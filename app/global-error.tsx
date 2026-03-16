@@ -12,7 +12,7 @@ export default function GlobalError({
 }) {
     useEffect(() => {
         // Here we could log the error to an external service
-        console.error('Global Error Caught:', error);
+        
     }, [error]);
 
     return (

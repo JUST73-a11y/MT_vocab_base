@@ -85,7 +85,7 @@ export async function POST(req: Request) {
 
         return NextResponse.json(share, { status: 201 });
     } catch (error) {
-        console.error('[UNIT SHARE POST] Error:', error);
+        
         return NextResponse.json({ message: 'Error sharing unit' }, { status: 500 });
     }
 }

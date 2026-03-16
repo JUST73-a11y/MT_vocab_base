@@ -49,7 +49,7 @@ export async function GET(req: Request) {
 
         return NextResponse.json(students);
     } catch (error) {
-        console.error('[TEACHER STUDENTS GET] Error:', error);
+        
         return NextResponse.json({ message: 'Error fetching students' }, { status: 500 });
     }
 }

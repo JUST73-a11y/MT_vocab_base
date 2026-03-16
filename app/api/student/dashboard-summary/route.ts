@@ -38,7 +38,7 @@ export async function GET() {
             availableUnits: unitCount,
         });
     } catch (error) {
-        console.error('[DASHBOARD_SUMMARY]', error);
+        
         return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });
     }
 }

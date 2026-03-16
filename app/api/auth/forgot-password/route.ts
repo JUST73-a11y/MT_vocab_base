@@ -52,7 +52,7 @@ export async function POST(req: Request) {
 
         return NextResponse.json({ message: 'Kod emailga yuborildi' });
     } catch (error: any) {
-        console.error('Forgot password error:', error);
+        
         return NextResponse.json({ message: error.message || 'Server xatosi' }, { status: 500 });
     }
 }
@@ -87,7 +87,7 @@ export async function PATCH(req: Request) {
 
         return NextResponse.json({ message: 'Parol muvaffaqiyatli yangilandi' });
     } catch (error: any) {
-        console.error('Reset password error:', error);
+        
         return NextResponse.json({ message: error.message || 'Server xatosi' }, { status: 500 });
     }
 }

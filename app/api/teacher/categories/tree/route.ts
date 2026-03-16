@@ -103,7 +103,7 @@ export async function GET(req: Request) {
         return NextResponse.json(tree);
 
     } catch (error: any) {
-        console.error('Error fetching category tree:', error);
+        
         return NextResponse.json({ message: error.message || 'Server error' }, { status: 500 });
     }
 }

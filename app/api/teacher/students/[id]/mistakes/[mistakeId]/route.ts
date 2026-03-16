@@ -37,7 +37,7 @@ export async function DELETE(
 
         return NextResponse.json({ ok: true, deletedId: mistakeId });
     } catch (error) {
-        console.error('[TEACHER_STUDENT_MISTAKES_DELETE]', error);
+        
         return NextResponse.json({ message: 'Error deleting mistake' }, { status: 500 });
     }
 }

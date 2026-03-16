@@ -221,7 +221,7 @@ export async function POST(req: Request) {
         });
 
     } catch (error) {
-        console.error('[QUIZ_START] Error:', error);
+        
         return NextResponse.json({ message: 'Error starting quiz' }, { status: 500 });
     }
 }

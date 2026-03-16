@@ -61,7 +61,7 @@ export async function GET(req: Request) {
         const words = await Word.find(query).lean();
         return NextResponse.json(words);
     } catch (error) {
-        console.error('[API GET WORDS] Error:', error);
+        
         return NextResponse.json({ message: 'Error fetching words' }, { status: 500 });
     }
 }

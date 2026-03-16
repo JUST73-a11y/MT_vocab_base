@@ -80,7 +80,7 @@ export async function PATCH(
         });
 
     } catch (error: any) {
-        console.error('Error updating role:', error);
+        
         return createApiError('SERVER_ERROR', error.message || 'Server error', 500);
     }
 }

@@ -15,7 +15,7 @@ export async function GET(req: Request) {
         const categories = await Category.find({ teacherId: session.id }).lean();
         return NextResponse.json(categories);
     } catch (error: any) {
-        console.error('Error fetching categories:', error);
+        
         return NextResponse.json({ message: error.message || 'Server error' }, { status: 500 });
     }
 }
@@ -68,7 +68,7 @@ export async function POST(req: Request) {
 
         return NextResponse.json(newCategory, { status: 201 });
     } catch (error: any) {
-        console.error('Error creating category:', error);
+        
         return NextResponse.json({ message: error.message || 'Server error' }, { status: 500 });
     }
 }

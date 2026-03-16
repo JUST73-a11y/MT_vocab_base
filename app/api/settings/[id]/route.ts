@@ -21,7 +21,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
         return NextResponse.json(settings);
     } catch (error) {
-        console.error('Settings update error:', error);
+        
         return NextResponse.json({ message: 'Error updating settings' }, { status: 500 });
     }
 }

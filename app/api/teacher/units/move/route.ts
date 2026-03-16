@@ -64,7 +64,7 @@ export async function POST(req: Request) {
         });
 
     } catch (error: any) {
-        console.error('Error moving units:', error);
+        
         return NextResponse.json({ error: 'Ichki server xatosi' }, { status: 500 });
     }
 }

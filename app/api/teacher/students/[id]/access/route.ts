@@ -73,7 +73,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
             currentUnitIds: unitIds
         });
     } catch (error) {
-        console.error('[STUDENT ACCESS POST] Error:', error);
+        
         return NextResponse.json({ message: 'Error updating access' }, { status: 500 });
     }
 }

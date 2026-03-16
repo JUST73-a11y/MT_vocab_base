@@ -29,7 +29,7 @@ export async function GET() {
             transactions: recentTxs,
         });
     } catch (error) {
-        console.error('[STUDENT_WALLET]', error);
+        
         return NextResponse.json({ message: 'Error fetching wallet' }, { status: 500 });
     }
 }

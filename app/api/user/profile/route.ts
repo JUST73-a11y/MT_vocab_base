@@ -42,7 +42,7 @@ export async function PUT(req: Request) {
             role: user.role,
         });
     } catch (error) {
-        console.error('Error updating profile:', error);
+        
         return NextResponse.json({ message: 'Error updating profile' }, { status: 500 });
     }
 }

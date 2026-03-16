@@ -70,10 +70,10 @@ export const getUnit = async (unitId: string): Promise<Unit | null> => {
     return { ...unit, id: unit._id || unit.id };
 };
 
-export const updateUnit = async (unitId: string, title: string, category?: string, customTimer?: number | null) => {
+export const updateUnit = async (unitId: string, title: string, category?: string, customTimer?: number | null, categoryId?: string | null) => {
     await fetchApi(`/units/${unitId}`, {
         method: 'PUT',
-        body: JSON.stringify({ title, category, customTimer }),
+        body: JSON.stringify({ title, category, customTimer, categoryId }),
     });
 };
 

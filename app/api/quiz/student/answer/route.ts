@@ -96,7 +96,7 @@ async function awardCoins(studentId: string, attemptId: string, correctCount: nu
             { upsert: true, new: true }
         );
     } catch (err) {
-        console.error('[AWARD_COINS] Failed:', err);
+        
     }
 }
 
@@ -195,7 +195,7 @@ export async function POST(req: Request) {
             servedAt: serverServedAt || undefined,
             answeredAt: now,
         }).catch(err => {
-            console.error('[QUIZ_ANSWER] DB creation failed:', err);
+            
             throw err;
         });
 
@@ -209,14 +209,14 @@ export async function POST(req: Request) {
                     $setOnInsert: { createdAt: now, isLearned: false },
                 },
                 { upsert: true }
-            ).catch(err => console.error('[MISTAKE_TRACK] Failed:', err));
+            ).catch(() => {});
         } else if (attempt.mode === 'REVIEW_WRONGS') {
             // "Xatoni quizda topsa ochib ketsin" 
             // Mark as learned if corrected during Stage 2 review
             StudentMistakeWord.findOneAndUpdate(
                 { studentId: new mongoose.Types.ObjectId(student.id), wordId: new mongoose.Types.ObjectId(wordId) },
                 { $set: { isLearned: true, lastCorrectedAt: now } }
-            ).catch(err => console.error('[MISTAKE_LEARN] Failed:', err));
+            ).catch(() => {});
         }
         // ─────────────────────────────────────────────────────────────────────
 
@@ -236,7 +236,7 @@ export async function POST(req: Request) {
                     for (const l of LEVELS) { if (gameProfile.xp >= l.xpNeeded) newLevel = l.level; }
                     gameProfile.level = newLevel;
                     await gameProfile.save();
-                } catch (e) { console.error('[XP_AWARD] Failed:', e); }
+                } catch (e) {  }
             })();
         }
 
@@ -268,7 +268,7 @@ export async function POST(req: Request) {
             { studentId: student.id, date: todayStr },
             dailyUpdate,
             { upsert: true }
-        ).catch(err => console.error('[DAILY_STATS] Update failed:', err));
+        ).catch(() => {});
 
         if (attempt.mode === 'GROUP_SESSION' && attempt.sessionId) {
             const currentScore = await SessionScore.findOne({ sessionId: attempt.sessionId, studentId: student.id });
@@ -282,7 +282,7 @@ export async function POST(req: Request) {
                     $set: { correctCount: sNewCorrect, answeredCount: sNewAnswered, accuracy: sNewAccuracy, lastAnsweredAt: now }
                 },
                 { upsert: true }
-            ).catch(err => console.error('[SESSION_SCORE] Update failed:', err));
+            ).catch(() => {});
         }
         // ───────────────────────────────────────────────
 
@@ -390,7 +390,7 @@ export async function POST(req: Request) {
                         { $inc: { totalQuizzes: 1 } },
                         { upsert: true }
                     );
-                } catch (e) { console.error('[STREAK_UPDATE] Failed:', e); }
+                } catch (e) {  }
             })();
         }
 
@@ -423,7 +423,7 @@ export async function POST(req: Request) {
         });
 
     } catch (error) {
-        console.error('[QUIZ_ANSWER] Major Error:', error);
+        
         return NextResponse.json({ message: 'Error processing answer' }, { status: 500 });
     }
 }

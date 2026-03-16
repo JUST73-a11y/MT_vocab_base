@@ -38,7 +38,7 @@ export async function GET(req: Request) {
             totalPages: Math.ceil(total / limit),
         });
     } catch (error) {
-        console.error('[QUIZ_HISTORY]', error);
+        
         return NextResponse.json({ message: 'Error fetching history' }, { status: 500 });
     }
 }

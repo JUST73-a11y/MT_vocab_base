@@ -88,7 +88,7 @@ export default function StudentStatsPage() {
             setWallet(w);
             setHistory(h);
         } catch (e) {
-            console.error(e);
+            
         } finally {
             setLoading(false);
         }

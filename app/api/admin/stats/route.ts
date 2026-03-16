@@ -36,7 +36,7 @@ export async function GET(req: Request) {
             recentUsers,
         });
     } catch (error) {
-        console.error('Error fetching admin stats:', error);
+        
         return NextResponse.json({ message: 'Error fetching stats' }, { status: 500 });
     }
 }

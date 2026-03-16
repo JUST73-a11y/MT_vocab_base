@@ -39,7 +39,7 @@ export async function GET(
 
         return NextResponse.json({ mistakes });
     } catch (error: any) {
-        console.error('[TEACHER_STUDENT_MISTAKES]', error);
+        
         return NextResponse.json({ message: error.message || 'Error fetching mistakes' }, { status: 500 });
     }
 }

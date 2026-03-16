@@ -65,7 +65,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
             currentUnitIds: unitIds
         });
     } catch (error) {
-        console.error('[GROUP ACCESS POST] Error:', error);
+        
         return NextResponse.json({ message: 'Error updating group access' }, { status: 500 });
     }
 }

@@ -63,7 +63,7 @@ export default function UsersPage() {
                 setFilteredUsers(data);
             }
         } catch (error) {
-            console.error('Failed to fetch users:', error);
+            
         } finally {
             setLoading(false);
         }
@@ -118,7 +118,7 @@ export default function UsersPage() {
                 alert(data.message || 'Xato yuz berdi');
             }
         } catch (error) {
-            console.error('Failed to update code:', error);
+            
         }
     };
 

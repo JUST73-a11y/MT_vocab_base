@@ -79,7 +79,7 @@ export async function GET(req: Request, { params }: { params: Params }) {
 
         return NextResponse.json({ leaderboard });
     } catch (error) {
-        console.error(error);
+        
         return NextResponse.json({ message: 'Error fetching leaderboard' }, { status: 500 });
     }
 }

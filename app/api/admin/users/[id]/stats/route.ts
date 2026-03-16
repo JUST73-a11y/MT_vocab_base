@@ -69,7 +69,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         });
 
     } catch (error) {
-        console.error('Error fetching student stats:', error);
+        
         return NextResponse.json({ message: 'Error fetching stats' }, { status: 500 });
     }
 }

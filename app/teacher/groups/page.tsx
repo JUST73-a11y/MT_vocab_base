@@ -117,7 +117,7 @@ export default function TeacherGroupsPage() {
             setUnits(uData);
             setCategoriesTree(catData || []);
         } catch (error) {
-            console.error('Failed to load groups:', error);
+            
         } finally {
             setLoadingData(false);
         }
@@ -139,7 +139,7 @@ export default function TeacherGroupsPage() {
             loadData(); // To get actual enriched counts if needed
             toast.success("Guruh yaratildi");
         } catch (error: any) {
-            console.error('Failed to create group:', error);
+            
             toast.error(error.message || 'Xatolik yuz berdi');
         } finally {
             setCreatingGroup(false);
@@ -155,7 +155,7 @@ export default function TeacherGroupsPage() {
             const data = await apiFetch(`/api/teacher/groups/${group.id}/members`);
             setGroupMembers(data.map((m: any) => m.id));
         } catch (error) {
-            console.error('Failed to load group members:', error);
+            
         }
 
         // Load access
@@ -164,7 +164,7 @@ export default function TeacherGroupsPage() {
             setGroupAccess(data.unitIds || []);
             setQuizSelectedUnits(data.unitIds || []);
         } catch (error) {
-            console.error('Failed to load group access:', error);
+            
         }
     };
 
@@ -174,7 +174,7 @@ export default function TeacherGroupsPage() {
             const data = await apiFetch(`/api/teacher/groups/${groupId}/stats`);
             setStats(data);
         } catch (error) {
-            console.error('Failed to load stats:', error);
+            
         } finally {
             setLoadingStats(false);
         }
@@ -206,7 +206,7 @@ export default function TeacherGroupsPage() {
             openGroupDetails(selectedGroup);
             toast.success('A\'zolar saqlandi');
         } catch (error: any) {
-            console.error('Failed to save members:', error);
+            
             toast.error(error.message || 'Xatolik yuz berdi');
         } finally {
             setSavingMembers(false);
@@ -233,7 +233,7 @@ export default function TeacherGroupsPage() {
             openGroupDetails(selectedGroup);
             toast.success('Huquqlar saqlandi');
         } catch (error: any) {
-            console.error('Failed to save access:', error);
+            
             toast.error(error.message || 'Xatolik yuz berdi');
         } finally {
             setSavingAccess(false);

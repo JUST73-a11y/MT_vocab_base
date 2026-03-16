@@ -25,7 +25,7 @@ export async function GET(req: Request) {
         return NextResponse.json({ gifts });
 
     } catch (error) {
-        console.error('[STUDENT_GIFTS]', error);
+        
         return NextResponse.json({ message: 'Error fetching gifts', gifts: [] }, { status: 500 });
     }
 }

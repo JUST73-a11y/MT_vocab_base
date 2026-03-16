@@ -56,7 +56,7 @@ export async function PATCH(
         });
 
     } catch (error) {
-        console.error('Error assigning teacher:', error);
+        
         return NextResponse.json({ message: 'Server error' }, { status: 500 });
     }
 }

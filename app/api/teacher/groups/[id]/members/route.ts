@@ -72,7 +72,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
         return NextResponse.json({ message: 'Members updated successfully' });
     } catch (error) {
-        console.error('[GROUP MEMBERS POST] Error:', error);
+        
         return NextResponse.json({ message: 'Error updating members' }, { status: 500 });
     }
 }

@@ -66,7 +66,7 @@ export async function GET(req: Request) {
 
         return NextResponse.json({ mistakes: enriched, units: unitOptions });
     } catch (error) {
-        console.error('[MISTAKES_API] Error:', error);
+        
         return NextResponse.json({ message: 'Error loading mistakes' }, { status: 500 });
     }
 }
@@ -98,7 +98,7 @@ export async function PATCH(req: Request) {
 
         return NextResponse.json({ success: true, isLearned: result.isLearned });
     } catch (error) {
-        console.error('[MISTAKES_PATCH] Error:', error);
+        
         return NextResponse.json({ message: 'Error updating' }, { status: 500 });
     }
 }

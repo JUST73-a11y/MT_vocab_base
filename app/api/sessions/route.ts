@@ -81,7 +81,7 @@ export async function PUT(req: Request) {
                 { studentId: session.studentId, date: todayStr },
                 { $inc: { timeSpentSeconds: timeSpentSeconds } },
                 { upsert: true }
-            )).catch(err => console.error('[SESSION_TIME_UPDATE] Failed:', err));
+            )).catch(() => {});
         }
 
         return NextResponse.json(session);

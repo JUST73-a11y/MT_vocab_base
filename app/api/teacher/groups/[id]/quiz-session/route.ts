@@ -64,7 +64,7 @@ async function saveLeaderboardSnapshot(sessionId: string, groupId: string) {
         });
 
     } catch (err) {
-        console.error('[SAVE_LEADERBOARD]', err);
+        
     }
 }
 
@@ -131,7 +131,7 @@ export async function POST(req: Request, { params }: { params: Params }) {
 
         return NextResponse.json({ session });
     } catch (error) {
-        console.error(error);
+        
         return NextResponse.json({ message: 'Error starting session' }, { status: 500 });
     }
 }

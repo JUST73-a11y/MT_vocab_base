@@ -133,7 +133,7 @@ export async function GET(req: Request) {
         return NextResponse.json(mapped);
 
     } catch (error) {
-        console.error('[API GET UNITS] Error:', error);
+        
         return NextResponse.json({ message: 'Error fetching units' }, { status: 500 });
     }
 }
@@ -172,7 +172,7 @@ export async function POST(req: Request) {
 
         return NextResponse.json(newUnit, { status: 201 });
     } catch (error: any) {
-        console.error('[API POST UNITS] Error creating unit:', error);
+        
         return NextResponse.json({ message: error.message || 'Error creating unit' }, { status: 500 });
     }
 }

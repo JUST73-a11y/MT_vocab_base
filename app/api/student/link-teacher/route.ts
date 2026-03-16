@@ -69,7 +69,7 @@ export async function POST(req: Request) {
         });
 
     } catch (error) {
-        console.error('Error linking teacher:', error);
+        
         return NextResponse.json({ message: 'Server error' }, { status: 500 });
     }
 }

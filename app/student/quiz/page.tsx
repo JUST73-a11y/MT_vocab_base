@@ -116,7 +116,7 @@ function playSound(type: 'correct' | 'wrong') {
             });
         }
     } catch (e) {
-        console.warn('Audio play failed:', e);
+        
     }
 }
 
@@ -927,7 +927,7 @@ export default function StudentQuizPage() {
                                                     body: JSON.stringify({ attemptId, wrongWordIds: [question.wordId] })
                                                 });
                                             } catch (e) {
-                                                console.error('Failed to notify abandon', e);
+                                                
                                             }
                                         }
                                         setShowLeaveModal(false);

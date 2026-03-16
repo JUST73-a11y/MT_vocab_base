@@ -56,7 +56,7 @@ export async function GET(req: Request) {
         });
 
     } catch (error) {
-        console.error('Active session check error:', error);
+        
         return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
     }
 }

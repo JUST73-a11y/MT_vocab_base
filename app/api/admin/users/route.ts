@@ -60,12 +60,12 @@ export async function GET(req: Request) {
         });
 
         if (process.env.NODE_ENV !== 'production') {
-            console.log(`[ADMIN_USERS_GET] Found ${users.length} users, ${wallets.length} wallets. Sample coinBalance: ${mergedUsers.find(u => u.role === 'student')?.coinBalance}`);
+            
         }
 
         return NextResponse.json(mergedUsers);
     } catch (error: any) {
-        console.error('Error fetching users:', error);
+        
         return createApiError('SERVER_ERROR', error.message || 'Error fetching users', 500);
     }
 }
@@ -155,7 +155,7 @@ export async function POST(req: Request) {
             { status: 201 }
         );
     } catch (error: any) {
-        console.error('Error creating teacher:', error);
+        
         return createApiError('SERVER_ERROR', error.message || 'Server error', 500);
     }
 }

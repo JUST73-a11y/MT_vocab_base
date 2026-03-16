@@ -61,7 +61,7 @@ export default function MistakesPage() {
             setMistakes(data.mistakes || []);
             setUnits(data.units || []);
         } catch (err) {
-            console.error('Failed to load mistakes:', err);
+            
         } finally {
             setLoadingData(false);
         }

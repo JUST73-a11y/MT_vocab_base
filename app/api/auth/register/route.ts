@@ -119,7 +119,7 @@ export async function POST(req: Request) {
 
         return NextResponse.json({ message: 'OTP sent to email' }, { status: 200 });
     } catch (error: any) {
-        console.error('Register/OTP error:', error);
+        
         return NextResponse.json({ message: error.message || 'Server error' }, { status: 500 });
     }
 }

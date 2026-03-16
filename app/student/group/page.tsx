@@ -86,7 +86,7 @@ export default function StudentGroupPage() {
             const data = await apiFetch('/api/student/group');
             setGroupData(data);
         } catch (error) {
-            console.error('Failed to load group data:', error);
+            
         } finally {
             setLoadingData(false);
         }

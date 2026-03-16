@@ -25,7 +25,7 @@ export async function GET(req: Request) {
 
         return NextResponse.json(teachers);
     } catch (error) {
-        console.error('[API GET TEACHER LIST] Error:', error);
+        
         return NextResponse.json({ message: 'Error fetching teacher list' }, { status: 500 });
     }
 }
