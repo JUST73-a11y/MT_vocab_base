@@ -44,7 +44,7 @@ function DeleteConfirmationModal({
             <motion.div
                 initial={{ scale: 0.95, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                className="glass-card w-full max-w-sm p-8 flex flex-col gap-6 relative !bg-gray-950/90 border-red-500/20 shadow-2xl shadow-red-500/10"
+                className="glass-card w-full max-w-md p-10 flex flex-col gap-8 relative !bg-gray-950/95 border-red-500/30 shadow-2xl shadow-red-500/20"
             >
                 <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-2">
                     <AlertCircle className="w-8 h-8 text-red-500" />
@@ -61,14 +61,14 @@ function DeleteConfirmationModal({
                     <button
                         onClick={onConfirm}
                         disabled={loading}
-                        className="w-full py-5 rounded-2xl bg-red-500 hover:bg-red-400 text-black font-black uppercase tracking-[0.2em] text-xs transition-all active:scale-95 shadow-lg shadow-red-500/20 disabled:opacity-50"
+                        className="w-full py-6 rounded-2xl bg-red-500 hover:bg-red-400 text-black font-[900] uppercase tracking-[0.25em] text-[15px] transition-all active:scale-95 shadow-2xl shadow-red-500/30 disabled:opacity-50"
                     >
-                        {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Ha, o\'chirilsin'}
+                        {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'Ha, o\'chirilsin'}
                     </button>
                     <button
                         onClick={onCancel}
                         disabled={loading}
-                        className="w-full py-5 rounded-2xl bg-white/5 border border-white/10 text-white/40 hover:text-white hover:bg-white/10 font-black uppercase tracking-[0.2em] text-xs transition-all"
+                        className="w-full py-6 rounded-2xl bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/10 font-[900] uppercase tracking-[0.25em] text-[15px] transition-all"
                     >
                         Bekor qilish
                     </button>
@@ -440,7 +440,13 @@ export default function UnitsPage() {
 
     // Units filtered by current category + search
     const baseUnits = currentCatId
-        ? units.filter(u => u.categoryId === currentCatId)
+        ? units.filter(u => {
+            // Match by ID if available
+            if (u.categoryId) return u.categoryId === currentCatId;
+            // Fallback: match by name if ID is missing (legacy units)
+            const currentNode = findNode(categoriesTree, currentCatId);
+            return currentNode && u.category === currentNode.name;
+        })
         : units.filter(u => !u.categoryId || u.categoryId === 'uncategorized');
     const currentUnits = search
         ? units.filter(u => u.title.toLowerCase().includes(search.toLowerCase())) // Search across all units if searching
