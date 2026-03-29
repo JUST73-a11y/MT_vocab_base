@@ -53,46 +53,46 @@ export async function POST(req: Request) {
         }
 
         // 2. Jo'natuvchining barcha unitlarini MongoDB'dan to'g'ridan-to'g'ri olish
-        const myUnits = await Unit.find({ createdBy: fromTeacherId }).lean();
-        const myUnitIds = myUnits.map((u: any) => u._id.toString());
+        const myUnits = await Unit.find({ createdBy: fromTeacherId }).select('_id').lean();
+        const myUnitIds = new Set(myUnits.map((u: any) => u._id.toString()));
 
-        const successfulUnitIds: string[] = [];
+        // 3. Clear ANY existing shares for these units to THIS teacher to allow a fresh start
+        await UnitShare.deleteMany({
+            unitId: { $in: unitIds },
+            fromTeacherId: fromTeacherId,
+            toTeacherId: toTeacherId
+        });
+
+        const toCreate: any[] = [];
         const failed: { unitId: string, reason: string }[] = [];
 
-        // 3. Har bir unitni tekshirish va ulashish
         for (const unitId of unitIds) {
             // Egalik huquqini tekshirish
-            if (!myUnitIds.includes(unitId)) {
+            if (!myUnitIds.has(unitId)) {
                 failed.push({ unitId, reason: "Sizga tegishli bo'lmagan unit" });
                 continue;
             }
 
-            // O'zi bor-yo'qligini tekshirish
-            const existingShare = await UnitShare.findOne({
-                unitId: unitId,
-                fromTeacherId: fromTeacherId,
-                toTeacherId: toTeacherId
-            });
-
-            if (existingShare) {
-                failed.push({ unitId, reason: "Ushbu unit avval yuborilgan" });
-                continue;
-            }
-
-            // Yangi share yaratish (PENDING - uppercase matching schema enum)
-            await UnitShare.create({
+            toCreate.push({
                 unitId: unitId,
                 fromTeacherId: fromTeacherId,
                 toTeacherId: toTeacherId,
                 status: 'PENDING'
             });
+        }
 
-            successfulUnitIds.push(unitId);
+        // 4. Yangi sharelarni bulk yaratish
+        if (toCreate.length > 0) {
+            await UnitShare.insertMany(toCreate);
         }
 
         return NextResponse.json({
-            message: `Ulashish natijasi: ${successfulUnitIds.length} ta muvaffaqiyatli, ${failed.length} ta xatolik`,
-            successfulUnitIds,
+            message: `Muvaffaqiyatli ulashildi!`,
+            summary: {
+                total: unitIds.length,
+                newlyShared: toCreate.length,
+                failed: failed.length
+            },
             failed
         });
 

@@ -57,12 +57,31 @@ export async function GET(req: Request) {
         let unitCountMap: Map<string, number> = new Map();
         if (includeCounts && categories.length > 0) {
             const catIds = categories.map((c: any) => c._id);
-            const counts = await Unit.aggregate([
+            
+            // 1. Count owned units
+            const ownedCounts = await Unit.aggregate([
                 { $match: { categoryId: { $in: catIds } } },
                 { $group: { _id: '$categoryId', count: { $sum: 1 } } }
             ]);
-            counts.forEach((c: any) => {
-                unitCountMap.set(c._id.toString(), c.count);
+            ownedCounts.forEach((c: any) => {
+                const id = c._id.toString();
+                unitCountMap.set(id, (unitCountMap.get(id) || 0) + c.count);
+            });
+
+            // 2. Count shared units (where this teacher is the recipient and it's accepted)
+            const sharedCounts = await (await import('@/models/UnitShare')).default.aggregate([
+                { 
+                    $match: { 
+                        targetCategoryId: { $in: catIds },
+                        toTeacherId: new (await import('mongoose')).default.Types.ObjectId(teacherIdForCategories),
+                        status: 'ACCEPTED'
+                    } 
+                },
+                { $group: { _id: '$targetCategoryId', count: { $sum: 1 } } }
+            ]);
+            sharedCounts.forEach((c: any) => {
+                const id = c._id.toString();
+                unitCountMap.set(id, (unitCountMap.get(id) || 0) + c.count);
             });
         }
 

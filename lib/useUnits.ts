@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Unit } from './types';
 
-const STALE_TIME_MS = 30_000; // 30 seconds
+const STALE_TIME_MS = 10_000; // 10 seconds for tighter sync
 
 // adminTeacherId: only pass when admin wants to view a specific teacher's units
 export function useUnits(userId?: string | null, adminTeacherId?: string | null) {
@@ -17,7 +17,7 @@ export function useUnits(userId?: string | null, adminTeacherId?: string | null)
         if (!userId) { setLoading(false); return; }
 
         const now = Date.now();
-        if (!force && now - lastFetchedAt.current < STALE_TIME_MS) return;
+        if (!force && lastFetchedAt.current > 0 && now - lastFetchedAt.current < STALE_TIME_MS) return;
 
         // Cancel any in-flight request
         abortRef.current?.abort();
@@ -29,7 +29,11 @@ export function useUnits(userId?: string | null, adminTeacherId?: string | null)
 
         try {
             const url = adminTeacherId ? `/api/units?teacherId=${adminTeacherId}` : '/api/units';
-            const res = await fetch(url, { signal: controller.signal, cache: 'no-store' });
+            const res = await fetch(url, { 
+                signal: controller.signal, 
+                cache: 'no-store',
+                headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' }
+            });
 
             if (controller.signal.aborted) return;
 
@@ -39,7 +43,6 @@ export function useUnits(userId?: string | null, adminTeacherId?: string | null)
                 return;
             }
 
-            // 200 or 404 both return array (backend never 404s on list)
             if (!res.ok) {
                 setUnits([]);
                 return;
@@ -59,16 +62,26 @@ export function useUnits(userId?: string | null, adminTeacherId?: string | null)
         } finally {
             if (!controller.signal.aborted) setLoading(false);
         }
-    }, [userId]);
+    }, [userId, adminTeacherId]);
 
     // Initial fetch and cleanup
     useEffect(() => {
         lastFetchedAt.current = 0; // force re-fetch on mount
         fetchUnits(true);
-        return () => { abortRef.current?.abort(); };
+
+        const handleFocus = () => {
+            // Auto re-fetch on window focus to ensure consistency between Dashboard and Units page
+            fetchUnits(true);
+        };
+
+        window.addEventListener('focus', handleFocus);
+        return () => { 
+            window.removeEventListener('focus', handleFocus);
+            abortRef.current?.abort(); 
+        };
     }, [fetchUnits]);
 
-    const refetch = useCallback(() => fetchUnits(true), [fetchUnits]);
+    const refetch = useCallback((force = true) => fetchUnits(force), [fetchUnits]);
 
     return { units, loading, error, refetch };
 }

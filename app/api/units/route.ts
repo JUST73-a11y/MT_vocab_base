@@ -7,6 +7,7 @@ import StudentUnitAccess from '@/models/StudentUnitAccess';
 import GroupMember from '@/models/GroupMember';
 import GroupUnitAccess from '@/models/GroupUnitAccess';
 import { cache } from '@/lib/cache';
+import mongoose from 'mongoose';
 
 const UNITS_TTL = 15_000; // 15 seconds
 
@@ -49,38 +50,46 @@ export async function GET(req: Request) {
                 ...groupAccess.map((ga: any) => ga.unitId.toString())
             ]));
             query._id = { $in: authorizedUnitIds };
-        } else if (user.role === 'teacher') {
-            const [myUnits, sharedEntries] = await Promise.all([
-                Unit.find({ createdBy: user.id }).select('_id').lean(),
-                (await import('@/models/UnitShare')).default.find({ 
-                    toTeacherId: user.id, 
-                    status: 'ACCEPTED' 
-                }).select('unitId targetCategoryId').lean()
-            ]);
+        } else if (user.role === 'teacher' || (user.role === 'admin' && !teacherId)) {
+            const filterUserId = user.id;
+            
+            // 1. Get all ACCEPTED shares for this teacher to find shared unit IDs
+            const sharedEntries = await (await import('@/models/UnitShare')).default.find({ 
+                toTeacherId: filterUserId, 
+                status: 'ACCEPTED' 
+            }).select('unitId targetCategoryId').lean();
 
-            const authorizedUnitIds = [
-                ...myUnits.map((u: any) => u._id.toString()),
-                ...sharedEntries.map((s: any) => s.unitId.toString())
-            ];
-            query._id = { $in: authorizedUnitIds };
+            const sharedUnitIds = sharedEntries.map((s: any) => s.unitId);
+            const sharedIdMap = new Map(sharedEntries.map((s: any) => [s.unitId.toString(), s.targetCategoryId?.toString()]));
+
+            // 2. Perform a SINGLE efficient query for owned OR shared units
+            query = {
+                $or: [
+                    { createdBy: filterUserId },
+                    { _id: { $in: sharedUnitIds } }
+                ]
+            };
 
             if (category) query.category = category;
 
-            const sharedIdMap = new Map(sharedEntries.map((s: any) => [s.unitId.toString(), s.targetCategoryId?.toString()]));
-
             const rawUnits = await Unit.find(query)
                 .select('title category categoryId customTimer createdAt createdBy')
+                .populate('createdBy', 'name email status') // populate creator info
                 .sort({ createdAt: -1 })
                 .lean();
 
             const mapped = rawUnits.map((u: any) => {
                 const unitId = u._id?.toString() || u.id;
                 const sharedCatId = sharedIdMap.get(unitId);
+                const creator = u.createdBy;
+                
                 return {
                     ...u,
                     id: unitId,
                     _id: unitId,
-                    createdBy: u.createdBy?.toString(),
+                    createdBy: creator?._id?.toString() || creator?.toString(),
+                    creator: creator, // Full populated object
+                    creatorName: creator?.name || (creator?._id?.toString() === user.id ? user.name : "Noma'lum"),
                     category: u.category || 'Uncategorized',
                     categoryId: (sharedCatId || u.categoryId?.toString()) ?? null,
                 };
@@ -88,34 +97,15 @@ export async function GET(req: Request) {
 
             if (cacheKey) cache.set(cacheKey, mapped, UNITS_TTL);
             return NextResponse.json(mapped);
-        } else if (user.role === 'admin' && teacherId) {
+        }
+ else if (user.role === 'admin' && teacherId) {
             query.createdBy = teacherId;
         }
 
         if (category && user.role !== 'teacher') query.category = category;
 
-        const needsCreatorInfo = user.role === 'admin';
-        if (needsCreatorInfo) {
-            const units = await Unit.find(query)
-                .populate('createdBy', 'name email')
-                .select('title category categoryId customTimer createdAt createdBy')
-                .sort({ createdAt: -1 });
-
-            const mapped = units.map((unit: any) => {
-                const u = unit.toObject ? unit.toObject() : unit;
-                return { 
-                    ...u, 
-                    id: u._id?.toString(),
-                    _id: u._id?.toString(), 
-                    category: u.category || 'Uncategorized', 
-                    categoryId: u.categoryId?.toString() ?? null 
-                };
-            });
-
-            return NextResponse.json(mapped);
-        }
-
         const rawUnits = await Unit.find(query)
+            .populate({ path: 'createdBy', select: 'name email' })
             .select('title category categoryId customTimer createdAt createdBy')
             .sort({ createdAt: -1 })
             .lean();
@@ -124,7 +114,9 @@ export async function GET(req: Request) {
             ...u,
             id: u._id?.toString(),
             _id: u._id?.toString(),
-            createdBy: u.createdBy?.toString(),
+            createdBy: u.createdBy?._id?.toString() || u.createdBy?.toString(),
+            creator: u.createdBy,
+            creatorName: u.createdBy?.name,
             category: u.category || 'Uncategorized',
             categoryId: u.categoryId?.toString() ?? null,
         }));

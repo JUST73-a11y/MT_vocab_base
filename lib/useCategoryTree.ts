@@ -7,6 +7,7 @@ export interface CategoryNode {
     name: string;
     path: string;
     unitCount?: number;
+    parentId?: string;
     children: CategoryNode[];
 }
 

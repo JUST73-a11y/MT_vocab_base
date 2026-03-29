@@ -90,7 +90,7 @@ export default function RandomPracticePage() {
 
     // Oyna NavBar ni yashirish (Faqat mashq paytida)
     useEffect(() => {
-        const nav = document.getElementById('student-nav');
+        const nav = document.getElementById('teacher-nav');
         if (nav) {
             nav.style.display = isSelectionMode ? 'block' : 'none';
         }
@@ -247,7 +247,7 @@ export default function RandomPracticePage() {
                             Bo'limni o'zgartirish
                         </button>
                     </div>
-                    <Link href="/student/dashboard" className="block mt-8 text-[11px] font-black uppercase tracking-widest text-white/20 hover:text-white/60 transition-colors">
+                    <Link href="/teacher/dashboard" className="block mt-8 text-[11px] font-black uppercase tracking-widest text-white/20 hover:text-white/60 transition-colors">
                         ← Dashboardga qaytish
                     </Link>
                 </div>
@@ -268,7 +268,7 @@ export default function RandomPracticePage() {
                                     <ArrowLeft className="w-5 h-5 text-white" />
                                 </button>
                             ) : (
-                                <Link href="/student/dashboard"
+                                <Link href="/teacher/dashboard"
                                     className="w-10 h-10 rounded-xl flex items-center justify-center transition-all bg-white/5 border border-white/10 hover:bg-white/10 active:scale-95">
                                     <ArrowLeft className="w-5 h-5 text-white" />
                                 </Link>

@@ -23,11 +23,11 @@ export async function GET(req: Request) {
             return NextResponse.json({ session: null });
         }
 
-        // 2. Find an ACTIVE session for any of these groups
-        // We sort by createdAt -1 to get the most recent one if multiple (though UI prevents multiple active)
+        // 2. Find an ACTIVE or PUBLISHED session for any of these groups
+        // We sort by status (ACTIVE first) then createdAt -1
         const session = await GroupQuizSession.findOne({
             groupId: { $in: groupIds },
-            status: 'ACTIVE',
+            status: { $in: ['ACTIVE', 'PUBLISHED'] },
             $or: [
                 { endsAt: { $gt: new Date() } },
                 { endsAt: { $exists: false } }
@@ -35,7 +35,7 @@ export async function GET(req: Request) {
         })
             .populate('groupId', 'name')
             .populate('teacherId', 'name')
-            .sort({ createdAt: -1 })
+            .sort({ status: 1, createdAt: -1 }) // 'ACTIVE' sorts before 'PUBLISHED' alphabetically
             .lean() as any;
 
         if (!session) {
@@ -52,6 +52,8 @@ export async function GET(req: Request) {
                 questionCount: session.questionCount,
                 startsAt: session.startsAt,
                 endsAt: session.endsAt,
+                status: session.status,
+                title: session.title,
             }
         });
 

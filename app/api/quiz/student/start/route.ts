@@ -11,7 +11,7 @@ import { getServerSession } from '@/lib/serverAuth';
 function buildQuestionData(word: any, allWords: any[]) {
     // 1. Gather pool excluding the target word
     const pool = allWords.filter(w => w._id.toString() !== word._id.toString());
-    const shuffledPool = pool.sort(() => Math.random() - 0.5);
+    const shuffledPool = pool.map(w => ({ w, sort: Math.random() })).sort((a, b) => a.sort - b.sort).map(({ w }) => w);
 
     // 2. Select exactly 2 distinct distractors
     const distractors: typeof pool = [];
@@ -41,7 +41,7 @@ function buildQuestionData(word: any, allWords: any[]) {
     ];
 
     // Safely shuffle into a new array to prevent reference loss
-    const shuffledOptions = [...rawOptions].sort(() => Math.random() - 0.5);
+    const shuffledOptions = rawOptions.map(opt => ({ opt, sort: Math.random() })).sort((a, b) => a.sort - b.sort).map(({ opt }) => opt);
 
     // 5. Assign clean IDs (opt_0, opt_1, opt_2) and locate the correct one
     let targetOptionId = '';
@@ -74,8 +74,8 @@ export async function POST(req: Request) {
 
         await dbConnect();
 
-        // ── ENERGY CHECK (self-study only, not group or review modes)
-        if (mode === 'STUDENT_SELF') {
+        // ── ENERGY CHECK (Deduct for self-study and group quizzes)
+        if (mode === 'STUDENT_SELF' || mode === 'GROUP_SESSION' || mode === 'GROUP_ASSIGNED') {
             let energyDoc = await StudentEnergy.findOne({ studentId: student.id });
             if (!energyDoc) {
                 energyDoc = await StudentEnergy.create({ studentId: student.id, energy: MAX_ENERGY, lastRefilledAt: new Date() });

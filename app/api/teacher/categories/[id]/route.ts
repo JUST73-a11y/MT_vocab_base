@@ -58,3 +58,81 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
         return NextResponse.json({ message: error.message || 'Server error' }, { status: 500 });
     }
 }
+
+export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+    try {
+        const session = await getServerSession();
+        if (!session || session.role !== 'teacher') {
+            return NextResponse.json({ message: 'Unauthorized' }, { status: 403 });
+        }
+
+        const { id } = await params;
+        const { name, parentId } = await req.json();
+
+        await dbConnect();
+
+        const category = await Category.findById(id);
+        if (!category) return NextResponse.json({ message: 'Kategoriya topilmadi' }, { status: 404 });
+        if (category.teacherId.toString() !== session.id) {
+            return NextResponse.json({ message: 'Forbidden' }, { status: 403 });
+        }
+
+        let updatedName = category.name;
+        let updatedParentId = category.parentId;
+
+        if (name !== undefined) updatedName = name.trim();
+        if (parentId !== undefined) updatedParentId = parentId || null;
+
+        // Moving to itself check
+        if (updatedParentId && updatedParentId.toString() === id) {
+            return NextResponse.json({ message: 'Kategoriyani o\'ziga ko\'chirib bo\'lmaydi' }, { status: 400 });
+        }
+
+        // Circular move check (moving to a child)
+        if (updatedParentId) {
+            const allCats = await Category.find({ teacherId: session.id }).lean();
+            const findIsChild = (targetId: string, currentParentId: string): boolean => {
+                const parent = allCats.find(c => c._id.toString() === currentParentId);
+                if (!parent) return false;
+                if (parent._id.toString() === targetId) return true;
+                if (!parent.parentId) return false;
+                return findIsChild(targetId, parent.parentId.toString());
+            };
+            if (findIsChild(id, updatedParentId.toString())) {
+                return NextResponse.json({ message: 'Kategoriyani o\'zining ichiga ko\'chirib bo\'lmaydi' }, { status: 400 });
+            }
+        }
+
+        // Calculate new path
+        let newPath = updatedName;
+        if (updatedParentId) {
+            const parent = await Category.findById(updatedParentId);
+            if (!parent) return NextResponse.json({ message: 'Ota kategoriya topilmadi' }, { status: 404 });
+            newPath = `${parent.path} / ${updatedName}`;
+        }
+
+        category.name = updatedName;
+        category.parentId = updatedParentId;
+        category.path = newPath;
+        await category.save();
+
+        // Recursively update children paths
+        const updateChildrenPaths = async (parentId: string, parentPath: string) => {
+            const children = await Category.find({ parentId });
+            for (const child of children) {
+                const childPath = `${parentPath} / ${child.name}`;
+                child.path = childPath;
+                await child.save();
+                await updateChildrenPaths(child._id.toString(), childPath);
+            }
+        };
+
+        if (name !== undefined || parentId !== undefined) {
+            await updateChildrenPaths(id, newPath);
+        }
+
+        return NextResponse.json(category);
+    } catch (error: any) {
+        return NextResponse.json({ message: error.message || 'Server error' }, { status: 500 });
+    }
+}

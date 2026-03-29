@@ -11,6 +11,7 @@ const QuizAttemptSchema = new Schema({
     correctCount: { type: Number, default: 0 },
     answeredCount: { type: Number, default: 0 },
     coinsEarned: { type: Number, default: 0 },
+    pendingCoins: { type: Number, default: 0 },
     wordIds: [{ type: Schema.Types.ObjectId, ref: 'Word' }],
     usedWordIds: [{ type: Schema.Types.ObjectId, ref: 'Word' }],
     // Server-side correctOptionId memo: { wordId: correctOptionId }

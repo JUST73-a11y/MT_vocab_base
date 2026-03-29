@@ -18,7 +18,7 @@ import { getServerSession } from '@/lib/serverAuth';
 function buildQuestionData(word: any, allWords: any[]) {
     // 1. Gather pool excluding the target word
     const pool = allWords.filter(w => w._id.toString() !== word._id.toString());
-    const shuffledPool = pool.sort(() => Math.random() - 0.5);
+    const shuffledPool = pool.map(w => ({ w, sort: Math.random() })).sort((a, b) => a.sort - b.sort).map(({ w }) => w);
 
     // 2. Select exactly 2 distinct distractors
     const distractors: typeof pool = [];
@@ -48,7 +48,7 @@ function buildQuestionData(word: any, allWords: any[]) {
     ];
 
     // Safely shuffle into a new array
-    const shuffledOptions = [...rawOptions].sort(() => Math.random() - 0.5);
+    const shuffledOptions = rawOptions.map(opt => ({ opt, sort: Math.random() })).sort((a, b) => a.sort - b.sort).map(({ opt }) => opt);
 
     // 5. Assign clean IDs (opt_0, opt_1, opt_2) and locate the correct one
     let targetOptionId = '';
@@ -347,15 +347,46 @@ export async function POST(req: Request) {
             // End the attempt
             updateDoc.$set.endedAt = new Date();
 
-            // REVIEW_WRONGS mode: NO coins awarded (learning/revision only)
+            // Fetch all wrong answers for this attempt (to identify if review is needed)
+            const otherWrongAnswers = await QuizAnswer.find({ attemptId, isCorrect: false }).lean();
+            const currentWrongId = !isCorrect ? [wordId] : [];
+            const allWrongWordIds = [...new Set([...otherWrongAnswers.map(a => a.wordId.toString()), ...currentWrongId])];
+
+            // REVIEW_WRONGS mode: award pending coins from source if review is complete
             if (attempt.mode === 'REVIEW_WRONGS') {
                 coinsEarned = 0;
                 updateDoc.$set.coinsEarned = 0;
+
+                // If this was a review of a specific attempt with pending rewards
+                if (attempt.sourceAttemptId) {
+                    const sourceAttempt = await QuizAttempt.findById(attempt.sourceAttemptId);
+                    if (sourceAttempt && (sourceAttempt as any).pendingCoins > 0) {
+                        const pendingCoins = (sourceAttempt as any).pendingCoins;
+                        await awardCoins(student.id, attemptId, sourceAttempt.correctCount, sourceAttempt.answeredCount, pendingCoins);
+                        
+                        // Clear pending coins in source and mark reward as granted here
+                        await QuizAttempt.findByIdAndUpdate(attempt.sourceAttemptId, { $set: { pendingCoins: 0 } });
+                        updateDoc.$set.coinsEarned = pendingCoins; 
+                        coinsEarned = pendingCoins;
+                    }
+                }
             } else {
-                coinsEarned = calculateCoins(newCorrectCount, newAnsweredCount);
-                updateDoc.$set.coinsEarned = coinsEarned;
-                awardCoins(student.id, attemptId, newCorrectCount, newAnsweredCount, coinsEarned);
+                const calculatedCoins = calculateCoins(newCorrectCount, newAnsweredCount);
+                
+                // If there are mistakes, hold the coins
+                if (allWrongWordIds.length > 0) {
+                    updateDoc.$set.pendingCoins = calculatedCoins;
+                    updateDoc.$set.coinsEarned = 0;
+                    coinsEarned = 0; // Don't show as earned in UI yet
+                } else {
+                    coinsEarned = calculatedCoins;
+                    updateDoc.$set.coinsEarned = coinsEarned;
+                    await awardCoins(student.id, attemptId, newCorrectCount, newAnsweredCount, coinsEarned);
+                }
             }
+
+            // Expose for the response block
+            (attempt as any)._allWrongWordIds = allWrongWordIds;
 
             // ── TRIGGER STREAK on quiz end (fire-and-forget)
             (async () => {
@@ -396,11 +427,12 @@ export async function POST(req: Request) {
 
         await QuizAttempt.findByIdAndUpdate(attemptId, updateDoc);
 
-        // Collect wrong wordIds for Stage 2 CTA when quiz ends
-        let wrongWordIds: string[] | undefined;
-        if (!sessionActive) {
-            const wrongAnswers = await QuizAnswer.find({ attemptId, isCorrect: false }).select('wordId').lean();
-            wrongWordIds = wrongAnswers.map((a: any) => a.wordId.toString());
+        // Calculate pending coins for UI display if just finished
+        const allWrongs = (attempt as any)._allWrongWordIds || [];
+        let pendingCoinsDisplay: number | undefined;
+        if (!sessionActive && allWrongs.length > 0) {
+            // Find what we just set in updateDoc
+            pendingCoinsDisplay = updateDoc.$set.pendingCoins;
         }
 
         return NextResponse.json({
@@ -413,8 +445,9 @@ export async function POST(req: Request) {
             nextQuestion: nextClientQuestion,
             quizDone: !sessionActive,
             coinsEarned: !sessionActive ? coinsEarned : undefined,
+            pendingCoins: pendingCoinsDisplay,
             isReviewMode: attempt.mode === 'REVIEW_WRONGS',
-            wrongWordIds: !sessionActive ? wrongWordIds : undefined,
+            wrongWordIds: !sessionActive ? allWrongs : undefined,
             stats: {
                 correct: newCorrectCount,
                 answered: newAnsweredCount,

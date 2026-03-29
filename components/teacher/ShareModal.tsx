@@ -110,16 +110,25 @@ export default function ShareModal({
                 body: JSON.stringify({ toTeacherCode: teacherCode.trim().toUpperCase(), unitIds: Array.from(selected) }),
             }) as any;
 
-            const failed: string[] = (res.failed || []).map((f: any) => `${f.unitId}: ${f.reason}`);
-            const successCount = (res.successfulUnitIds || []).length;
+            const summary = res.summary;
+            const newlyShared = summary?.newlyShared || 0;
+            const alreadyShared = summary?.alreadyShared || 0;
+            const failed = res.failed || [];
 
-            if (successCount > 0) {
-                toast.success(`${successCount} ta unit muvaffaqiyatli ulashildi!`);
+            if (newlyShared > 0) {
+                let msg = `${newlyShared} ta unit muvaffaqiyatli ulashildi!`;
+                if (alreadyShared > 0) msg += ` (${alreadyShared} tasi avval ulashilgan edi)`;
+                toast.success(msg);
                 onSuccess();
                 if (failed.length === 0) onClose();
-                else setErrors(failed);
+                else setErrors(failed.map((f: any) => `${f.unitId}: ${f.reason}`));
+            } else if (alreadyShared > 0 && failed.length === 0) {
+                toast.error(`Barcha tanlangan unitlar (${alreadyShared} ta) avval ulashilgan.`);
+                onClose();
             } else {
-                setErrors(failed.length > 0 ? failed : ['Hech bir unit ulashilmadi.']);
+                setErrors(failed.length > 0 
+                    ? failed.map((f: any) => `${f.unitId}: ${f.reason}`) 
+                    : ['Hech bir unit ulashilmadi.']);
             }
         } catch (e: any) {
             toast.error(e?.message || 'Xatolik yuz berdi');

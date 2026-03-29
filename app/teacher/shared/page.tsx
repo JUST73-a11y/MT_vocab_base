@@ -3,13 +3,14 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/AuthContext';
-import { Share2, Loader2, Plus, ArrowUpRight, ArrowDownLeft, CheckCircle2, XCircle, Clock, Trash2, BookOpen, FolderOpen, ChevronRight, X, ChevronDown } from 'lucide-react';
+import { Share2, Loader2, ArrowUpRight, CheckCircle2, XCircle, Clock, Trash2, BookOpen, Folder, User, ChevronDown, ChevronRight } from 'lucide-react';
 import { getUnits } from '@/lib/firestore';
 import { Unit } from '@/lib/types';
 import { apiFetch } from '@/lib/apiFetch';
-import { useCategoryTree, CategoryNode } from '@/lib/useCategoryTree';
+import { useCategoryTree } from '@/lib/useCategoryTree';
 import { motion, AnimatePresence } from 'framer-motion';
 import ShareModal from '@/components/teacher/ShareModal';
+import toast from 'react-hot-toast';
 
 interface Share {
     _id: string;
@@ -31,8 +32,14 @@ export default function TeacherSharedPage() {
     const [units, setUnits] = useState<Unit[]>([]);
     const [loadingData, setLoadingData] = useState(true);
     const [activeTab, setActiveTab] = useState<TabType>('incoming');
-
     const [showShareModal, setShowShareModal] = useState(false);
+    const [acceptingAll, setAcceptingAll] = useState(false);
+    const [rejectingId, setRejectingId] = useState<string | null>(null);
+    const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
+
+    const toggleFolder = (folderKey: string) => setExpandedFolders(p => ({ ...p, [folderKey]: !p[folderKey] }));
+
+    const { tree: categoriesTree } = useCategoryTree(user?.id);
 
     useEffect(() => {
         if (!loading && (!user || (user.role !== 'teacher' && user.role !== 'admin'))) {
@@ -54,34 +61,62 @@ export default function TeacherSharedPage() {
             setOutgoingShares(outRes);
             setUnits(uData);
         } catch (error) {
-            
         } finally {
             setLoadingData(false);
         }
     };
 
+    // Hammasini qabul qilish — bulk accept, sender nomi bilan papka avtomatik yaratiladi
+    const handleAcceptAll = async () => {
+        setAcceptingAll(true);
+        try {
+            const res = await apiFetch('/api/teacher/shares/bulk-accept', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({}),
+            }) as any;
+            toast.success(res.message || `${res.accepted} ta unit qabul qilindi`);
+            await loadData();
+            setActiveTab('accepted');
+        } catch (error: any) {
+            toast.error(error.message || 'Xatolik yuz berdi');
+        } finally {
+            setAcceptingAll(false);
+        }
+    };
 
-    const handleStatusUpdate = async (shareId: string, status: string, targetCategoryId?: string | null) => {
+    // Bitta share rad etish
+    const handleReject = async (shareId: string) => {
+        setRejectingId(shareId);
         try {
             await apiFetch(`/api/teacher/shares/${shareId}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status, targetCategoryId }),
+                body: JSON.stringify({ status: 'REJECTED' }),
             });
-            loadData(); // Refetch explicitly 
+            toast.success("Rad etildi");
+            await loadData();
         } catch (error: any) {
-            
-            alert(error.message || 'Xatolik yuz berdi');
+            toast.error(error.message || 'Xatolik yuz berdi');
+        } finally {
+            setRejectingId(null);
         }
     };
 
-    const [pendingAcceptShare, setPendingAcceptShare] = useState<Share | null>(null);
-    const { tree: categoriesTree } = useCategoryTree(user?.id);
-
-    const onAcceptClick = (share: Share) => {
-        setPendingAcceptShare(share);
+    // Outgoing shareni bekor qilish
+    const handleRevoke = async (shareId: string) => {
+        try {
+            await apiFetch(`/api/teacher/shares/${shareId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'REVOKED' }),
+            });
+            toast.success("Bekor qilindi");
+            await loadData();
+        } catch (error: any) {
+            toast.error(error.message || 'Xatolik yuz berdi');
+        }
     };
-
 
     if (loading || !user) {
         return (
@@ -91,10 +126,26 @@ export default function TeacherSharedPage() {
         );
     }
 
-
-    // Filtrlar
+    const myUnits = units.filter(u => u.createdBy === user?.id);
     const pendingIncoming = incomingShares.filter(s => s.status === 'PENDING');
     const acceptedIncoming = incomingShares.filter(s => s.status === 'ACCEPTED');
+
+    const groupedIncoming = pendingIncoming.reduce((acc, share) => {
+        const senderId = share.fromTeacherId._id;
+        const senderName = share.fromTeacherId.name;
+        const categoryName = share.unitId.category || 'Asosiy (Kategoriyasiz)';
+
+        if (!acc[senderId]) {
+            acc[senderId] = { senderName, totalUnits: 0, categories: {} };
+        }
+        if (!acc[senderId].categories[categoryName]) {
+            acc[senderId].categories[categoryName] = [];
+        }
+        
+        acc[senderId].categories[categoryName].push(share);
+        acc[senderId].totalUnits++;
+        return acc;
+    }, {} as Record<string, { senderName: string, totalUnits: number, categories: Record<string, Share[]> }>);
 
     return (
         <div className="min-h-screen flex flex-col items-center bg-transparent p-6 md:p-10">
@@ -139,7 +190,7 @@ export default function TeacherSharedPage() {
                 {loadingData ? (
                     <div className="flex flex-col items-center justify-center py-20 gap-4">
                         <Loader2 className="w-10 h-10 text-indigo-500 animate-spin" />
-                        <p className="text-[10px] font-black uppercase tracking-widest text-white/20">Ma'lumotlar yuklanmoqda...</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-white/20">Ma&apos;lumotlar yuklanmoqda...</p>
                     </div>
                 ) : (
                     <div className="grid gap-6">
@@ -149,26 +200,106 @@ export default function TeacherSharedPage() {
                             <section className="space-y-4 animate-fade-in">
                                 {pendingIncoming.length === 0 ? (
                                     <div className="glass-card p-12 text-center text-white/20 font-black uppercase tracking-widest text-[10px]">
-                                        Yangi so'rovlar yo'q
+                                        Yangi so&apos;rovlar yo&apos;q
                                     </div>
                                 ) : (
-                                    pendingIncoming.map(share => (
-                                        <div key={share._id} className="glass-card p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 border-l-4 border-l-amber-500">
-                                            <div className="flex items-center gap-5">
-                                                <div className="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20">
-                                                    <BookOpen className="w-6 h-6 text-amber-400" />
-                                                </div>
-                                                <div>
-                                                    <h3 className="text-lg font-black text-white leading-tight">{share.unitId.title}</h3>
-                                                    <p className="text-sm text-white/40 font-medium">Kimdan: {share.fromTeacherId.name}</p>
-                                                </div>
+                                    <>
+                                        {/* Hammasini qabul qilish tugmasi */}
+                                        <div className="glass-card p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-emerald-500/20 bg-emerald-500/[0.03]">
+                                            <div>
+                                                <p className="text-sm font-black text-white">
+                                                    {pendingIncoming.length} ta yangi so&apos;rov
+                                                </p>
+                                                <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mt-0.5">
+                                                    Qabul qilinganda, sender nomi bilan papka avtomatik yaratiladi
+                                                </p>
                                             </div>
-                                            <div className="flex items-center gap-3">
-                                                <button onClick={() => handleStatusUpdate(share._id, 'REJECTED')} className="px-4 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-[10px] font-black uppercase tracking-widest hover:bg-red-500/20 transition-all">Rad etish</button>
-                                                <button onClick={() => onAcceptClick(share)} className="px-4 py-2 rounded-lg bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20">Qabul qilish</button>
-                                            </div>
+                                            <button
+                                                onClick={handleAcceptAll}
+                                                disabled={acceptingAll}
+                                                className="shrink-0 px-6 py-3 rounded-xl bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                            >
+                                                {acceptingAll
+                                                    ? <><Loader2 className="w-4 h-4 animate-spin" /> Qabul qilinmoqda...</>
+                                                    : <><CheckCircle2 className="w-4 h-4" /> Hammasini qabul qilish</>
+                                                }
+                                            </button>
                                         </div>
-                                    ))
+
+                                        {/* Har bir share -> Grouped by Sender/Folder */}
+                                        <div className="flex flex-col gap-6">
+                                            {Object.entries(groupedIncoming).map(([senderId, senderData]) => (
+                                                <div key={senderId} className="glass-card overflow-hidden">
+                                                    {/* Sender Header */}
+                                                    <div className="p-5 flex items-center gap-4 bg-indigo-500/10 border-b border-indigo-500/20">
+                                                        <div className="w-12 h-12 rounded-xl bg-indigo-500/20 flex items-center justify-center border border-indigo-500/30">
+                                                            <User className="w-5 h-5 text-indigo-400" />
+                                                        </div>
+                                                        <div>
+                                                            <h2 className="text-xl font-black text-white">{senderData.senderName}</h2>
+                                                            <p className="text-[10px] uppercase font-bold text-indigo-300 tracking-[0.2em]">{senderData.totalUnits} ta unit yubordi</p>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Folders List */}
+                                                    <div className="p-4 flex flex-col gap-3">
+                                                        {Object.entries(senderData.categories).map(([catName, shares]) => {
+                                                            const folderKey = `${senderId}_${catName}`;
+                                                            const isExpanded = expandedFolders[folderKey];
+                                                            return (
+                                                                <div key={catName} className="rounded-xl border border-white/10 bg-white/[0.02] overflow-hidden transition-all duration-300">
+                                                                    <button 
+                                                                        onClick={() => toggleFolder(folderKey)}
+                                                                        className="w-full px-5 py-4 flex items-center justify-between hover:bg-white/[0.05] transition-colors"
+                                                                    >
+                                                                        <div className="flex items-center gap-3">
+                                                                            <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+                                                                                <Folder className="w-4 h-4 text-amber-500" />
+                                                                            </div>
+                                                                            <span className="text-sm font-black text-white text-left">{catName}</span>
+                                                                            <span className="px-2 py-0.5 rounded-md bg-white/10 border border-white/5 text-[10px] font-black text-white/50">{shares.length}</span>
+                                                                        </div>
+                                                                        <div className="w-6 h-6 rounded-md bg-white/5 flex items-center justify-center">
+                                                                            {isExpanded ? <ChevronDown className="w-4 h-4 text-white/40" /> : <ChevronRight className="w-4 h-4 text-white/40" />}
+                                                                        </div>
+                                                                    </button>
+
+                                                                    <AnimatePresence>
+                                                                        {isExpanded && (
+                                                                            <motion.div 
+                                                                                initial={{ height: 0, opacity: 0 }}
+                                                                                animate={{ height: "auto", opacity: 1 }}
+                                                                                exit={{ height: 0, opacity: 0 }}
+                                                                                className="border-t border-white/5 bg-black/20"
+                                                                            >
+                                                                                <div className="p-2 space-y-1">
+                                                                                    {shares.map(share => (
+                                                                                        <div key={share._id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-3 hover:bg-white/[0.05] transition-colors rounded-lg group">
+                                                                                            <div className="flex items-center gap-3 pl-2">
+                                                                                                <BookOpen className="w-4 h-4 text-white/20 group-hover:text-indigo-400 transition-colors" />
+                                                                                                <p className="text-sm font-bold text-white/70 group-hover:text-white transition-colors">{share.unitId.title}</p>
+                                                                                            </div>
+                                                                                            <button
+                                                                                                onClick={(e) => { e.stopPropagation(); handleReject(share._id); }}
+                                                                                                disabled={rejectingId === share._id}
+                                                                                                className="px-4 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-[10px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all disabled:opacity-50 sm:ml-auto w-fit"
+                                                                                            >
+                                                                                                {rejectingId === share._id ? '...' : 'Rad etish'}
+                                                                                            </button>
+                                                                                        </div>
+                                                                                    ))}
+                                                                                </div>
+                                                                            </motion.div>
+                                                                        )}
+                                                                    </AnimatePresence>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </>
                                 )}
                             </section>
                         )}
@@ -200,7 +331,7 @@ export default function TeacherSharedPage() {
                                                     {share.status}
                                                 </div>
                                                 {share.status !== 'REVOKED' && (
-                                                    <button onClick={() => handleStatusUpdate(share._id, 'REVOKED')} className="p-2 text-white/10 hover:text-red-400 transition-colors">
+                                                    <button onClick={() => handleRevoke(share._id)} className="p-2 text-white/10 hover:text-red-400 transition-colors">
                                                         <Trash2 className="w-4 h-4" />
                                                     </button>
                                                 )}
@@ -216,7 +347,7 @@ export default function TeacherSharedPage() {
                             <section className="space-y-4 animate-fade-in">
                                 {acceptedIncoming.length === 0 ? (
                                     <div className="glass-card p-12 text-center text-white/20 font-black uppercase tracking-widest text-[10px]">
-                                        Qabul qilingan materiallar yo'q
+                                        Qabul qilingan materiallar yo&apos;q
                                     </div>
                                 ) : (
                                     acceptedIncoming.map(share => (
@@ -247,23 +378,10 @@ export default function TeacherSharedPage() {
 
             {showShareModal && (
                 <ShareModal
-                    units={units}
+                    units={myUnits}
                     categoriesTree={categoriesTree}
                     onClose={() => setShowShareModal(false)}
                     onSuccess={loadData}
-                />
-            )}
-
-            {/* ── Folder Picker Modal for Acceptance ── */}
-            {pendingAcceptShare && (
-                <FolderPickerModal
-                    share={pendingAcceptShare}
-                    categoriesTree={categoriesTree}
-                    onClose={() => setPendingAcceptShare(null)}
-                    onConfirm={(catId) => {
-                        handleStatusUpdate(pendingAcceptShare._id, 'ACCEPTED', catId);
-                        setPendingAcceptShare(null);
-                    }}
                 />
             )}
 
@@ -272,149 +390,6 @@ export default function TeacherSharedPage() {
                 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
                 .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.05); border-radius: 10px; }
             `}</style>
-        </div>
-    );
-}
-
-// ── Sub-components for Folder Selection ────────────────────────────────────
-
-function TreeNode({
-    node,
-    depth = 0,
-    selectedId,
-    onSelect,
-}: {
-    node: CategoryNode;
-    depth?: number;
-    selectedId: string | null;
-    onSelect: (node: CategoryNode) => void;
-}) {
-    const [expanded, setExpanded] = useState(false);
-    const isSelected = node._id === selectedId;
-    const hasChildren = node.children.length > 0;
-
-    return (
-        <div className="select-none">
-            <motion.div
-                initial={false}
-                className={`flex items-center gap-2 px-3 py-2 rounded-xl cursor-pointer group transition-all text-sm font-bold relative overflow-hidden ${isSelected ? 'text-white' : 'text-white/40 hover:text-white/80 hover:bg-white/[0.03]'}`}
-                style={{ marginLeft: `${depth * 12}px` }}
-            >
-                {isSelected && (
-                    <motion.div
-                        layoutId="tree-active-picker"
-                        className="absolute inset-0 bg-emerald-500/10 border-l-2 border-emerald-500"
-                    />
-                )}
-
-                {hasChildren ? (
-                    <button onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }} className="shrink-0 opacity-60 hover:opacity-100 transition-opacity z-10">
-                        <ChevronRight className={`w-3.5 h-3.5 transition-transform duration-300 ${expanded ? 'rotate-90' : ''}`} />
-                    </button>
-                ) : <span className="w-3.5 h-3.5 shrink-0 z-10" />}
-
-                <button onClick={() => onSelect(node)} className="flex items-center gap-2.5 flex-1 text-left truncate z-10 py-1">
-                    <FolderOpen className={`w-4 h-4 shrink-0 transition-colors ${isSelected ? 'text-emerald-400 fill-emerald-400/10' : 'group-hover:text-emerald-300'}`} />
-                    <span className="truncate text-[13px] tracking-tight">{node.name}</span>
-                </button>
-            </motion.div>
-
-            <AnimatePresence initial={false}>
-                {expanded && (
-                    <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.3, ease: 'easeInOut' }}
-                        className="overflow-hidden"
-                    >
-                        {node.children.map(child => (
-                            <TreeNode key={child._id} node={child} depth={depth + 1}
-                                selectedId={selectedId} onSelect={onSelect} />
-                        ))}
-                    </motion.div>
-                )}
-            </AnimatePresence>
-        </div>
-    );
-}
-
-function FolderPickerModal({
-    share,
-    categoriesTree,
-    onClose,
-    onConfirm,
-}: {
-    share: Share;
-    categoriesTree: CategoryNode[];
-    onClose: () => void;
-    onConfirm: (catId: string | null) => void;
-}) {
-    const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
-
-    return (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xl animate-fade-in">
-            <motion.div
-                initial={{ scale: 0.95, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className="glass-card w-full max-w-md flex flex-col max-h-[90vh] relative !bg-gray-950/80 shadow-2xl"
-            >
-                <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-500" />
-
-                <div className="px-8 py-6 border-b border-white/5 flex items-center justify-between">
-                    <div>
-                        <h2 className="text-xl font-black text-white uppercase tracking-tight">Qabul Qilish</h2>
-                        <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mt-1">
-                            Unit qaysi papkaga joylashsin?
-                        </p>
-                    </div>
-                    <button onClick={onClose} className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center text-white/40 hover:text-white transition-all">
-                        <X className="w-5 h-5" />
-                    </button>
-                </div>
-
-                <div className="p-6 flex-1 overflow-y-auto custom-scrollbar">
-                    <div className="mb-6 p-4 rounded-2xl bg-white/[0.03] border border-white/5 flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20">
-                            <BookOpen className="w-5 h-5 text-indigo-400" />
-                        </div>
-                        <div className="flex-1">
-                            <p className="text-[10px] font-black text-white/20 uppercase tracking-widest">Unit nomi</p>
-                            <h3 className="text-sm font-black text-white">{share.unitId.title}</h3>
-                        </div>
-                    </div>
-
-                    <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] mb-4">Papkkani tanlang</p>
-                    <div className="space-y-1 bg-white/[0.02] p-4 rounded-xl border border-white/5">
-                        <button
-                            onClick={() => setSelectedCategoryId(null)}
-                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-left text-sm font-bold ${selectedCategoryId === null ? 'bg-emerald-500/20 text-emerald-400' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
-                        >
-                            <FolderOpen className="w-4 h-4 shrink-0" />
-                            Asosiy (Kategoriyasiz)
-                        </button>
-                        
-                        {categoriesTree.map(node => (
-                            <TreeNode
-                                key={node._id}
-                                node={node}
-                                selectedId={selectedCategoryId}
-                                onSelect={(n) => setSelectedCategoryId(n._id)}
-                            />
-                        ))}
-                    </div>
-                </div>
-
-                <div className="p-6 border-t border-white/5 flex gap-3 bg-white/[0.01]">
-                    <button onClick={onClose} className="btn-secondary flex-1 h-12 uppercase tracking-widest text-xs font-black">Bekor</button>
-                    <button
-                        onClick={() => onConfirm(selectedCategoryId)}
-                        className="btn-premium flex-1 h-12 uppercase tracking-widest text-xs font-black !bg-gradient-to-r !from-emerald-500 !to-teal-500 !shadow-emerald-500/20"
-                    >
-                        Qabul Qilish
-                    </button>
-                </div>
-            </motion.div>
         </div>
     );
 }

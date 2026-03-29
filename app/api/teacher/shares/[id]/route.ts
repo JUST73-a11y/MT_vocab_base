@@ -42,7 +42,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         await share.save();
 
         return NextResponse.json({ message: `Share ${status.toLowerCase()} successfully` });
-    } catch (error) {
-        return NextResponse.json({ message: 'Error updating share' }, { status: 500 });
+    } catch (error: any) {
+        return NextResponse.json({ message: error.message || 'Error updating share' }, { status: 500 });
     }
 }

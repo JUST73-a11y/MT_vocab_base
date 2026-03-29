@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { BookOpen, Settings, LogOut, LayoutDashboard, Menu, X, Phone, Instagram, Send, MessageCircle, Users, UsersRound, Share2 } from 'lucide-react';
+import { BookOpen, Settings, LogOut, LayoutDashboard, Menu, X, Phone, Instagram, Send, MessageCircle, Users, UsersRound, Share2, Play } from 'lucide-react';
 
 export default function TeacherLayout({ children }: { children: React.ReactNode }) {
     const { user, signOut, loading } = useAuth();
@@ -40,6 +40,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
         { name: 'Students', href: '/teacher/students', icon: Users },
         { name: 'Groups', href: '/teacher/groups', icon: UsersRound },
         { name: 'Shared', href: '/teacher/shared', icon: Share2 },
+        { name: 'Mashq', href: '/teacher/random', icon: Play },
         { name: 'Settings', href: '/teacher/settings', icon: Settings },
     ];
 
@@ -55,7 +56,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
         <div className="min-h-[100svh] flex flex-col items-center bg-[#0a0a0f] font-sans text-white relative overflow-x-hidden">
             <MeshBackground />
             {/* ── Desktop & Mobile Top Nav ── */}
-            <nav className="sticky top-0 w-full z-40 bg-gray-900/60 backdrop-blur-xl border-b border-white/5">
+            <nav id="teacher-nav" className="sticky top-0 w-full z-40 bg-gray-900/60 backdrop-blur-xl border-b border-white/5">
                 <div className="w-[95%] lg:w-[80%] max-w-[1600px] mx-auto px-4 md:px-6 justify-self-center">
                     <div className="flex items-center justify-between h-16 md:h-20">
                         {/* Left: Logo + Desktop Links */}

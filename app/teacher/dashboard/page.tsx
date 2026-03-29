@@ -11,16 +11,83 @@ import toast from 'react-hot-toast';
 import {
     BookOpen, Plus, Loader2, ChevronRight, FolderOpen,
     ArrowLeft, BarChart3, Clock, Users, Copy, Check,
-    TrendingUp, Layers, ExternalLink
+    TrendingUp, Layers, ExternalLink, Trash2, AlertCircle
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+
+// ── Delete Confirmation Modal ──────────────────────────────────────────────
+function DeleteConfirmationModal({
+    isOpen,
+    title,
+    message,
+    onConfirm,
+    onCancel,
+    loading = false
+}: {
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    onCancel: () => void;
+    loading?: boolean;
+}) {
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-[400] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xl animate-fade-in">
+            <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="glass-card w-full max-w-md p-10 flex flex-col gap-8 relative !bg-gray-950/95 border-red-500/30 shadow-2xl shadow-red-500/20"
+            >
+                <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-2">
+                    <AlertCircle className="w-8 h-8 text-red-500" />
+                </div>
+
+                <div className="text-center space-y-2">
+                    <h3 className="text-xl font-black text-white uppercase tracking-tight">{title}</h3>
+                    <p className="text-xs font-bold text-white/40 uppercase tracking-widest leading-relaxed whitespace-pre-wrap">
+                        {message}
+                    </p>
+                </div>
+
+                <div className="flex flex-col gap-3 mt-4">
+                    <button
+                        onClick={onConfirm}
+                        disabled={loading}
+                        className="w-full py-6 rounded-2xl bg-red-500 hover:bg-red-400 text-black font-[900] uppercase tracking-[0.25em] text-[15px] transition-all active:scale-95 shadow-2xl shadow-red-500/30 disabled:opacity-50"
+                    >
+                        {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'Ha, o\'chirilsin'}
+                    </button>
+                    <button
+                        onClick={onCancel}
+                        disabled={loading}
+                        className="w-full py-6 rounded-2xl bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/10 font-[900] uppercase tracking-[0.25em] text-[15px] transition-all"
+                    >
+                        Bekor qilish
+                    </button>
+                </div>
+            </motion.div>
+        </div>
+    );
+}
 
 export default function TeacherDashboard() {
     const { user, loading: authLoading } = useAuth();
     const router = useRouter();
-    const { units, loading: unitsLoading } = useUnits(user?.id);
+    const { units, loading: unitsLoading, refetch } = useUnits(user?.id);
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
     const [copied, setCopied] = useState(false);
     const [studentCount, setStudentCount] = useState<number | null>(null);
+
+    // Delete Modal State
+    const [deleteModal, setDeleteModal] = useState<{
+        isOpen: boolean;
+        type: 'unit' | 'category';
+        id?: string;
+        name: string;
+    }>({ isOpen: false, type: 'unit', name: '' });
+    const [deleting, setDeleting] = useState(false);
 
     useEffect(() => {
         if (!authLoading && (!user || user.role !== 'teacher')) {
@@ -44,6 +111,36 @@ export default function TeacherDashboard() {
         toast.success('Teacher kodi nusxalandi!');
         setTimeout(() => setCopied(false), 2000);
     }, [user?.teacherCode]);
+
+    const handleDelete = async () => {
+        if (!deleteModal.name) return;
+        setDeleting(true);
+        try {
+            const body = deleteModal.type === 'category' 
+                ? { categoryName: deleteModal.name, cascade: true }
+                : { unitIds: [deleteModal.id] };
+
+            const res = await fetch('/api/teacher/units/bulk-delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+
+            if (!res.ok) throw new Error('O\'chirishda xatolik yuz berdi');
+            
+            toast.success(deleteModal.type === 'category' 
+                ? `"${deleteModal.name}" kategoriyasi va uning barcha unitlari o'chirildi`
+                : `"${deleteModal.name}" uniti o'chirildi`);
+            
+            if (deleteModal.type === 'category') setSelectedCategory(null);
+            refetch(true); // Force absolute baseline refresh
+            setDeleteModal({ ...deleteModal, isOpen: false });
+        } catch (err: any) {
+            toast.error(err.message);
+        } finally {
+            setDeleting(false);
+        }
+    };
 
     // Group by category
     const grouped = units.reduce((acc, unit) => {
@@ -299,8 +396,8 @@ export default function TeacherDashboard() {
                                 ];
                                 const p = palettes[idx % palettes.length];
                                 return (
-                                    <button key={cat} onClick={() => setSelectedCategory(cat)}
-                                        className="group relative overflow-hidden rounded-2xl p-5 text-left flex flex-col gap-4 transition-all duration-300 hover:-translate-y-1.5 active:scale-[0.98]"
+                                    <div key={cat} onClick={() => setSelectedCategory(cat)}
+                                        className="group relative overflow-hidden rounded-2xl p-5 text-left flex flex-col gap-4 transition-all duration-300 hover:-translate-y-1.5 active:scale-[0.98] cursor-pointer"
                                         style={{ background: `linear-gradient(135deg, ${p.from}, ${p.to})`, border: `1px solid ${p.border}`, boxShadow: 'none', transition: 'all 0.3s' }}
                                         onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = `0 16px 40px ${p.glow}`; (e.currentTarget as HTMLElement).style.borderColor = p.hborder; }}
                                         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = 'none'; (e.currentTarget as HTMLElement).style.borderColor = p.border; }}>
@@ -313,10 +410,21 @@ export default function TeacherDashboard() {
                                                 style={{ background: p.badge, border: `1px solid ${p.border}` }}>
                                                 <FolderOpen className="w-5 h-5" style={{ color: p.icon }} />
                                             </div>
-                                            <span className="text-[11px] font-black px-2.5 py-1 rounded-lg"
-                                                style={{ background: p.badge, color: p.badgeText }}>
-                                                {catUnits.length} ta
-                                            </span>
+                                            <div className="flex items-center gap-2">
+                                                <button 
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setDeleteModal({ isOpen: true, type: 'category', name: cat });
+                                                    }}
+                                                    className="w-8 h-8 rounded-lg flex items-center justify-center bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500 hover:text-white transition-all opacity-0 group-hover:opacity-100"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                                <span className="text-[11px] font-black px-2.5 py-1 rounded-lg"
+                                                    style={{ background: p.badge, color: p.badgeText }}>
+                                                    {catUnits.length} ta
+                                                </span>
+                                            </div>
                                         </div>
                                         {/* Title */}
                                         <div className="relative z-10 flex-1">
@@ -328,7 +436,7 @@ export default function TeacherDashboard() {
                                             <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: p.badgeText, opacity: 0.7 }}>Ochish</span>
                                             <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" style={{ color: p.badgeText, opacity: 0.7 }} />
                                         </div>
-                                    </button>
+                                    </div>
                                 );
                             })}
                         </div>
@@ -336,8 +444,8 @@ export default function TeacherDashboard() {
                         /* ── UNITS GRID ── */
                         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                             {unitsInSelected.map((unit, idx) => (
-                                <Link key={unit.id} href={`/teacher/units/${unit.id}`}
-                                    className="group relative overflow-hidden rounded-2xl p-5 flex flex-col gap-3 transition-all duration-300 hover:-translate-y-1.5 active:scale-[0.98]"
+                                <div key={unit.id} onClick={() => router.push(`/teacher/units/${unit.id}`)}
+                                    className="group relative overflow-hidden rounded-2xl p-5 flex flex-col gap-3 transition-all duration-300 hover:-translate-y-1.5 active:scale-[0.98] cursor-pointer"
                                     style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.15)', boxShadow: 'none', transition: 'all 0.3s' }}
                                     onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = '0 16px 40px rgba(99,102,241,0.2)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(99,102,241,0.45)'; }}
                                     onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = 'none'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(99,102,241,0.15)'; }}>
@@ -357,10 +465,19 @@ export default function TeacherDashboard() {
                                     {/* Footer */}
                                     <div className="flex items-center justify-between pt-3 relative z-10"
                                         style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                                        <span className="text-[9px] font-black text-indigo-400/60 uppercase tracking-widest group-hover:text-indigo-400 transition-colors">Tahrirlash</span>
+                                        <button 
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                setDeleteModal({ isOpen: true, type: 'unit', id: unit.id, name: unit.title });
+                                            }}
+                                            className="text-[9px] font-black text-red-400/60 uppercase tracking-widest hover:text-red-400 transition-colors flex items-center gap-1 group/btn"
+                                        >
+                                            <Trash2 className="w-3 h-3" /> O'chirish
+                                        </button>
                                         <ChevronRight className="w-3.5 h-3.5 text-white/20 group-hover:text-indigo-400 group-hover:translate-x-0.5 transition-all" />
                                     </div>
-                                </Link>
+                                </div>
                             ))}
                             {/* Add unit card */}
                             <Link href={`/teacher/units/new?category=${selectedCategory}`}
@@ -377,7 +494,17 @@ export default function TeacherDashboard() {
                     )}
                 </div>
             </main>
+
+            <DeleteConfirmationModal
+                isOpen={deleteModal.isOpen}
+                title={deleteModal.type === 'category' ? "Kategoriyani o'chirish" : "Unitni o'chirish"}
+                message={deleteModal.type === 'category' 
+                    ? `"${deleteModal.name}" kategoriyasidagi barcha unitlar doimiy ravishda o'chiriladi. Ushbu amalni bekor qilib bo'lmaydi.`
+                    : `"${deleteModal.name}" uniti o'chiriladi. Davom etasizmi?`}
+                onConfirm={handleDelete}
+                onCancel={() => setDeleteModal({ ...deleteModal, isOpen: false })}
+                loading={deleting}
+            />
         </div>
     );
 }
-

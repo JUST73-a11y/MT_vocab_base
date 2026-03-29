@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { apiFetch } from '@/lib/apiFetch';
 import toast from 'react-hot-toast';
-import { ArrowLeft, Play, LayoutGrid, Timer, Users, User, LogOut, CheckCircle2, Target, Trophy, XCircle, Brain, BookOpen, Clock, HeartPulse, Sparkles, Languages, Save, Plus, ArrowRight, Zap, RefreshCw, BarChart2, Star, MessageCircle, AlertCircle, Loader2, RotateCcw, FolderOpen } from 'lucide-react';
+import { ArrowLeft, Play, LayoutGrid, Timer, Users, User, LogOut, CheckCircle2, Target, Trophy, XCircle, Brain, BookOpen, Clock, HeartPulse, Sparkles, Languages, Save, Plus, ArrowRight, Zap, RefreshCw, BarChart2, Star, MessageCircle, AlertCircle, Loader2, RotateCcw, FolderOpen, Megaphone } from 'lucide-react';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -116,7 +116,7 @@ function playSound(type: 'correct' | 'wrong') {
             });
         }
     } catch (e) {
-        
+
     }
 }
 
@@ -130,11 +130,14 @@ export default function StudentQuizPage() {
     const [loadingUnits, setLoadingUnits] = useState(true);
     const [selectedUnitIds, setSelectedUnitIds] = useState<Set<string>>(new Set());
     const [pickMode, setPickMode] = useState<QuizMode>('EN');
-    const [pickTimerSec, setPickTimerSec] = useState(10);
+    const [coinsEarned, setCoinsEarned] = useState<number | undefined>(undefined);
+    const [pendingCoins, setPendingCoins] = useState<number | undefined>(undefined);
+    const [wrongWordIds, setWrongWordIds] = useState<string[]>([]);
+    const [quizMode, setQuizMode] = useState<string>('STUDENT_SELF');
+    const [pickTimerSec, setPickTimerSec] = useState(5);
     const [pickQuestionCount, setPickQuestionCount] = useState(10);
     const [activeGroupSession, setActiveGroupSession] = useState<any>(null);
     const [checkingSession, setCheckingSession] = useState(false);
-    const [coinsEarned, setCoinsEarned] = useState<number | undefined>(undefined);
 
     const [activeCategory, setActiveCategory] = useState<string | null>(null);
     const [viewingUnits, setViewingUnits] = useState(false);
@@ -172,7 +175,7 @@ export default function StudentQuizPage() {
     const [submitting, setSubmitting] = useState(false);
 
     // Timer
-    const [timeLeft, setTimeLeft] = useState(10);
+    const [timeLeft, setTimeLeft] = useState(5);
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const hasTimedOut = useRef(false);
 
@@ -371,32 +374,48 @@ export default function StudentQuizPage() {
     };
 
     // ── Start quiz
-    const startQuiz = async (joinSessionId?: string, sessionDataOverride?: any) => {
-        const sessionToUse = sessionDataOverride || activeGroupSession;
+    const startQuiz = async (joinSessionId?: string, isReview = false) => {
+        const sessionToUse = activeGroupSession;
         const unitsToUse = joinSessionId && sessionToUse ? sessionToUse.unitIds : [...selectedUnitIds];
-        if (!unitsToUse || unitsToUse.length === 0) { toast.error('Kamida 1 ta unit tanlang'); return; }
+        
+        // Final fallback if we are in review mode
+        if (isReview && wrongWordIds.length === 0) return;
+        const unitsFinal = isReview ? [] : unitsToUse; // API handles words directly for review
+
+        if (!isReview && (!unitsFinal || unitsFinal.length === 0)) { toast.error('Kamida 1 ta unit tanlang'); return; }
 
         setStarting(true);
+        const oldAttemptId = attemptId;
         setCoinsEarned(undefined);
+        setPendingCoins(undefined);
+        // setWrongWordIds([]); // DON'T CLEAR if we are about to use them!
+        
         try {
             const data = await apiFetch('/api/quiz/student/start', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    unitIds: unitsToUse,
-                    timeLimitSec: joinSessionId ? sessionToUse.timeLimitSec : pickTimerSec,
-                    questionCount: joinSessionId ? (sessionToUse.questionCount || 20) : pickQuestionCount,
+                    unitIds: unitsFinal,
+                    timeLimitSec: isReview ? 10 : (joinSessionId ? sessionToUse.timeLimitSec : pickTimerSec),
+                    questionCount: isReview ? wrongWordIds.length : (joinSessionId ? (sessionToUse.questionCount || 20) : pickQuestionCount),
                     sessionId: joinSessionId,
-                    mode: joinSessionId ? 'GROUP_SESSION' : 'STUDENT_SELF'
+                    mode: isReview ? 'REVIEW_WRONGS' : (joinSessionId ? (sessionToUse.status === 'PUBLISHED' ? 'GROUP_ASSIGNED' : 'GROUP_SESSION') : 'STUDENT_SELF'),
+                    wrongWordIds: isReview ? wrongWordIds : undefined,
+                    sourceAttemptId: isReview ? oldAttemptId : undefined
                 }),
             });
+            
+            // Now safe to clear
+            if (!isReview) setWrongWordIds([]);
+            
             setAttemptId(data.attemptId);
             setQuestion(data.question);
             setStats({ correct: 0, answered: 0, total: data.questionCountPlanned || data.total });
             setMode(pickMode);
+            setQuizMode(isReview ? 'REVIEW_WRONGS' : (joinSessionId ? (sessionToUse.status === 'PUBLISHED' ? 'GROUP_ASSIGNED' : 'GROUP_SESSION') : 'STUDENT_SELF'));
             setPhase('quiz');
             setSelectedId(null); setRevealed(false); setResultData(null);
-            startTimer(data.question.timeLimitSec ?? (joinSessionId && sessionToUse ? sessionToUse.timeLimitSec : pickTimerSec));
+            startTimer(data.question.timeLimitSec ?? 10);
         } catch (err: any) {
             toast.error(err?.message || 'Xato yuz berdi');
         } finally { setStarting(false); }
@@ -442,16 +461,18 @@ export default function StudentQuizPage() {
             setStats({ correct: data.stats.correct, answered: data.stats.answered, total: stats.total });
 
             // Auto advance after reveal
-            setTimeout(() => {
-                if (data.nextQuestion && !data.quizDone) {
+            setTimeout(async () => {
+                if (data.quizDone) {
+                    setPhase('result');
+                    setCoinsEarned(data.coinsEarned);
+                    setPendingCoins(data.pendingCoins);
+                    setWrongWordIds(data.wrongWordIds || []);
+                    await loadOverallStats();
+                } else if (data.nextQuestion) {
                     setQuestion(data.nextQuestion);
                     setSelectedId(null); setRevealed(false); setResultData(null);
                     hasTimedOut.current = false;
                     startTimer(data.nextQuestion.timeLimitSec ?? question.timeLimitSec);
-                } else {
-                    if (data.coinsEarned !== undefined) setCoinsEarned(data.coinsEarned);
-                    setPhase('result');
-                    loadOverallStats();
                 }
                 setSubmitting(false);
             }, data.isTimeout ? 1000 : 1200);
@@ -518,67 +539,65 @@ export default function StudentQuizPage() {
                     )}
 
                     {/* Settings row */}
-                    <div className="grid grid-cols-1 gap-3">
-                        {/* Question count selector (self mode only) */}
-                        {!activeGroupSession && (
-                            <div className="rounded-2xl p-4 flex flex-col gap-3"
-                                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                                <p className="text-[10px] font-black uppercase tracking-widest text-white/30 flex items-center gap-1.5">
-                                    <Target className="w-3.5 h-3.5" /> Savollar soni
-                                </p>
-                                <div className="flex bg-white/5 rounded-xl p-1 gap-1">
-                                    {[5, 10, 15, 20, 30].map(n => (
-                                        <button key={n} onClick={() => setPickQuestionCount(n)}
-                                            className="flex-1 py-2 rounded-lg text-xs font-black transition-all"
-                                            style={pickQuestionCount === n
-                                                ? { background: 'rgba(99,102,241,0.7)', color: '#fff' }
-                                                : { color: 'rgba(255,255,255,0.3)' }}>
-                                            {n}
-                                        </button>
-                                    ))}
-                                </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {/* Question count selector */}
+                        <div className="rounded-2xl p-4 flex flex-col gap-3"
+                            style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-white/30 flex items-center gap-1.5">
+                                <Target className="w-3.5 h-3.5" /> Savollar soni
+                            </p>
+                            <div className="flex bg-white/5 rounded-xl p-1 gap-1 overflow-x-auto no-scrollbar">
+                                {[10, 15, 20, 30, 50, 100].map(n => (
+                                    <button key={n} onClick={() => setPickQuestionCount(n)}
+                                        className="flex-1 min-w-[32px] py-2 rounded-lg text-xs font-black transition-all"
+                                        style={pickQuestionCount === n
+                                            ? { background: 'rgba(99,102,241,0.7)', color: '#fff' }
+                                            : { color: 'rgba(255,255,255,0.3)' }}>
+                                        {n}
+                                    </button>
+                                ))}
                             </div>
-                        )}
+                        </div>
 
-                        {activeGroupSession ? (
-                            <div className="rounded-2xl p-6 flex flex-col gap-4 animate-pulse-slow"
-                                style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.3)' }}>
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <Zap className="w-5 h-5 text-indigo-400 animate-pulse" />
-                                        <div>
-                                            <p className="text-xs font-black text-white/60 uppercase tracking-widest">Active Group Quiz</p>
-                                            <p className="text-lg font-black text-white">{activeGroupSession.groupName}</p>
-                                        </div>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className="text-[10px] font-black text-white/30 uppercase tracking-widest">O&apos;qituvchi</p>
-                                        <p className="text-xs font-bold text-indigo-300">{activeGroupSession.teacherName}</p>
-                                    </div>
-                                </div>
-                                <button onClick={() => startQuiz(activeGroupSession.id)}
-                                    className="w-full btn-premium py-4 text-sm flex items-center justify-center gap-2">
-                                    <Play className="w-4 h-4 fill-current" /> QO&apos;SHILISH
-                                </button>
+                        <div className="rounded-2xl p-4 flex flex-col gap-3"
+                            style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-white/30 flex items-center gap-1.5">
+                                <Languages className="w-3.5 h-3.5" /> Savol tili
+                            </p>
+                            <div className="flex bg-white/5 rounded-xl p-1 gap-1">
+                                {(['EN', 'UZ'] as QuizMode[]).map(m => (
+                                    <button key={m} onClick={() => setPickMode(m)}
+                                        className="flex-1 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all"
+                                        style={pickMode === m ? { background: 'rgba(99,102,241,0.7)', color: '#fff' } : { color: 'rgba(255,255,255,0.3)' }}>
+                                        {m === 'EN' ? 'EN → UZ' : 'UZ → EN'}
+                                    </button>
+                                ))}
                             </div>
-                        ) : (
-                            <div className="rounded-2xl p-4 flex flex-col gap-3"
-                                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                                <p className="text-[10px] font-black uppercase tracking-widest text-white/30 flex items-center gap-1.5">
-                                    <Languages className="w-3.5 h-3.5" /> Savol tili
-                                </p>
-                                <div className="flex bg-white/5 rounded-xl p-1 gap-1">
-                                    {(['EN', 'UZ'] as QuizMode[]).map(m => (
-                                        <button key={m} onClick={() => setPickMode(m)}
-                                            className="flex-1 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all"
-                                            style={pickMode === m ? { background: 'rgba(99,102,241,0.7)', color: '#fff' } : { color: 'rgba(255,255,255,0.3)' }}>
-                                            {m === 'EN' ? 'EN → UZ' : 'UZ → EN'}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
+                        </div>
                     </div>
+
+                    {activeGroupSession && (
+                        <div className="rounded-2xl p-6 flex flex-col gap-4 animate-pulse-slow"
+                            style={{ background: activeGroupSession.status === 'PUBLISHED' ? 'rgba(16,185,129,0.1)' : 'rgba(99,102,241,0.1)', border: activeGroupSession.status === 'PUBLISHED' ? '1px solid rgba(16,185,129,0.3)' : '1px solid rgba(99,102,241,0.3)' }}>
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    {activeGroupSession.status === 'PUBLISHED' ? <Megaphone className="w-5 h-5 text-emerald-400" /> : <Zap className="w-5 h-5 text-indigo-400 animate-pulse" />}
+                                    <div>
+                                        <p className="text-xs font-black text-white/60 uppercase tracking-widest">{activeGroupSession.status === 'PUBLISHED' ? "Yangi Quiz E'loni" : "Active Group Quiz"}</p>
+                                        <p className="text-lg font-black text-white">{activeGroupSession.title || activeGroupSession.groupName}</p>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-[10px] font-black text-white/30 uppercase tracking-widest">O&apos;qituvchi</p>
+                                    <p className="text-xs font-bold text-indigo-300">{activeGroupSession.teacherName}</p>
+                                </div>
+                            </div>
+                            <button onClick={() => startQuiz(activeGroupSession.id)}
+                                className={`w-full py-4 text-sm flex items-center justify-center gap-2 rounded-2xl font-black text-white transition-all hover:scale-[1.02] shadow-xl ${activeGroupSession.status === 'PUBLISHED' ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 shadow-emerald-500/20' : 'bg-gradient-to-r from-indigo-600 to-indigo-500 shadow-indigo-500/20'}`}>
+                                <Play className="w-4 h-4 fill-current" /> {activeGroupSession.status === 'PUBLISHED' ? 'BOSHLASH' : "QO'SHILISH"}
+                            </button>
+                        </div>
+                    )}
 
                     {/* Unit picker */}
                     <div className="rounded-2xl p-5 flex flex-col gap-4"
@@ -611,30 +630,63 @@ export default function StudentQuizPage() {
                         ) : (
                             <div className="space-y-2 max-h-64 overflow-y-auto custom-scrollbar pr-1">
                                 {!viewingUnits ? (
-                                    categories.map(cat => {
-                                        const unitsInCat = categoryMap[cat] || [];
-                                        const selectedInCat = unitsInCat.filter(u => selectedUnitIds.has(u.id)).length;
-                                        return (
-                                            <button key={cat} onClick={() => { setActiveCategory(cat); setViewingUnits(true); }}
-                                                className="w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left"
-                                                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                                                <div className="w-10 h-10 rounded-lg bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20 shrink-0">
-                                                    <FolderOpen className="w-5 h-5 text-indigo-400" />
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="font-bold text-sm text-white truncate">{cat}</p>
-                                                    <p className="text-[10px] text-white/30 truncate">{unitsInCat.length} bo'lim</p>
-                                                </div>
-                                                {selectedInCat > 0 ? (
-                                                    <div className="px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase">
-                                                        {selectedInCat} ta
+                                    <div className="space-y-2">
+                                        {categories.filter(cat => cat !== 'Kategoriyasiz' && cat !== 'Uncategorized').map(cat => {
+                                            const unitsInCat = categoryMap[cat] || [];
+                                            const selectedInCat = unitsInCat.filter(u => selectedUnitIds.has(u.id)).length;
+                                            return (
+                                                <button key={cat} onClick={() => { setActiveCategory(cat); setViewingUnits(true); }}
+                                                    className="w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left"
+                                                    style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                                                    <div className="w-10 h-10 rounded-lg bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20 shrink-0">
+                                                        <FolderOpen className="w-5 h-5 text-indigo-400" />
                                                     </div>
-                                                ) : (
-                                                    <ArrowRight className="w-4 h-4 text-white/20" />
-                                                )}
-                                            </button>
-                                        );
-                                    })
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="font-bold text-sm text-white truncate">{cat}</p>
+                                                        <p className="text-[10px] text-white/30 truncate">{unitsInCat.length} bo'lim</p>
+                                                    </div>
+                                                    {selectedInCat > 0 ? (
+                                                        <div className="px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase">
+                                                            {selectedInCat} ta
+                                                        </div>
+                                                    ) : (
+                                                        <ArrowRight className="w-4 h-4 text-white/20" />
+                                                    )}
+                                                </button>
+                                            );
+                                        })}
+
+                                        {/* Root Units for Quiz */}
+                                        {units.filter(u => !u.category || u.category === 'Kategoriyasiz' || u.category === 'Uncategorized').length > 0 && (
+                                            <div className="py-2 flex items-center gap-2">
+                                                <div className="h-px flex-1 bg-white/5" />
+                                                <span className="text-[8px] font-black uppercase tracking-widest text-white/20">Unitlar</span>
+                                                <div className="h-px flex-1 bg-white/5" />
+                                            </div>
+                                        )}
+
+                                        {units
+                                            .filter(u => !u.category || u.category === 'Kategoriyasiz' || u.category === 'Uncategorized')
+                                            .map(unit => {
+                                                const isSel = selectedUnitIds.has(unit.id);
+                                                return (
+                                                    <button key={unit.id} onClick={() => setSelectedUnitIds(prev => {
+                                                        const next = new Set(prev);
+                                                        if (isSel) next.delete(unit.id);
+                                                        else next.add(unit.id);
+                                                        return next;
+                                                    })}
+                                                        className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left border ${isSel ? 'bg-indigo-500/10 border-indigo-500/30' : 'bg-white/5 border-white/10 hover:border-white/20'}`}>
+                                                        <div className={`w-6 h-6 rounded-md flex items-center justify-center transition-all ${isSel ? 'bg-indigo-500 shadow-lg shadow-indigo-500/30' : 'bg-white/5 text-white/20'}`}>
+                                                            {isSel && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="font-bold text-sm text-white">{unit.title}</p>
+                                                        </div>
+                                                    </button>
+                                                );
+                                            })}
+                                    </div>
                                 ) : (
                                     <>
                                         <div className="flex items-center gap-2 mb-3">
@@ -679,13 +731,11 @@ export default function StudentQuizPage() {
                         )}
                     </div>
 
-                    {!activeGroupSession && (
-                        <button onClick={() => startQuiz()} disabled={starting || selectedUnitIds.size === 0}
-                            className="btn-premium py-4 text-base font-black flex items-center justify-center gap-3 disabled:opacity-40 disabled:cursor-not-allowed">
-                            {starting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5" />}
-                            Boshlash · {pickQuestionCount} savol · {pickTimerSec}s
-                        </button>
-                    )}
+                    <button onClick={() => startQuiz()} disabled={starting || selectedUnitIds.size === 0}
+                        className="btn-premium py-4 text-base font-black flex items-center justify-center gap-3 disabled:opacity-40 disabled:cursor-not-allowed">
+                        {starting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5" />}
+                        Boshlash · {pickQuestionCount} savol · 5s
+                    </button>
                 </div>
                 <style jsx global>{`.custom-scrollbar::-webkit-scrollbar{width:4px}.custom-scrollbar::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:8px}`}</style>
             </div>
@@ -729,223 +779,223 @@ export default function StudentQuizPage() {
 
         return (
             <>
-            <div className="min-h-screen text-white flex flex-col">
+                <div className="min-h-screen text-white flex flex-col">
 
-                {/* ── Premium Sticky Header ── */}
-                <div className="sticky top-0 z-40 px-4 py-4 md:px-8 md:py-6 backdrop-blur-3xl border-b border-white/5 flex items-center justify-between gap-2"
-                    style={{ background: 'rgba(10,12,25,0.85)' }}>
+                    {/* ── Premium Sticky Header ── */}
+                    <div className="sticky top-0 z-40 px-4 py-4 md:px-8 md:py-6 backdrop-blur-3xl border-b border-white/5 flex items-center justify-between gap-2"
+                        style={{ background: 'rgba(10,12,25,0.85)' }}>
 
-                    <div className="flex items-center gap-6">
-                        <button onClick={() => requestLeave(resetQuiz)}
-                            className="p-3.5 rounded-2xl bg-white/5 border border-white/10 text-white/40 hover:text-white hover:bg-white/10 transition-all active:scale-95 shadow-lg shadow-black/20">
-                            <ArrowLeft className="w-6 h-6" />
-                        </button>
+                        <div className="flex items-center gap-6">
+                            <button onClick={() => requestLeave(resetQuiz)}
+                                className="p-3.5 rounded-2xl bg-white/5 border border-white/10 text-white/40 hover:text-white hover:bg-white/10 transition-all active:scale-95 shadow-lg shadow-black/20">
+                                <ArrowLeft className="w-6 h-6" />
+                            </button>
 
-                        <div className="hidden sm:block">
-                            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 mb-0.5">Quiz Mode</p>
-                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-[10px] font-black uppercase tracking-widest">
-                                <Languages className="w-3.5 h-3.5" />
-                                {mode === 'EN' ? 'EN → UZ' : 'UZ → EN'}
+                            <div className="hidden sm:block">
+                                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 mb-0.5">Quiz Mode</p>
+                                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-[10px] font-black uppercase tracking-widest">
+                                    <Languages className="w-3.5 h-3.5" />
+                                    {mode === 'EN' ? 'EN → UZ' : 'UZ → EN'}
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <div className="flex-1 flex flex-col items-center">
-                        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-white/30 truncate max-w-[120px] whitespace-nowrap">
-                            {stats.answered >= stats.total && stats.total > 0
-                                ? `Loop ${Math.floor(stats.answered / stats.total) + 1} • Q: ${stats.answered + 1}`
-                                : `${stats.answered + 1} of ${stats.total}`}
-                        </p>
-                        <div className="flex gap-1 mt-1.5">
-                            {Array.from({ length: 5 }).map((_, i) => {
-                                const progress = stats.answered >= stats.total && stats.total > 0
-                                    ? ((stats.answered % stats.total) / stats.total) * 5
-                                    : (stats.answered / stats.total) * 5;
-                                return (
-                                    <div key={i}
-                                        className={`h-1 rounded-full transition-all duration-500 ${progress > i ? 'w-4 bg-indigo-500' : 'w-2 bg-white/10'}`}
-                                    />
-                                );
-                            })}
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-3 md:gap-5">
-                        <div className="flex items-center gap-3 sm:gap-6">
-                            <div className="text-center sm:text-right">
-                                <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-emerald-400/60 leading-tight">To&apos;g&apos;ri</p>
-                                <p className="text-lg sm:text-xl font-black text-emerald-400 sm:text-white leading-tight">{stats.correct}</p>
-                            </div>
-                            <div className="text-center sm:text-right">
-                                <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-rose-400/60 leading-tight">Xato</p>
-                                <p className="text-lg sm:text-xl font-black text-rose-400 sm:text-white leading-tight">{stats.answered - stats.correct}</p>
-                            </div>
-                            <div className="text-center sm:text-right pr-3 sm:pr-5 border-r border-white/10">
-                                <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-white/50 leading-tight">Jami</p>
-                                <p className="text-lg sm:text-xl font-black text-white leading-tight">{stats.answered}</p>
-                            </div>
-                        </div>
-                        <div className="relative group">
-                            <div className="absolute -inset-2 bg-indigo-500/30 rounded-full blur opacity-0 group-hover:opacity-100 transition-opacity" />
-                            <TimerRing remaining={timeLeft} total={timeLimitSec} />
-                        </div>
-                    </div>
-                </div>
-
-                {/* ── Progress bar */}
-                <div className="h-0.5 w-full" style={{ background: 'rgba(255,255,255,0.06)' }}>
-                    <div className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-700"
-                        style={{ width: `${progress}%` }} />
-                </div>
-
-                {/* ── Main area */}
-                <div className="flex-1 flex flex-col items-center justify-center px-2 md:px-4 py-8 pb-12 w-full max-w-xl mx-auto gap-8 min-w-0">
-
-                    {/* Question card */}
-                    {/* ── Massive Question Display ── */}
-                    <div className="w-full text-center rounded-[2rem] md:rounded-[3rem] px-4 py-10 md:px-10 md:py-20 flex flex-col items-center gap-6 relative overflow-visible active-scale-up min-w-0"
-                        style={{
-                            background: 'linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)',
-                            border: '1px solid rgba(255,255,255,0.08)',
-                            boxShadow: '0 20px 40px -20px rgba(0,0,0,0.5)'
-                        }}>
-                        {/* Background subtle glow */}
-                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[250px] h-[250px] bg-indigo-500/15 rounded-full blur-[100px] pointer-events-none" />
-
-                        <div className="space-y-4 w-full min-w-0">
-                            <p className="text-[10px] md:text-[11px] font-black uppercase tracking-[0.4em] text-indigo-400 opacity-60 flex items-center justify-center gap-2 md:gap-3 break-words">
-                                <span className="w-4 md:w-8 h-px bg-indigo-500/30" />
-                                {mode === 'EN' ? '🇬🇧 English' : '🇺🇿 O\'zbek'}
-                                <span className="w-4 md:w-8 h-px bg-indigo-500/30" />
+                        <div className="flex-1 flex flex-col items-center">
+                            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-white/30 truncate max-w-[120px] whitespace-nowrap">
+                                {stats.answered >= stats.total && stats.total > 0
+                                    ? `Loop ${Math.floor(stats.answered / stats.total) + 1} • Q: ${stats.answered + 1}`
+                                    : `${stats.answered + 1} of ${stats.total}`}
                             </p>
-                            <h2 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-white tracking-tight leading-snug break-words hyphens-auto w-full drop-shadow-2xl max-w-full">
-                                {promptText}
-                            </h2>
-                            {prompt2 && (
-                                <p className="text-indigo-300/40 text-lg md:text-2xl font-medium tracking-tight italic break-words w-full">{prompt2}</p>
+                            <div className="flex gap-1 mt-1.5">
+                                {Array.from({ length: 5 }).map((_, i) => {
+                                    const progress = stats.answered >= stats.total && stats.total > 0
+                                        ? ((stats.answered % stats.total) / stats.total) * 5
+                                        : (stats.answered / stats.total) * 5;
+                                    return (
+                                        <div key={i}
+                                            className={`h-1 rounded-full transition-all duration-500 ${progress > i ? 'w-4 bg-indigo-500' : 'w-2 bg-white/10'}`}
+                                        />
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-3 md:gap-5">
+                            <div className="flex items-center gap-3 sm:gap-6">
+                                <div className="text-center sm:text-right">
+                                    <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-emerald-400/60 leading-tight">To&apos;g&apos;ri</p>
+                                    <p className="text-lg sm:text-xl font-black text-emerald-400 sm:text-white leading-tight">{stats.correct}</p>
+                                </div>
+                                <div className="text-center sm:text-right">
+                                    <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-rose-400/60 leading-tight">Xato</p>
+                                    <p className="text-lg sm:text-xl font-black text-rose-400 sm:text-white leading-tight">{stats.answered - stats.correct}</p>
+                                </div>
+                                <div className="text-center sm:text-right pr-3 sm:pr-5 border-r border-white/10">
+                                    <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-white/50 leading-tight">Jami</p>
+                                    <p className="text-lg sm:text-xl font-black text-white leading-tight">{stats.answered}</p>
+                                </div>
+                            </div>
+                            <div className="relative group">
+                                <div className="absolute -inset-2 bg-indigo-500/30 rounded-full blur opacity-0 group-hover:opacity-100 transition-opacity" />
+                                <TimerRing remaining={timeLeft} total={timeLimitSec} />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* ── Progress bar */}
+                    <div className="h-0.5 w-full" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                        <div className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-700"
+                            style={{ width: `${progress}%` }} />
+                    </div>
+
+                    {/* ── Main area */}
+                    <div className="flex-1 flex flex-col items-center justify-center px-2 md:px-4 py-8 pb-12 w-full max-w-xl mx-auto gap-8 min-w-0">
+
+                        {/* Question card */}
+                        {/* ── Massive Question Display ── */}
+                        <div className="w-full text-center rounded-[2rem] md:rounded-[3rem] px-4 py-10 md:px-10 md:py-20 flex flex-col items-center gap-6 relative overflow-visible active-scale-up min-w-0"
+                            style={{
+                                background: 'linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)',
+                                border: '1px solid rgba(255,255,255,0.08)',
+                                boxShadow: '0 20px 40px -20px rgba(0,0,0,0.5)'
+                            }}>
+                            {/* Background subtle glow */}
+                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[250px] h-[250px] bg-indigo-500/15 rounded-full blur-[100px] pointer-events-none" />
+
+                            <div className="space-y-4 w-full min-w-0">
+                                <p className="text-[10px] md:text-[11px] font-black uppercase tracking-[0.4em] text-indigo-400 opacity-60 flex items-center justify-center gap-2 md:gap-3 break-words">
+                                    <span className="w-4 md:w-8 h-px bg-indigo-500/30" />
+                                    {mode === 'EN' ? '🇬🇧 English' : '🇺🇿 O\'zbek'}
+                                    <span className="w-4 md:w-8 h-px bg-indigo-500/30" />
+                                </p>
+                                <h2 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-white tracking-tight leading-snug break-words hyphens-auto w-full drop-shadow-2xl max-w-full">
+                                    {promptText}
+                                </h2>
+                                {prompt2 && (
+                                    <p className="text-indigo-300/40 text-lg md:text-2xl font-medium tracking-tight italic break-words w-full">{prompt2}</p>
+                                )}
+                            </div>
+
+                            {/* Status feedback */}
+                            {revealed && (
+                                <div className={`px-8 py-2.5 rounded-full text-sm font-black uppercase tracking-[0.2em] animate-bounce-slow flex items-center gap-3 border transition-colors ${!resultData ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30' :
+                                    resultData.isCorrect ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' :
+                                        resultData.isTimeout ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' :
+                                            'bg-red-500/10 text-red-400 border-red-500/30'
+                                    }`}>
+                                    {!resultData ? (
+                                        <> <Loader2 className="w-4 h-4 animate-spin" /> Tekshirilmoqda... </>
+                                    ) : resultData.isCorrect ? (
+                                        <> <CheckCircle2 className="w-4 h-4" /> Juda yaxshi! </>
+                                    ) : resultData.isTimeout ? (
+                                        <> <Timer className="w-4 h-4" /> Vaqt tugadi! </>
+                                    ) : (
+                                        <> <XCircle className="w-4 h-4" /> Noto&apos;g&apos;ri </>
+                                    )}
+                                </div>
                             )}
                         </div>
 
-                        {/* Status feedback */}
-                        {revealed && (
-                            <div className={`px-8 py-2.5 rounded-full text-sm font-black uppercase tracking-[0.2em] animate-bounce-slow flex items-center gap-3 border transition-colors ${!resultData ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30' :
-                                resultData.isCorrect ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' :
-                                    resultData.isTimeout ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' :
-                                        'bg-red-500/10 text-red-400 border-red-500/30'
-                                }`}>
-                                {!resultData ? (
-                                    <> <Loader2 className="w-4 h-4 animate-spin" /> Tekshirilmoqda... </>
-                                ) : resultData.isCorrect ? (
-                                    <> <CheckCircle2 className="w-4 h-4" /> Juda yaxshi! </>
-                                ) : resultData.isTimeout ? (
-                                    <> <Timer className="w-4 h-4" /> Vaqt tugadi! </>
-                                ) : (
-                                    <> <XCircle className="w-4 h-4" /> Noto&apos;g&apos;ri </>
-                                )}
-                            </div>
-                        )}
-                    </div>
+                        {/* Options ── Grid/List */}
+                        <div className="w-full grid grid-cols-1 gap-4 min-w-0">
+                            {displayOptions.map((opt, i) => {
+                                const s = getOptionStyle(opt.id);
+                                return (
+                                    <button key={opt.id}
+                                        onClick={() => !revealed && !submitting && submitAnswer(opt.id, false)}
+                                        disabled={revealed || submitting}
+                                        className="group w-full flex items-center gap-4 sm:gap-6 p-4 sm:p-6 rounded-[1.5rem] sm:rounded-3xl text-left font-black text-base sm:text-lg transition-all duration-300 disabled:cursor-default relative overflow-hidden min-w-0"
+                                        style={{
+                                            background: s.bg,
+                                            border: `1px solid ${s.border}`,
+                                            color: s.color,
+                                            transform: revealed && opt.id === selectedId ? 'scale(0.98)' : 'none'
+                                        }}>
 
-                    {/* Options ── Grid/List */}
-                    <div className="w-full grid grid-cols-1 gap-4 min-w-0">
-                        {displayOptions.map((opt, i) => {
-                            const s = getOptionStyle(opt.id);
-                            return (
-                                <button key={opt.id}
-                                    onClick={() => !revealed && !submitting && submitAnswer(opt.id, false)}
-                                    disabled={revealed || submitting}
-                                    className="group w-full flex items-center gap-4 sm:gap-6 p-4 sm:p-6 rounded-[1.5rem] sm:rounded-3xl text-left font-black text-base sm:text-lg transition-all duration-300 disabled:cursor-default relative overflow-hidden min-w-0"
-                                    style={{
-                                        background: s.bg,
-                                        border: `1px solid ${s.border}`,
-                                        color: s.color,
-                                        transform: revealed && opt.id === selectedId ? 'scale(0.98)' : 'none'
-                                    }}>
+                                        {/* Glass reflection effect */}
+                                        <div className="absolute inset-0 bg-gradient-to-tr from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 
-                                    {/* Glass reflection effect */}
-                                    <div className="absolute inset-0 bg-gradient-to-tr from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        <span className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center text-xs sm:text-sm font-black shrink-0 transition-all shadow-inner"
+                                            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                                            {['A', 'B', 'C'][i]}
+                                        </span>
+                                        <span className="flex-1 tracking-tight break-words hyphens-auto whitespace-normal leading-snug min-w-0 pr-2">
+                                            {opt.text}
+                                        </span>
 
-                                    <span className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center text-xs sm:text-sm font-black shrink-0 transition-all shadow-inner"
-                                        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                                        {['A', 'B', 'C'][i]}
-                                    </span>
-                                    <span className="flex-1 tracking-tight break-words hyphens-auto whitespace-normal leading-snug min-w-0 pr-2">
-                                        {opt.text}
-                                    </span>
-
-                                    {revealed && (() => {
-                                        if (!resultData) {
-                                            if (opt.id === selectedId) return <div className="p-1.5 sm:p-2 rounded-full bg-indigo-500/20 shrink-0"><Loader2 className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-400 animate-spin" /></div>;
-                                            return null;
-                                        }
-
-                                        const isThisCorrectOpt = resultData.correctOptionId === opt.id;
-                                        if (isThisCorrectOpt) return <div className="p-1.5 sm:p-2 rounded-full bg-emerald-500/20 shrink-0"><CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-400" /></div>;
-                                        if (opt.id === selectedId) return <div className="p-1.5 sm:p-2 rounded-full bg-red-500/20 shrink-0"><XCircle className="w-5 h-5 sm:w-6 sm:h-6 text-red-400" /></div>;
-                                        return null;
-                                    })()}
-                                </button>
-                            );
-                        })}
-                    </div>
-
-                    {/* Keyboard hint */}
-                    <div className="mt-4 py-2 px-6 rounded-2xl bg-white/5 border border-white/5 inline-flex items-center gap-3">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-white/20">Shortcuts</span>
-                        <div className="flex gap-1.5">
-                            {['1', '2', '3'].map(k => <kbd key={k} className="px-1.5 py-0.5 rounded-md bg-white/10 text-[10px] font-black text-white/40">{k}</kbd>)}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Abandon Confirmation Modal */}
-                {showLeaveModal && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm bg-black/60">
-                        <div className="w-full max-w-sm rounded-[24px] bg-[#1a1c2e] border border-white/10 p-6 shadow-2xl overflow-hidden relative">
-                            {/* decorative background glow */}
-                            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-32 bg-red-500/20 blur-[50px] pointer-events-none rounded-full" />
-
-                            <div className="relative z-10 text-center">
-                                <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-5">
-                                    <AlertCircle className="w-8 h-8 text-red-500" />
-                                </div>
-                                <h3 className="text-xl font-black text-white mb-2 tracking-tight">Qaroringiz qat'iymi?</h3>
-                                <p className="text-sm text-white/60 mb-8 whitespace-pre-wrap">Quizni hozir tark etsangiz, sizning natijangiz yakunlanadi va saqlanmaydi.</p>
-
-                                <div className="flex gap-3">
-                                    <button onClick={() => setShowLeaveModal(false)}
-                                        className="flex-1 py-3.5 rounded-xl font-bold text-sm bg-white/5 hover:bg-white/10 text-white transition-colors border border-white/10 tracking-widest uppercase">
-                                        Davom etish
-                                    </button>
-                                    <button onClick={async () => {
-                                        // Auto-abandon immediately on confirm
-                                        if (attemptId && question) {
-                                            try {
-                                                await apiFetch('/api/quiz/student/abandon', {
-                                                    method: 'POST',
-                                                    headers: { 'Content-Type': 'application/json' },
-                                                    body: JSON.stringify({ attemptId, wrongWordIds: [question.wordId] })
-                                                });
-                                            } catch (e) {
-                                                
+                                        {revealed && (() => {
+                                            if (!resultData) {
+                                                if (opt.id === selectedId) return <div className="p-1.5 sm:p-2 rounded-full bg-indigo-500/20 shrink-0"><Loader2 className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-400 animate-spin" /></div>;
+                                                return null;
                                             }
-                                        }
-                                        setShowLeaveModal(false);
-                                        if (pendingLeaveAction) pendingLeaveAction();
-                                    }}
-                                        className="flex-1 py-3.5 rounded-xl font-black text-sm text-white bg-red-500 hover:bg-red-600 transition-colors shadow-lg shadow-red-500/20 tracking-widest uppercase">
-                                        Chiqish
+
+                                            const isThisCorrectOpt = resultData.correctOptionId === opt.id;
+                                            if (isThisCorrectOpt) return <div className="p-1.5 sm:p-2 rounded-full bg-emerald-500/20 shrink-0"><CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-400" /></div>;
+                                            if (opt.id === selectedId) return <div className="p-1.5 sm:p-2 rounded-full bg-red-500/20 shrink-0"><XCircle className="w-5 h-5 sm:w-6 sm:h-6 text-red-400" /></div>;
+                                            return null;
+                                        })()}
                                     </button>
-                                </div>
+                                );
+                            })}
+                        </div>
+
+                        {/* Keyboard hint */}
+                        <div className="mt-4 py-2 px-6 rounded-2xl bg-white/5 border border-white/5 inline-flex items-center gap-3">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-white/20">Shortcuts</span>
+                            <div className="flex gap-1.5">
+                                {['1', '2', '3'].map(k => <kbd key={k} className="px-1.5 py-0.5 rounded-md bg-white/10 text-[10px] font-black text-white/40">{k}</kbd>)}
                             </div>
                         </div>
                     </div>
-                )}
-            </div>
-            <style jsx global>{`
+
+                    {/* Abandon Confirmation Modal */}
+                    {showLeaveModal && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm bg-black/60">
+                            <div className="w-full max-w-sm rounded-[24px] bg-[#1a1c2e] border border-white/10 p-6 shadow-2xl overflow-hidden relative">
+                                {/* decorative background glow */}
+                                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-32 bg-red-500/20 blur-[50px] pointer-events-none rounded-full" />
+
+                                <div className="relative z-10 text-center">
+                                    <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-5">
+                                        <AlertCircle className="w-8 h-8 text-red-500" />
+                                    </div>
+                                    <h3 className="text-xl font-black text-white mb-2 tracking-tight">Qaroringiz qat'iymi?</h3>
+                                    <p className="text-sm text-white/60 mb-8 whitespace-pre-wrap">Quizni hozir tark etsangiz, sizning natijangiz yakunlanadi va saqlanmaydi.</p>
+
+                                    <div className="flex gap-3">
+                                        <button onClick={() => setShowLeaveModal(false)}
+                                            className="flex-1 py-3.5 rounded-xl font-bold text-sm bg-white/5 hover:bg-white/10 text-white transition-colors border border-white/10 tracking-widest uppercase">
+                                            Davom etish
+                                        </button>
+                                        <button onClick={async () => {
+                                            // Auto-abandon immediately on confirm
+                                            if (attemptId && question) {
+                                                try {
+                                                    await apiFetch('/api/quiz/student/abandon', {
+                                                        method: 'POST',
+                                                        headers: { 'Content-Type': 'application/json' },
+                                                        body: JSON.stringify({ attemptId, wrongWordIds: [question.wordId] })
+                                                    });
+                                                } catch (e) {
+
+                                                }
+                                            }
+                                            setShowLeaveModal(false);
+                                            if (pendingLeaveAction) pendingLeaveAction();
+                                        }}
+                                            className="flex-1 py-3.5 rounded-xl font-black text-sm text-white bg-red-500 hover:bg-red-600 transition-colors shadow-lg shadow-red-500/20 tracking-widest uppercase">
+                                            Chiqish
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+                <style jsx global>{`
                 #student-nav { display: none !important; }
             `}</style>
-        </>);
+            </>);
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -981,6 +1031,20 @@ export default function StudentQuizPage() {
                         </div>
                     )}
 
+                    {/* Pending Coins Message */}
+                    {pendingCoins !== undefined && pendingCoins > 0 && (
+                        <div className="rounded-2xl p-5 flex flex-col items-center gap-3 animate-fade-in bg-amber-500/5 border border-amber-500/20">
+                            <div className="flex items-center gap-4">
+                                <span className="text-3xl grayscale opacity-50">🪙</span>
+                                <div className="text-left">
+                                    <p className="text-xs font-black text-amber-400/70 uppercase tracking-widest">Kutilayotgan tangalar</p>
+                                    <p className="text-2xl font-black text-white">+{pendingCoins} MT Coin</p>
+                                </div>
+                            </div>
+                            <p className="text-xs text-amber-400/60 font-medium">Xatolar ustida ishlab, bu tangalarni qo&apos;lga kiriting!</p>
+                        </div>
+                    )}
+
                     <div className="rounded-2xl p-6" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
                         <p className="text-[10px] font-black uppercase tracking-widest text-white/25 mb-4">Bu session</p>
                         <div className="grid grid-cols-3 gap-4">
@@ -1012,9 +1076,16 @@ export default function StudentQuizPage() {
                         </div>
                     )}
 
-                    <button onClick={resetQuiz} className="btn-premium py-4 font-black flex items-center justify-center gap-3">
-                        <RotateCcw className="w-5 h-5" /> Qayta O&apos;ynash
-                    </button>
+                    {wrongWordIds.length > 0 ? (
+                        <button onClick={() => startQuiz(undefined, true)}
+                            className="w-full py-5 rounded-3xl bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-black text-lg shadow-xl shadow-emerald-500/20 hover:scale-[1.02] transition-all flex items-center justify-center gap-3 uppercase tracking-widest">
+                            <Brain className="w-6 h-6" /> Xatolar ustida ishlash
+                        </button>
+                    ) : (
+                        <button onClick={resetQuiz} className="btn-premium py-4 font-black flex items-center justify-center gap-3">
+                            <RotateCcw className="w-5 h-5" /> Qayta O&apos;ynash
+                        </button>
+                    )}
                 </div>
             </div>
         );

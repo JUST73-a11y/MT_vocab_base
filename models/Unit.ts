@@ -12,6 +12,7 @@ const UnitSchema = new Schema({
 // Compound index: speeds up GET /api/units?teacherId=X (filters by createdBy, sorts by createdAt)
 UnitSchema.index({ createdBy: 1, categoryId: 1, createdAt: -1 });
 UnitSchema.index({ categoryId: 1 }); // standalone for category-only lookups
+UnitSchema.index({ createdBy: 1, category: 1 }); // for dashboard name-based lookups
 
 const Unit = models.Unit || model('Unit', UnitSchema);
 

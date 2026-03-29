@@ -14,7 +14,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     BookOpen, Plus, Trash2, Edit, Loader2, ArrowLeft, FolderOpen, ChevronRight,
     Search, Share2, X, ChevronDown, Check, Users, Send, AlertCircle,
-    LayoutGrid, List, Filter, MoreVertical, Sparkles
+    LayoutGrid, List, Filter, MoreVertical, Sparkles, Pencil
 } from 'lucide-react';
 import ShareModal from '@/components/teacher/ShareModal';
 // FolderPlus is not available depending on lucide-react version. Swapping to Plus.
@@ -93,12 +93,14 @@ function TreeNode({
     selectedId,
     onSelect,
     onDelete,
+    onEdit,
 }: {
     node: CategoryNode;
     depth?: number;
     selectedId: string | null;
     onSelect: (node: CategoryNode) => void;
     onDelete: (id: string, name: string) => void;
+    onEdit: (node: CategoryNode) => void;
 }) {
     const [expanded, setExpanded] = useState(false);
     const isSelected = node._id === selectedId;
@@ -143,12 +145,20 @@ function TreeNode({
                     <span className="truncate text-[15px] tracking-tight uppercase">{node.name}</span>
                 </button>
 
-                <button
-                    onClick={(e) => { e.stopPropagation(); onDelete(node._id, node.name); }}
-                    className="opacity-0 group-hover:opacity-100 p-2.5 rounded-xl text-white/10 hover:text-red-400 hover:bg-red-500/10 transition-all shrink-0 z-10"
-                >
-                    <Trash2 className="w-5 h-5" />
-                </button>
+                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onEdit(node); }}
+                        className="p-2.5 rounded-xl text-white/10 hover:text-indigo-400 hover:bg-indigo-500/10 transition-all shrink-0"
+                    >
+                        <Pencil className="w-4 h-4" />
+                    </button>
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onDelete(node._id, node.name); }}
+                        className="p-2.5 rounded-xl text-white/10 hover:text-red-400 hover:bg-red-500/10 transition-all shrink-0"
+                    >
+                        <Trash2 className="w-4 h-4" />
+                    </button>
+                </div>
             </motion.div>
 
             <AnimatePresence initial={false}>
@@ -162,7 +172,7 @@ function TreeNode({
                     >
                         {node.children.map(child => (
                             <TreeNode key={child._id} node={child} depth={depth + 1}
-                                selectedId={selectedId} onSelect={onSelect} onDelete={onDelete} />
+                                selectedId={selectedId} onSelect={onSelect} onDelete={onDelete} onEdit={onEdit} />
                         ))}
                     </motion.div>
                 )}
@@ -357,8 +367,9 @@ function MoveModal({
                                 key={node._id}
                                 node={node}
                                 selectedId={selectedCategoryId}
-                                onSelect={(n) => setSelectedCategoryId(n._id)}
+                                onSelect={(n: CategoryNode) => setSelectedCategoryId(n._id)}
                                 onDelete={() => { }} // Disabled in move modal
+                                onEdit={() => { }} // Disabled in move modal
                             />
                         ))}
                     </div>
@@ -374,6 +385,122 @@ function MoveModal({
                         {moving ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Shu yerga ko\'chirish'}
                     </button>
                 </div>
+            </motion.div>
+        </div>
+    );
+}
+
+// ── Edit Folder Modal ───────────────────────────────────────────────────
+function EditFolderModal({
+    category,
+    categoriesTree,
+    onClose,
+    onSuccess,
+}: {
+    category: CategoryNode;
+    categoriesTree: CategoryNode[];
+    onClose: () => void;
+    onSuccess: () => void;
+}) {
+    const [name, setName] = useState(category.name);
+    const [parentId, setParentId] = useState<string | null>(category.parentId || null);
+    const [updating, setUpdating] = useState(false);
+
+    const handleUpdate = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!name.trim()) return;
+        setUpdating(true);
+        try {
+            await apiFetch(`/api/teacher/categories/${category._id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: name.trim(), parentId: parentId })
+            });
+            toast.success('Papkada o\'zgarishlar saqlandi');
+            onSuccess();
+            onClose();
+        } catch (e: any) {
+            toast.error(e?.message || 'Xatolik yuz berdi');
+        } finally {
+            setUpdating(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xl animate-fade-in">
+            <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="glass-card w-full max-w-lg flex flex-col max-h-[90vh] relative !bg-gray-950/80 shadow-2xl"
+            >
+                <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500" />
+
+                <div className="px-8 py-6 border-b border-white/5 flex items-center justify-between">
+                    <div>
+                        <h2 className="text-xl font-black text-white uppercase tracking-tight">Papkani Tahrirlash</h2>
+                        <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mt-1">Nomi yoki joylashuvini o'zgartiring</p>
+                    </div>
+                    <button onClick={onClose} className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center text-white/40 hover:text-white transition-all">
+                        <X className="w-5 h-5" />
+                    </button>
+                </div>
+
+                <form onSubmit={handleUpdate} className="p-8 flex flex-col gap-6">
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] block">Papka nomi</label>
+                        <input
+                            type="text"
+                            value={name}
+                            onChange={e => setName(e.target.value)}
+                            className="input-premium w-full"
+                            placeholder="Papka nomini kiriting..."
+                        />
+                    </div>
+
+                    <div className="space-y-2 flex-1 flex flex-col">
+                        <label className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] block">Joylashuv (Ota papka)</label>
+                        <div className="flex-1 overflow-y-auto max-h-[300px] bg-white/[0.02] border border-white/10 rounded-2xl p-4 custom-scrollbar">
+                            <button
+                                type="button"
+                                onClick={() => setParentId(null)}
+                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-left text-sm font-black mb-2 uppercase tracking-tight ${parentId === null ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30' : 'text-white/40 hover:bg-white/5 hover:text-white border border-transparent'}`}
+                            >
+                                <FolderOpen className="w-4 h-4 shrink-0" />
+                                Asosiy (Root)
+                            </button>
+
+                            {/* Self and children should be filtered or blocked in PATCH, handling visually here */}
+                            {categoriesTree.map(node => (
+                                <TreeNode
+                                    key={node._id}
+                                    node={node}
+                                    depth={0}
+                                    selectedId={parentId}
+                                    onSelect={(n: CategoryNode) => {
+                                        if (n._id === category._id) {
+                                            toast.error('O\'ziga ko\'chirib bo\'lmaydi');
+                                            return;
+                                        }
+                                        setParentId(n._id);
+                                    }}
+                                    onDelete={() => {}} 
+                                    onEdit={() => {}}
+                                />
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="flex gap-4 mt-2">
+                        <button type="button" onClick={onClose} className="btn-secondary flex-1 h-14 uppercase tracking-widest text-xs font-black">Bekor qilish</button>
+                        <button
+                            type="submit"
+                            disabled={updating || !name.trim()}
+                            className="btn-premium flex-1 h-14 uppercase tracking-widest text-xs font-black disabled:opacity-50"
+                        >
+                            {updating ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'Saqlash'}
+                        </button>
+                    </div>
+                </form>
             </motion.div>
         </div>
     );
@@ -402,13 +529,19 @@ export default function UnitsPage() {
     const [showShareModal, setShowShareModal] = useState(false);
 
     // Delete Modal State
-    const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; type: 'folder' | 'unit'; id: string; name: string } | null>(null);
+    const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; type: 'folder' | 'unit' | 'bulk-unit'; id: string; name: string } | null>(null);
     const [deleting, setDeleting] = useState(false);
 
     // Multi-select & Move State
     const [selectedUnits, setSelectedUnits] = useState<Set<string>>(new Set());
     const [showMoveModal, setShowMoveModal] = useState(false);
     const [unitsToMove, setUnitsToMove] = useState<Unit[]>([]);
+
+    // Sync State
+    const [syncing, setSyncing] = useState(false);
+
+    // Folder Edit State
+    const [editingFolder, setEditingFolder] = useState<CategoryNode | null>(null);
 
     const newFolderInputRef = useRef<HTMLInputElement>(null);
 
@@ -438,7 +571,10 @@ export default function UnitsPage() {
         ? (findNode(categoriesTree, currentCatId)?.children ?? [])
         : categoriesTree;
 
-    // Units filtered by current category + search
+    // ShareModal uchun faqat o'zi yaratgan unitlar (boshqalarnikini qayta ulashmaslik)
+    const myUnits = units.filter(u => u.createdBy === user?.id);
+
+    // Units filtered by current category + search (barcha unitlar: o'z + shared)
     const baseUnits = currentCatId
         ? units.filter(u => {
             // Match by ID if available
@@ -449,7 +585,7 @@ export default function UnitsPage() {
         })
         : units.filter(u => !u.categoryId || u.categoryId === 'uncategorized');
     const currentUnits = search
-        ? units.filter(u => u.title.toLowerCase().includes(search.toLowerCase())) // Search across all units if searching
+        ? units.filter(u => u.title.toLowerCase().includes(search.toLowerCase()))
         : baseUnits;
 
     // Selection Handlers
@@ -481,9 +617,24 @@ export default function UnitsPage() {
         }
     };
 
+    const handleInitiateBulkDelete = () => {
+        if (selectedUnits.size > 0) {
+            setDeleteModal({
+                isOpen: true,
+                type: 'bulk-unit',
+                id: 'bulk',
+                name: `${selectedUnits.size} ta unitni`
+            });
+        }
+    };
+
     const handleInitiateSingleMove = (unit: Unit) => {
         setUnitsToMove([unit]);
         setShowMoveModal(true);
+    };
+
+    const handleEditFolder = (node: CategoryNode) => {
+        setEditingFolder(node);
     };
 
     const handleDeleteFolder = (id: string, name: string) => {
@@ -537,19 +688,57 @@ export default function UnitsPage() {
         if (!deleteModal) return;
         setDeleting(true);
         try {
-            await deleteUnit(deleteModal.id);
+            const unitIds = deleteModal.type === 'bulk-unit' 
+                ? Array.from(selectedUnits) 
+                : [deleteModal.id];
+
+            await apiFetch('/api/teacher/units/bulk-delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ unitIds })
+            });
+
             setSelectedUnits(prev => {
                 const next = new Set(prev);
-                next.delete(deleteModal.id);
+                unitIds.forEach(id => next.delete(id));
                 return next;
             });
+
             refetch();
-            toast.success('Unit o\'chirildi');
+            router.refresh(); 
+            toast.success(deleteModal.type === 'bulk-unit' ? 'Unitlar o\'chirildi' : 'Unit o\'chirildi');
             setDeleteModal(null);
         } catch {
-            toast.error('Unit o\'chirishda xatolik');
+            toast.error('O\'chirishda xatolik yuz berdi');
         } finally {
             setDeleting(false);
+        }
+    };
+
+    const handleSyncCategories = async () => {
+        const uniqueCatNames = Array.from(new Set(
+            units.map(u => u.category?.trim()).filter(Boolean)
+        ));
+
+        if (uniqueCatNames.length === 0) {
+            toast.error("Sinxronizatsiya uchun unitlar topilmadi");
+            return;
+        }
+
+        setSyncing(true);
+        try {
+            await apiFetch('/api/teacher/categories/sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ categories: uniqueCatNames })
+            });
+
+            toast.success("Kategoriyalar muvaffaqiyatli tiklandi!");
+            treeRefetch();
+        } catch (err: any) {
+            toast.error(err?.message || "Sinxronizatsiyada xatolik");
+        } finally {
+            setSyncing(false);
         }
     };
 
@@ -683,13 +872,23 @@ export default function UnitsPage() {
                                             }
                                         }}
                                         onDelete={handleDeleteFolder}
+                                        onEdit={handleEditFolder}
                                     />
                                 ))
                             )}
 
                             {categoriesTree.length === 0 && !catLoading && (
-                                <div className="py-10 text-center opacity-20">
-                                    <p className="text-xs font-black uppercase tracking-widest">Kategoriyalar yo'q</p>
+                                <div className="py-10 text-center flex flex-col items-center gap-4 bg-white/[0.02] rounded-2xl border border-dashed border-white/5 mx-2">
+                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20">Kategoriyalar yo'q</p>
+                                    {units.length > 0 && (
+                                        <button 
+                                            onClick={handleSyncCategories}
+                                            disabled={syncing}
+                                            className="px-4 py-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[9px] font-black uppercase tracking-[0.2em] hover:bg-indigo-500/20 hover:text-indigo-300 transition-all active:scale-95 disabled:opacity-50"
+                                        >
+                                            {syncing ? <Loader2 className="w-3.5 h-3.5 animate-spin mx-auto text-indigo-400" /> : 'Kategoriyalarni tiklash'}
+                                        </button>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -803,12 +1002,20 @@ export default function UnitsPage() {
                                                         whileHover={{ y: -4 }}
                                                         className="glass-card group flex flex-col items-stretch overflow-hidden !bg-white/[0.02]"
                                                     >
-                                                        <button
-                                                            onClick={e => { e.stopPropagation(); handleDeleteFolder(folder._id, folder.name); }}
-                                                            className="absolute top-4 right-4 w-10 h-10 rounded-2xl flex items-center justify-center text-white/5 hover:text-red-500 hover:bg-red-500/10 transition-all z-20"
-                                                        >
-                                                            <Trash2 className="w-5 h-5" />
-                                                        </button>
+                                                        <div className="absolute top-4 right-4 flex items-center gap-1 z-20">
+                                                            <button
+                                                                onClick={e => { e.stopPropagation(); handleEditFolder(folder); }}
+                                                                className="w-10 h-10 rounded-2xl flex items-center justify-center text-white/5 hover:text-indigo-400 hover:bg-indigo-500/10 transition-all"
+                                                            >
+                                                                <Pencil className="w-4 h-4" />
+                                                            </button>
+                                                            <button
+                                                                onClick={e => { e.stopPropagation(); handleDeleteFolder(folder._id, folder.name); }}
+                                                                className="w-10 h-10 rounded-2xl flex items-center justify-center text-white/5 hover:text-red-500 hover:bg-red-500/10 transition-all"
+                                                            >
+                                                                <Trash2 className="w-5 h-5" />
+                                                            </button>
+                                                        </div>
 
                                                         <button
                                                             onClick={() => setCurrentPath([...currentPath, folder])}
@@ -931,7 +1138,7 @@ export default function UnitsPage() {
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-3">
                                                 <BookOpen className="w-5 h-5 text-indigo-400" />
-                                                <h3 className="text-sm font-black text-white/30 uppercase tracking-[0.4em]">Asosiy Bo'limlar (Uncategorized)</h3>
+                                                <h3 className="text-sm font-black text-white/30 uppercase tracking-[0.4em]">Asosiy Bo'limlar</h3>
                                             </div>
                                             <button
                                                 onClick={toggleAllCurrentUnits}
@@ -979,6 +1186,12 @@ export default function UnitsPage() {
                                 Bekor
                             </button>
                             <button
+                                onClick={handleInitiateBulkDelete}
+                                className="px-6 py-2.5 rounded-xl text-xs font-black text-red-500 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-red-500/5 mr-2"
+                            >
+                                O'chirish
+                            </button>
+                            <button
                                 onClick={handleInitiateBulkMove}
                                 className="px-6 py-2.5 rounded-xl text-xs font-black text-black bg-emerald-400 hover:bg-emerald-300 uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-emerald-500/20"
                             >
@@ -993,7 +1206,7 @@ export default function UnitsPage() {
             <AnimatePresence>
                 {showShareModal && (
                     <ShareModal
-                        units={units}
+                        units={myUnits}
                         categoriesTree={categoriesTree}
                         onClose={() => setShowShareModal(false)}
                         onSuccess={refetch}
@@ -1012,6 +1225,21 @@ export default function UnitsPage() {
                             setSelectedUnits(new Set());
                             refetch();
                             treeRefetch();
+                        }}
+                    />
+                )}
+            </AnimatePresence>
+
+            {/* Edit Folder Modal */}
+            <AnimatePresence>
+                {editingFolder && (
+                    <EditFolderModal
+                        category={editingFolder}
+                        categoriesTree={categoriesTree}
+                        onClose={() => setEditingFolder(null)}
+                        onSuccess={() => {
+                            treeRefetch();
+                            refetch();
                         }}
                     />
                 )}

@@ -9,7 +9,11 @@ interface CacheEntry {
     expiresAt: number;
 }
 
-const store = new Map<string, CacheEntry>();
+// Global obyekti orqali bog'lash (Next.js serverless development muhitida xotira yo'qolmasligi uchun)
+if (!(globalThis as any).cacheStore) {
+    (globalThis as any).cacheStore = new Map<string, CacheEntry>();
+}
+const store: Map<string, CacheEntry> = (globalThis as any).cacheStore;
 
 export const cache = {
     get<T>(key: string): T | null {
