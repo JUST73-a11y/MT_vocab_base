@@ -116,7 +116,7 @@ export default function TeacherDashboard() {
         if (!deleteModal.name) return;
         setDeleting(true);
         try {
-            const body = deleteModal.type === 'category' 
+            const body = deleteModal.type === 'category'
                 ? { categoryName: deleteModal.name, cascade: true }
                 : { unitIds: [deleteModal.id] };
 
@@ -127,11 +127,11 @@ export default function TeacherDashboard() {
             });
 
             if (!res.ok) throw new Error('O\'chirishda xatolik yuz berdi');
-            
-            toast.success(deleteModal.type === 'category' 
+
+            toast.success(deleteModal.type === 'category'
                 ? `"${deleteModal.name}" kategoriyasi va uning barcha unitlari o'chirildi`
                 : `"${deleteModal.name}" uniti o'chirildi`);
-            
+
             if (deleteModal.type === 'category') setSelectedCategory(null);
             refetch(true); // Force absolute baseline refresh
             setDeleteModal({ ...deleteModal, isOpen: false });
@@ -411,7 +411,7 @@ export default function TeacherDashboard() {
                                                 <FolderOpen className="w-5 h-5" style={{ color: p.icon }} />
                                             </div>
                                             <div className="flex items-center gap-2">
-                                                <button 
+                                                <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         setDeleteModal({ isOpen: true, type: 'category', name: cat });
@@ -465,7 +465,7 @@ export default function TeacherDashboard() {
                                     {/* Footer */}
                                     <div className="flex items-center justify-between pt-3 relative z-10"
                                         style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                                        <button 
+                                        <button
                                             onClick={(e) => {
                                                 e.preventDefault();
                                                 e.stopPropagation();
@@ -498,7 +498,7 @@ export default function TeacherDashboard() {
             <DeleteConfirmationModal
                 isOpen={deleteModal.isOpen}
                 title={deleteModal.type === 'category' ? "Kategoriyani o'chirish" : "Unitni o'chirish"}
-                message={deleteModal.type === 'category' 
+                message={deleteModal.type === 'category'
                     ? `"${deleteModal.name}" kategoriyasidagi barcha unitlar doimiy ravishda o'chiriladi. Ushbu amalni bekor qilib bo'lmaydi.`
                     : `"${deleteModal.name}" uniti o'chiriladi. Davom etasizmi?`}
                 onConfirm={handleDelete}
