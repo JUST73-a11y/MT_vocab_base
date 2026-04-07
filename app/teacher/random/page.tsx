@@ -51,6 +51,7 @@ export default function RandomPracticePage() {
     const [isPaused, setIsPaused] = useState(false);
     const [historyStack, setHistoryStack] = useState<Word[]>([]);
     const [speechRate, setSpeechRate] = useState(1.0);
+    const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
     const [isBlurred, setIsBlurred] = useState(false);
     const [loadingData, setLoadingData] = useState(true);
     const [error, setError] = useState('');
@@ -68,7 +69,27 @@ export default function RandomPracticePage() {
         a === 'Kategoriyasiz' ? 1 : b === 'Kategoriyasiz' ? -1 : a.localeCompare(b));
     const displayedUnits = activeCategory ? (categoryMap[activeCategory] || []) : availableUnits;
 
-    useEffect(() => { if (loading || !user) return; loadInitialData(); }, [user, loading]);
+    useEffect(() => {
+        if (loading || !user) return;
+        loadInitialData();
+
+        // Load voices and listen for changes (important for some browsers)
+        const loadVoices = () => {
+            if (typeof window !== 'undefined' && window.speechSynthesis) {
+                const v = window.speechSynthesis.getVoices();
+                if (v.length > 0) setVoices(v);
+            }
+        };
+        loadVoices();
+        if (typeof window !== 'undefined' && window.speechSynthesis) {
+            window.speechSynthesis.onvoiceschanged = loadVoices;
+        }
+        return () => { 
+            if (typeof window !== 'undefined' && window.speechSynthesis) {
+                window.speechSynthesis.onvoiceschanged = null; 
+            }
+        };
+    }, [user, loading]);
 
     useEffect(() => {
         let interval: NodeJS.Timeout | undefined;
@@ -167,21 +188,42 @@ export default function RandomPracticePage() {
 
     const handleSpeak = (e?: React.MouseEvent | null, lang: 'en-US' | 'en-GB' = 'en-US') => {
         if (e) e.stopPropagation();
-        if (!currentWord) return;
+        if (!currentWord || typeof window === 'undefined' || !window.speechSynthesis) return;
+
+        // Cancel existing speech
         window.speechSynthesis.cancel();
-        const u = new SpeechSynthesisUtterance(currentWord.englishWord);
-        u.lang = lang; u.rate = speechRate;
-        const v = window.speechSynthesis.getVoices().find(v => v.lang === lang || v.lang.startsWith(lang));
-        if (v) u.voice = v;
-        window.speechSynthesis.speak(u);
+
+        // Small delay to ensure cancel clears properly before speaking again
+        setTimeout(() => {
+            const u = new SpeechSynthesisUtterance(currentWord.englishWord);
+            u.lang = lang;
+            u.rate = speechRate;
+
+            // Find best matching voice from available voices
+            const availableVoices = window.speechSynthesis.getVoices();
+            const v = availableVoices.find(voice => voice.lang === lang || voice.lang.startsWith(lang))
+                || availableVoices.find(voice => voice.lang.startsWith('en'))
+                || availableVoices[0];
+
+            if (v) u.voice = v;
+            window.speechSynthesis.speak(u);
+        }, 50);
     };
 
     useEffect(() => {
-        if (currentWord && !isSelectionMode && !showTranslation && practiceMode === 'EN') {
-            const t = setTimeout(() => handleSpeak(null, 'en-GB'), 500);
-            return () => clearTimeout(t);
+        if (currentWord && !isSelectionMode) {
+            // Case 1: EN mode - speak when word appears
+            if (practiceMode === 'EN' && !showTranslation) {
+                const t = setTimeout(() => handleSpeak(null, 'en-GB'), 500);
+                return () => clearTimeout(t);
+            }
+            // Case 2: UZ mode - speak when translation (EN word) is revealed
+            if (practiceMode === 'UZ' && showTranslation) {
+                const t = setTimeout(() => handleSpeak(null, 'en-GB'), 300);
+                return () => clearTimeout(t);
+            }
         }
-    }, [currentWord?.id, isSelectionMode, practiceMode]);
+    }, [currentWord?.id, isSelectionMode, practiceMode, showTranslation]);
 
     const handleNext = async () => {
         if (!sessionId || !currentWord || !user) return;

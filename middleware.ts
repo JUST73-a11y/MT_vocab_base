@@ -11,7 +11,7 @@ const API_STUDENT_ROUTES = '/api/student';
 const API_TEACHER_ROUTES = '/api/teacher';
 const API_ADMIN_ROUTES = '/api/admin';
 
-export async function middleware(req: NextRequest) {
+export default async function proxy(req: NextRequest) {
     const path = req.nextUrl.pathname;
 
     // Fast-path: Skip middleware for public routes and static assets

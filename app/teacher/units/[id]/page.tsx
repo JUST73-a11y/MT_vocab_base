@@ -120,12 +120,34 @@ export default function UnitDetailPage() {
                         trans: bracketMatch[3].trim()
                     };
                 }
-                const parts = cleanText.split(/\t|\s{2,}|[—–→]|[=:]+/).map(p => p.trim()).filter(Boolean);
+                
+                // Enhanced separator regex:
+                // 1. Tabs
+                // 2. Two or more spaces
+                // 3. Hyphen, en-dash, em-dash, or arrow with spaces (prevents splitting hyphenated words)
+                // 4. Pipe, Equals, or Colon (standard separators)
+                const separators = /\t|\s{2,}|(?:\s+[-—–→]\s+)|[|→]|[=:]+/;
+                const parts = cleanText.split(separators).map(p => p.trim()).filter(Boolean);
+                
                 if (parts.length >= 2) {
+                    const english = parts[0];
+                    const translation = parts[parts.length - 1];
+                    const middleParts = parts.slice(1, -1);
+                    
+                    // Handle 3-part format: Word - Phonetic/Duplicate - Translation
+                    // If there's a middle part, use it as phonetic unless it's identical to english
+                    let phonetic: string | undefined = undefined;
+                    if (middleParts.length > 0) {
+                        const candidate = middleParts[0];
+                        if (candidate.toLowerCase() !== english.toLowerCase()) {
+                            phonetic = candidate;
+                        }
+                    }
+
                     return {
-                        english: parts[0],
-                        pho: parts.length === 3 ? parts[1] : undefined,
-                        trans: parts[parts.length - 1]
+                        english: english,
+                        pho: phonetic,
+                        trans: translation
                     };
                 }
                 return { english: cleanText, pho: undefined, trans: '' };

@@ -77,13 +77,18 @@ export async function POST(req: Request) {
         await dbConnect();
 
         if (Array.isArray(body)) {
-            const words = await Word.insertMany(body);
+            // Use { ordered: false } to continue inserting even if some words fail (e.g., validation)
+            const words = await Word.insertMany(body, { ordered: false });
             return NextResponse.json(words, { status: 201 });
         }
 
         const word = await Word.create(body);
         return NextResponse.json(word, { status: 201 });
-    } catch (error) {
-        return NextResponse.json({ message: 'Error creating word' }, { status: 500 });
+    } catch (error: any) {
+        console.error('Error creating word(s):', error);
+        return NextResponse.json({ 
+            message: 'Error creating word', 
+            error: error.message 
+        }, { status: 500 });
     }
 }
