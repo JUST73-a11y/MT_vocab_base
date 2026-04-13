@@ -82,51 +82,8 @@ export async function POST(req: Request) {
             console.log(`[BULK-DELETE] Shared units removed: ${shareRes.deletedCount}`);
         }
 
-        // --- Kategoriyalarni tozalash (Optimized Category Cleanup) ---
         try {
-            const allCats = await Category.find({ teacherId: teacher.id }).lean();
-            if (allCats.length > 0) {
-                const catIds = allCats.map(c => c._id);
-                
-                // 1. Qaysi kategoriyalar bandligini (unitlar yoki sharelar borligini) bir marta aniqlaymiz
-                const [occupiedByUnits, occupiedByShares] = await Promise.all([
-                    Unit.distinct('categoryId', { categoryId: { $in: catIds } }),
-                    UnitShare.distinct('targetCategoryId', { 
-                        targetCategoryId: { $in: catIds }, 
-                        toTeacherId: teacher.id,
-                        status: 'ACCEPTED'
-                    })
-                ]);
-
-                const occupiedSet = new Set([
-                    ...occupiedByUnits.map(id => id?.toString()),
-                    ...occupiedByShares.map(id => id?.toString())
-                ]);
-
-                // 2. Barglardan (leaf) boshlab tepaga qarab tekshiramiz
-                // 2. Identify categories to delete (empty branches)
-                const sortedCats = [...allCats].sort((a, b) => (b.path?.length || 0) - (a.path?.length || 0));
-                const idsToDelete = new Set<string>();
-
-                for (const cat of sortedCats) {
-                    const catId = cat._id.toString();
-                    if (occupiedSet.has(catId)) continue;
-
-                    const hasActiveChildren = allCats.some(c => 
-                        c.parentId?.toString() === catId && !idsToDelete.has(c._id.toString())
-                    );
-                    
-                    if (!hasActiveChildren) {
-                        idsToDelete.add(catId);
-                    }
-                }
-
-                if (idsToDelete.size > 0) {
-                    const catRes = await Category.deleteMany({ _id: { $in: Array.from(idsToDelete).map(id => new mongoose.Types.ObjectId(id)) } });
-                    deletedCategoryCount = catRes.deletedCount;
-                    console.log(`[BULK-DELETE] Categories cleanup: ${catRes.deletedCount} removed.`);
-                }
-            }
+            // Category cleanup has been disabled to prevent accidental deletion of empty folders
         } catch (catErr) {
             console.error('[CLEANUP ERROR] Categories cleanup failed:', catErr);
         }

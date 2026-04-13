@@ -4,6 +4,7 @@ import Category from '@/models/Category';
 import Unit from '@/models/Unit';
 import Word from '@/models/Word';
 import { getServerSession } from '@/lib/serverAuth';
+import { cache } from '@/lib/cache';
 
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
@@ -51,6 +52,9 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
 
         // 3. Delete the categories
         await Category.deleteMany({ _id: { $in: categoriesToDeleteIds } });
+
+        cache.delByPrefix(`categoryTree:${session.id}`);
+        cache.delByPrefix(`units:${session.id}`);
 
         return NextResponse.json({ message: 'Papkalar va barcha unitlar muvaffaqiyatli o\'chirildi' });
     } catch (error: any) {
@@ -130,6 +134,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         if (name !== undefined || parentId !== undefined) {
             await updateChildrenPaths(id, newPath);
         }
+
+        cache.delByPrefix(`categoryTree:${session.id}`);
+        cache.delByPrefix(`units:${session.id}`);
 
         return NextResponse.json(category);
     } catch (error: any) {

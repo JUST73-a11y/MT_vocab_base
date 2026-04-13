@@ -98,7 +98,10 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
         // Invalidate cache so list reflects the update
         const ownerId = unit.createdBy?.toString();
-        if (ownerId) cache.delByPrefix(`units:${ownerId}`);
+        if (ownerId) {
+            cache.delByPrefix(`units:${ownerId}`);
+            cache.delByPrefix(`categoryTree:${ownerId}`);
+        }
 
         return NextResponse.json(unit);
     } catch (error) {

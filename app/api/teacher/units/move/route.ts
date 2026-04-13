@@ -4,6 +4,7 @@ import Unit from '@/models/Unit';
 import Category from '@/models/Category';
 import { cookies } from 'next/headers';
 import { jwtVerify } from 'jose';
+import { cache } from '@/lib/cache';
 
 export async function POST(req: Request) {
     try {
@@ -57,6 +58,9 @@ export async function POST(req: Request) {
         if (result.modifiedCount === 0) {
             return NextResponse.json({ error: 'Hech qanday unit o\'zgartirilmadi. Sizga tegishliligiga ishonch hosil qiling.' }, { status: 404 });
         }
+
+        cache.delByPrefix(`units:${teacherId}`);
+        cache.delByPrefix(`categoryTree:${teacherId}`);
 
         return NextResponse.json({ 
             message: 'Unitlar muvaffaqiyatli ko\'chirildi',

@@ -107,84 +107,106 @@ export default function UnitDetailPage() {
 
         setSaving(true);
         try {
-            const rawLines = bulkText.split('\n');
+            const rawLines = bulkText.split('\n')
+                .map(l => l.trim())
+                .filter(l => l && !/^(ENGLISH|TRANSCRIPT|UZBEK)$/i.test(l) && !/^\d+\-\s*(LESSON|UNIT)/i.test(l));
             const newWords: Omit<Word, 'id'>[] = [];
-
-            const parseLine = (text: string) => {
-                const cleanText = text.replace(/^\d+[\.\-\)]\s*/, '').trim();
-                const bracketMatch = cleanText.match(/^(.*?)\s*(\[[^\]]+\]|\/[^\/]+\/)\s*(.*)$/);
-                if (bracketMatch) {
-                    return {
-                        english: bracketMatch[1].trim(),
-                        pho: bracketMatch[2].replace(/[\[\]\/]/g, '').trim(),
-                        trans: bracketMatch[3].trim()
-                    };
-                }
-                
-                // Enhanced separator regex:
-                // 1. Tabs
-                // 2. Two or more spaces
-                // 3. Hyphen, en-dash, em-dash, or arrow with spaces (prevents splitting hyphenated words)
-                // 4. Pipe, Equals, or Colon (standard separators)
-                const separators = /\t|\s{2,}|(?:\s+[-—–→]\s+)|[|→]|[=:]+/;
-                const parts = cleanText.split(separators).map(p => p.trim()).filter(Boolean);
-                
-                if (parts.length >= 2) {
-                    const english = parts[0];
-                    const translation = parts[parts.length - 1];
-                    const middleParts = parts.slice(1, -1);
-                    
-                    // Handle 3-part format: Word - Phonetic/Duplicate - Translation
-                    // If there's a middle part, use it as phonetic unless it's identical to english
-                    let phonetic: string | undefined = undefined;
-                    if (middleParts.length > 0) {
-                        const candidate = middleParts[0];
-                        if (candidate.toLowerCase() !== english.toLowerCase()) {
-                            phonetic = candidate;
-                        }
-                    }
-
-                    return {
-                        english: english,
-                        pho: phonetic,
-                        trans: translation
-                    };
-                }
-                return { english: cleanText, pho: undefined, trans: '' };
-            };
 
             let i = 0;
             while (i < rawLines.length) {
-                const line = rawLines[i].trim();
-                if (!line) { i++; continue; }
+                const line = rawLines[i];
+                let english = '';
+                let phonetic = '';
+                let translation = '';
+                let example = '';
 
-                const { english, pho, trans } = parseLine(line);
-                let translation = trans;
-                let phonetic = pho;
-                let example: string | undefined = undefined;
+                // Strip leading numbering
+                const cleanLine = line.replace(/^\d+[\.\-\)]\s*/, '').trim();
 
-                if (!translation && i + 1 < rawLines.length) {
-                    const nextLine = rawLines[i + 1].trim();
-                    if (nextLine && !nextLine.toLowerCase().startsWith('e.g.') && !nextLine.includes('[')) {
-                        translation = nextLine;
-                        i++;
-                    }
+                // 1. Column-based check (tabs, multi-spaces, pipes)
+                if (/\t|\s{2,}|[|]/.test(cleanLine)) {
+                     const parts = cleanLine.split(/\t|\s{2,}|[|]/).map(p => p.trim()).filter(Boolean);
+                     if (parts.length >= 3) {
+                         english = parts[0];
+                         phonetic = parts[1];
+                         translation = parts.slice(2).join(' ');
+                     } else if (parts.length === 2) {
+                         english = parts[0];
+                         translation = parts[1];
+                     } else {
+                         english = parts[0];
+                     }
+                } else {
+                     // 2. Bracket-based check
+                     const bracketMatch = cleanLine.match(/^(.*?)\s*(\[[^\]]+\]|\/[^\/]+\/)\s*(.*)$/);
+                     if (bracketMatch) {
+                         english = bracketMatch[1].trim();
+                         phonetic = bracketMatch[2].replace(/[\[\]\/]/g, '').trim();
+                         translation = bracketMatch[3].trim();
+                     } else {
+                         // 3. Fallback standard line
+                         english = cleanLine;
+                     }
                 }
 
-                if (i + 1 < rawLines.length) {
-                    const nextLine = rawLines[i + 1].trim();
-                    if (nextLine.toLowerCase().startsWith('e.g.')) {
-                        example = nextLine.replace(/^e\.g\.\s*/i, '').trim();
-                        i++;
-                    }
+                // If translation is still missing, pull from next lines
+                if (!translation && i + 1 < rawLines.length) {
+                     if (!phonetic) {
+                          // Could be 3-line format. Count elements until next numbered bullet or end.
+                          let nextNumIndex = -1;
+                          for(let j = i + 1; j < rawLines.length; j++) {
+                               if (/^\d+[\.\-\)]/.test(rawLines[j])) {
+                                   nextNumIndex = j;
+                                   break;
+                               }
+                          }
+                          const linesUntilNext = nextNumIndex !== -1 ? nextNumIndex - i : rawLines.length - i;
+                          
+                          if (linesUntilNext === 3) {
+                               if (rawLines[i+2].toLowerCase().startsWith('e.g.')) {
+                                   translation = rawLines[i+1];
+                                   example = rawLines[i+2].replace(/^e\.g\.\s*/i, '').trim();
+                                   i += 2;
+                               } else {
+                                   phonetic = rawLines[i+1];
+                                   translation = rawLines[i+2];
+                                   i += 2;
+                               }
+                          } else if (linesUntilNext === 2) {
+                               translation = rawLines[i+1];
+                               i += 1;
+                          } else if (linesUntilNext > 3) {
+                               if (linesUntilNext % 3 === 0) {
+                                    phonetic = rawLines[i+1];
+                                    translation = rawLines[i+2];
+                                    i += 2;
+                               } else {
+                                    translation = rawLines[i+1];
+                                    i += 1;
+                               }
+                          } else {
+                               translation = rawLines[i+1];
+                               i += 1;
+                          }
+                     } else {
+                          // Phonetic is satisfied, next line is translation
+                          translation = rawLines[i+1];
+                          i += 1;
+                     }
                 }
 
                 if (translation.toLowerCase().includes('e.g.')) {
                     const egMatch = translation.match(/^(.*?)\s*e\.g\.\s*(.*)$/i);
                     if (egMatch) {
                         translation = egMatch[1].trim();
-                        example = egMatch[2].trim();
+                        // Only set example if not already set by linesUntilNext block
+                        if (!example) example = egMatch[2].trim();
                     }
+                }
+
+                if (!example && i + 1 < rawLines.length && rawLines[i+1].toLowerCase().startsWith('e.g.')) {
+                    example = rawLines[i+1].replace(/^e\.g\.\s*/i, '').trim();
+                    i++;
                 }
 
                 if (english && translation) {
@@ -192,8 +214,8 @@ export default function UnitDetailPage() {
                         unitId,
                         englishWord: english,
                         uzbekTranslation: translation,
-                        exampleSentence: example,
-                        phonetic: phonetic,
+                        exampleSentence: example || undefined,
+                        phonetic: phonetic || undefined,
                     });
                 }
                 i++;

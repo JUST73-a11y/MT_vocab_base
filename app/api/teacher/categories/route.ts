@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
+import { cache } from '@/lib/cache';
 import Category from '@/models/Category';
 import { getServerSession } from '@/lib/serverAuth';
 
@@ -65,6 +66,8 @@ export async function POST(req: Request) {
             parentId: parentId || null,
             path
         });
+
+        cache.delByPrefix(`categoryTree:${session.id}`);
 
         return NextResponse.json(newCategory, { status: 201 });
     } catch (error: any) {
