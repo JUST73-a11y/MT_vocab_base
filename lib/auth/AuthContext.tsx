@@ -67,13 +67,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             body: JSON.stringify({ email, password, name, role }),
         });
 
+        const data = await res.json();
+
         if (!res.ok) {
-            const error = await res.json();
-            throw new Error(error.message || 'Failed to sign up');
+            throw new Error(data.message || 'Failed to sign up');
         }
 
-        // Auto login after signup
-        await signIn(email, password);
+        // Return server data (may include otp if email failed)
+        return data;
     };
 
     const refreshUser = async () => {

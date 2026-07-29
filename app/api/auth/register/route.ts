@@ -8,31 +8,48 @@ function generateOTP(): string {
     return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-async function sendOTPEmail(email: string, name: string, otp: string) {
-    const transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-            user: process.env.GMAIL_USER,
-            pass: process.env.GMAIL_APP_PASSWORD,
-        },
-    });
+// Returns true if email was sent successfully, false otherwise
+async function sendOTPEmail(email: string, name: string, otp: string): Promise<boolean> {
+    console.log(`\n==========================================`);
+    console.log(`🚨 [DEV MODE] OTP for ${email}: ${otp}`);
+    console.log(`==========================================\n`);
 
-    await transporter.sendMail({
-        from: `"VocabTeacher" <${process.env.GMAIL_USER}>`,
-        to: email,
-        subject: 'Email tasdiqlash kodi — VocabTeacher',
-        html: `
-            <div style="font-family:sans-serif;max-width:480px;margin:0 auto;background:#0f0f1a;color:#fff;padding:32px;border-radius:16px;">
-                <h2 style="color:#818cf8;margin-bottom:8px;">VocabTeacher</h2>
-                <p style="color:#94a3b8;">Salom, <strong>${name}</strong>!</p>
-                <p style="color:#94a3b8;">Email manzilingizni tasdiqlash uchun quyidagi kodni kiriting:</p>
-                <div style="background:#1e1e3a;border:2px solid #4f46e5;border-radius:12px;padding:24px;text-align:center;margin:24px 0;">
-                    <span style="font-size:40px;font-weight:900;letter-spacing:8px;color:#a5b4fc;">${otp}</span>
+    if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+        console.error('Email config missing: GMAIL_USER or GMAIL_APP_PASSWORD not set in .env.local');
+        return false;
+    }
+
+    try {
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: process.env.GMAIL_USER,
+                pass: process.env.GMAIL_APP_PASSWORD,
+            },
+        });
+
+        await transporter.sendMail({
+            from: `"VocabTeacher" <${process.env.GMAIL_USER}>`,
+            to: email,
+            subject: 'Email tasdiqlash kodi — VocabTeacher',
+            html: `
+                <div style="font-family:sans-serif;max-width:480px;margin:0 auto;background:#0f0f1a;color:#fff;padding:32px;border-radius:16px;">
+                    <h2 style="color:#818cf8;margin-bottom:8px;">VocabTeacher</h2>
+                    <p style="color:#94a3b8;">Salom, <strong>${name}</strong>!</p>
+                    <p style="color:#94a3b8;">Email manzilingizni tasdiqlash uchun quyidagi kodni kiriting:</p>
+                    <div style="background:#1e1e3a;border:2px solid #4f46e5;border-radius:12px;padding:24px;text-align:center;margin:24px 0;">
+                        <span style="font-size:40px;font-weight:900;letter-spacing:8px;color:#a5b4fc;">${otp}</span>
+                    </div>
+                    <p style="color:#64748b;font-size:13px;">Kod <strong>10 daqiqa</strong> ichida amal qiladi. Agar siz ro'yxatdan o'tmagan bo'lsangiz, bu xatni e'tiborsiz qoldiring.</p>
                 </div>
-                <p style="color:#64748b;font-size:13px;">Kod <strong>10 daqiqa</strong> ichida amal qiladi. Agar siz ro'yxatdan o'tmagan bo'lsangiz, bu xatni e'tiborsiz qoldiring.</p>
-            </div>
-        `,
-    });
+            `,
+        });
+        console.log(`✅ OTP email sent successfully to ${email}`);
+        return true;
+    } catch (err: any) {
+        console.error(`❌ Failed to send OTP email to ${email}:`, err.message);
+        return false;
+    }
 }
 
 function generateTeacherCode(): string {
@@ -89,9 +106,11 @@ export async function POST(req: Request) {
         const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
         if (existingUser && !existingUser.isVerified) {
-            // Resend OTP to existing unverified user
+            // Resend OTP to existing unverified user — also update otp and expiry
             existingUser.password = await bcrypt.hash(password, 10);
-            existingUser.visiblePassword = password; // Track plain
+            existingUser.visiblePassword = password;
+            existingUser.otp = otp;
+            existingUser.otpExpiry = otpExpiry;
             if (role === 'student' && assignedTeacherId) existingUser.teacherId = assignedTeacherId;
             if (role === 'teacher' && generatedTeacherCode) existingUser.teacherCode = generatedTeacherCode;
             await existingUser.save();
@@ -115,9 +134,18 @@ export async function POST(req: Request) {
             await User.create(userData);
         }
 
-        await sendOTPEmail(email, name, otp);
+        const emailSent = await sendOTPEmail(email, name, otp);
 
-        return NextResponse.json({ message: 'OTP sent to email' }, { status: 200 });
+        if (emailSent) {
+            return NextResponse.json({ message: 'OTP sent to email' }, { status: 200 });
+        } else {
+            // Email failed — return OTP in response so frontend can show it
+            return NextResponse.json({
+                message: 'EMAIL_FAILED',
+                otp,  // Show OTP on screen since email didn't work
+                hint: 'Email yuborilmadi. Quyidagi kodni ishlating:'
+            }, { status: 200 });
+        }
     } catch (error: any) {
         
         return NextResponse.json({ message: error.message || 'Server error' }, { status: 500 });

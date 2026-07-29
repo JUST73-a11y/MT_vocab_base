@@ -1,14 +1,14 @@
 
 import mongoose from 'mongoose';
-import Word from './models/Word.ts';
-import Unit from './models/Unit.ts';
+import Word from '../models/Word';
+import Unit from '../models/Unit';
 import dotenv from 'dotenv';
 
 dotenv.config({ path: '.env.local' });
 
 async function checkWords() {
     try {
-        await mongoose.connect(process.env.MONGODB_URI);
+        await mongoose.connect(process.env.MONGODB_URI!);
         console.log('Connected to MongoDB');
 
         const units = await Unit.find({});

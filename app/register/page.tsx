@@ -47,6 +47,7 @@ function RegisterForm() {
     const [step, setStep] = useState<'register' | 'verify'>('register');
     const [otp, setOtp] = useState('');
     const [verifyLoading, setVerifyLoading] = useState(false);
+    const [devOtp, setDevOtp] = useState<string | null>(null); // shown when email fails
 
     const { signUp, signIn, user } = useAuth();
     const router = useRouter();
@@ -81,9 +82,14 @@ function RegisterForm() {
         e.preventDefault();
         if (!EMAIL_REGEX.test(email)) { setError("To'g'ri email kiriting."); return; }
         if (!isPasswordStrong(password)) { setError("Parol barcha talablarga javob berishi kerak."); return; }
-        setError(''); setLoading(true);
+        setError(''); setLoading(true); setDevOtp(null);
         try {
-            await signUp(email, password, name, 'student');
+            const data = await signUp(email, password, name, 'student');
+            // If email failed, server returns otp in response
+            if (data?.message === 'EMAIL_FAILED' && data?.otp) {
+                setDevOtp(data.otp);
+            }
+            setStep('verify');
         } catch (err: any) {
             if (err.message === 'EMAIL_NOT_VERIFIED' || err.message.includes('OTP')) {
                 setStep('verify');
@@ -253,10 +259,31 @@ function RegisterForm() {
                     <div className="space-y-6 animate-fade-in">
                         <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-2xl p-6 text-center">
                             <h3 className="text-white font-bold mb-2">Email tasdiqlash</h3>
-                            <p className="text-sm text-indigo-300/80 leading-relaxed">
-                                <span className="font-bold text-white">{email}</span> manziliga 6 xonali tasdiqlash kodi yuborildi. Iltimos kodni kiriting:
-                            </p>
+                            {devOtp ? (
+                                <p className="text-sm text-yellow-300/80 leading-relaxed">
+                                    ⚠️ Email yuborilmadi (Gmail xato). Quyidagi kodni ishlating:
+                                </p>
+                            ) : (
+                                <p className="text-sm text-indigo-300/80 leading-relaxed">
+                                    <span className="font-bold text-white">{email}</span> manziliga 6 xonali tasdiqlash kodi yuborildi. Iltimos kodni kiriting:
+                                </p>
+                            )}
                         </div>
+
+                        {devOtp && (
+                            <div className="bg-yellow-500/10 border-2 border-yellow-500/40 rounded-2xl p-6 text-center animate-pulse">
+                                <p className="text-[10px] font-black text-yellow-400/60 uppercase tracking-widest mb-3">Sizning OTP kodingiz</p>
+                                <div className="text-5xl font-black tracking-[0.4em] text-yellow-300 mb-4">{devOtp}</div>
+                                <button
+                                    type="button"
+                                    onClick={() => setOtp(devOtp)}
+                                    className="text-xs font-bold text-yellow-400 underline underline-offset-2"
+                                >
+                                    ↓ Avtomatik kiritish
+                                </button>
+                            </div>
+                        )}
+
 
                         {error && (
                             <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-6 py-4 rounded-2xl text-xs font-black uppercase tracking-widest mx-auto flex items-center gap-3">
