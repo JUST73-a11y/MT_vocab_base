@@ -42,6 +42,9 @@ export default function TeacherGroupsPage() {
     const [loadingData, setLoadingData] = useState(true);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [newGroupName, setNewGroupName] = useState('');
+    const [newGroupLevel, setNewGroupLevel] = useState('');
+    const [newGroupCourse, setNewGroupCourse] = useState('');
+    const [newGroupVocabMode, setNewGroupVocabMode] = useState(true);
     const [creatingGroup, setCreatingGroup] = useState(false);
     const [mounted, setMounted] = useState(false);
 
@@ -131,15 +134,22 @@ export default function TeacherGroupsPage() {
             const group = await apiFetch('/api/teacher/groups', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: newGroupName }),
+                body: JSON.stringify({
+                    name: newGroupName,
+                    level: newGroupLevel,
+                    course: newGroupCourse,
+                    vocabularyMode: newGroupVocabMode,
+                }),
             });
             setGroups(prev => [group, ...prev]);
             setShowCreateModal(false);
             setNewGroupName('');
-            loadData(); // To get actual enriched counts if needed
+            setNewGroupLevel('');
+            setNewGroupCourse('');
+            setNewGroupVocabMode(true);
+            loadData();
             toast.success("Guruh yaratildi");
         } catch (error: any) {
-            
             toast.error(error.message || 'Xatolik yuz berdi');
         } finally {
             setCreatingGroup(false);
@@ -467,9 +477,9 @@ export default function TeacherGroupsPage() {
                         style={{ background: 'linear-gradient(160deg,#13111f,#0f0d1e)', border: '1px solid rgba(255,255,255,0.12)' }}>
                         <header>
                             <h2 className="text-2xl font-black text-white tracking-tight">Yangi Guruh</h2>
-                            <p className="text-sm text-white/40 font-medium">Guruh nomini kiriting</p>
+                            <p className="text-sm text-white/40 font-medium">Guruh ma'lumotlarini kiriting</p>
                         </header>
-                        <form onSubmit={handleCreateGroup} className="space-y-6">
+                        <form onSubmit={handleCreateGroup} className="space-y-4">
                             <input
                                 type="text"
                                 value={newGroupName}
@@ -480,6 +490,40 @@ export default function TeacherGroupsPage() {
                                 required
                             />
                             <div className="grid grid-cols-2 gap-3">
+                                <input
+                                    type="text"
+                                    value={newGroupLevel}
+                                    onChange={e => setNewGroupLevel(e.target.value)}
+                                    placeholder="Daraja (A1, B2...)"
+                                    className="w-full rounded-xl px-4 py-3 bg-white/5 border border-white/10 text-white font-bold text-sm outline-none focus:border-indigo-500 transition-all"
+                                />
+                                <input
+                                    type="text"
+                                    value={newGroupCourse}
+                                    onChange={e => setNewGroupCourse(e.target.value)}
+                                    placeholder="Kurs (IELTS, General...)"
+                                    className="w-full rounded-xl px-4 py-3 bg-white/5 border border-white/10 text-white font-bold text-sm outline-none focus:border-indigo-500 transition-all"
+                                />
+                            </div>
+                            {/* Vocabulary Mode Toggle */}
+                            <div className="flex items-center justify-between p-4 rounded-2xl" style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.18)' }}>
+                                <div>
+                                    <p className="text-sm font-black text-white">🎯 Lug'at Mashqi</p>
+                                    <p className="text-[11px] text-white/40 mt-0.5">Bu guruh uchun lug'at o'yinini yoqish</p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setNewGroupVocabMode(v => !v)}
+                                    className={`relative w-14 h-7 rounded-full transition-all duration-300 shrink-0 ${
+                                        newGroupVocabMode ? 'bg-indigo-500' : 'bg-white/10'
+                                    }`}
+                                >
+                                    <div className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow-lg transition-all duration-300 ${
+                                        newGroupVocabMode ? 'left-8' : 'left-1'
+                                    }`} />
+                                </button>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3 pt-2">
                                 <button type="button" onClick={() => setShowCreateModal(false)}
                                     className="py-4 rounded-2xl font-black text-white/40 hover:text-white transition-all"
                                     style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>Bekor</button>

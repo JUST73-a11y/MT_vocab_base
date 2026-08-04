@@ -5,15 +5,19 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { BookOpen, Settings, LogOut, LayoutDashboard, Menu, X, Phone, Instagram, Send, MessageCircle, Users, UsersRound, Share2, Play } from 'lucide-react';
+import { BookOpen, Settings, LogOut, LayoutDashboard, Menu, X, Share2, Play, Users, UsersRound, Gamepad2 } from 'lucide-react';
+import { TeacherThemeProvider, useTeacherTheme } from '@/lib/teacherTheme';
+import ThemeToggle from '@/components/teacher/ThemeToggle';
 
-export default function TeacherLayout({ children }: { children: React.ReactNode }) {
+// ── Inner layout (needs access to theme context) ─────────────────────────────
+function TeacherLayoutInner({ children }: { children: React.ReactNode }) {
     const { user, signOut, loading } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [mounted, setMounted] = useState(false);
+    const { config, theme } = useTeacherTheme();
 
     useEffect(() => {
         setMounted(true);
@@ -21,10 +25,50 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
             if (!user) {
                 router.push('/login');
             } else if (user.role !== 'teacher' && user.role !== 'admin') {
-                router.push('/student/dashboard'); // Redirect unauthorized users
+                router.push('/student/dashboard');
             }
         }
     }, [user, loading, router]);
+
+    // Inject theme keyframes once
+    useEffect(() => {
+        const styleId = 'teacher-theme-keyframes';
+        if (!document.getElementById(styleId)) {
+            const s = document.createElement('style');
+            s.id = styleId;
+            s.textContent = `
+                @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap');
+                @keyframes tt-bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
+                @keyframes tt-wiggle { 0%,100%{transform:rotate(0)} 25%{transform:rotate(-3deg)} 75%{transform:rotate(3deg)} }
+                @keyframes tt-glow { 0%,100%{box-shadow:0 0 8px var(--tt-glow)} 50%{box-shadow:0 0 22px var(--tt-glow)} }
+                @keyframes tt-slide { from{opacity:0;transform:translateX(-8px)} to{opacity:1;transform:translateX(0)} }
+                @keyframes tt-fade { from{opacity:0;transform:scale(.98)} to{opacity:1;transform:scale(1)} }
+
+                /* Kids theme overrides */
+                .theme-kids .btn-premium, .theme-kids .btn-action { border-radius:24px !important; animation: tt-bounce 2s ease infinite; }
+                .theme-kids a, .theme-kids button { font-family:'Fredoka',sans-serif !important; }
+                .theme-kids .glass-card { border-radius:24px !important; background:rgba(10,20,40,0.72) !important; border:1px solid rgba(59,130,246,.2) !important; }
+                .theme-kids [class*="border-white"] { border-color:rgba(59,130,246,.15) !important; }
+                .theme-kids .bg-white\/\[0\.02\], .theme-kids .bg-white\/\[0\.03\] { background: rgba(10,20,40,0.65) !important; }
+                .theme-kids main { animation: tt-wiggle 0s; }
+
+                /* Teen theme overrides */
+                .theme-teen .btn-premium { border-radius:12px !important; }
+                .theme-teen .glass-card { border-radius:12px !important; background:rgba(20,10,40,0.75) !important; border:1px solid rgba(139,92,246,.25) !important; }
+                .theme-teen [class*="border-white"] { border-color:rgba(139,92,246,.2) !important; }
+                .theme-teen .bg-white\\/\\[0\\.02\\], .theme-teen .bg-white\\/\\[0\\.03\\] { background: rgba(30,15,60,0.65) !important; }
+                .theme-teen main { animation: tt-slide .35s ease both; }
+
+                /* Adult theme overrides */
+                .theme-adult .btn-premium { border-radius:8px !important; }
+                .theme-adult .glass-card { border-radius:10px !important; background:rgba(10,20,40,0.72) !important; border:1px solid rgba(59,130,246,.2) !important; }
+                .theme-adult [class*="border-white"] { border-color:rgba(59,130,246,.15) !important; }
+                .theme-adult .bg-white\\/\\[0\\.02\\], .theme-adult .bg-white\\/\\[0\\.03\\] { background: rgba(10,20,40,0.65) !important; }
+                .theme-adult main { animation: tt-fade .4s ease both; }
+            `;
+            document.head.appendChild(s);
+        }
+    }, []);
 
     const handleSignOut = async () => {
         await signOut();
@@ -41,68 +85,172 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
         { name: 'Groups', href: '/teacher/groups', icon: UsersRound },
         { name: 'Shared', href: '/teacher/shared', icon: Share2 },
         { name: 'Mashq', href: '/teacher/random', icon: Play },
+        { name: 'Lug\'at O\'yini', href: '/teacher/vocab-game', icon: Gamepad2 },
         { name: 'Settings', href: '/teacher/settings', icon: Settings },
     ];
 
     if (loading || !user || (user.role !== 'teacher' && user.role !== 'admin')) {
         return (
-            <div className="h-screen flex items-center justify-center bg-gray-950">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+            <div
+                className="h-screen flex items-center justify-center"
+                style={{
+                    backgroundImage: `url(${config.bgImage})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                }}
+            >
+                <div style={{ ...config.overlayStyle, position: 'absolute', inset: 0 }} />
+                <div className="relative z-10 flex flex-col items-center gap-4">
+                    <div
+                        className="w-14 h-14 rounded-2xl flex items-center justify-center animate-spin"
+                        style={{ border: `3px solid ${config.accentColor}30`, borderTopColor: config.accentColor }}
+                    />
+                    <p className="font-black text-xs uppercase tracking-widest" style={{ color: config.accentColor }}>
+                        Yuklanmoqda...
+                    </p>
+                </div>
             </div>
         );
     }
 
+    // Nav link active style (depends on theme)
+    const getLinkClass = (href: string) => {
+        const isActive = pathname === href || (href !== '/teacher/dashboard' && pathname.startsWith(href));
+        if (isActive) return 'active-nav-link';
+        return 'inactive-nav-link';
+    };
+
+    const navTextColor = 'white';
+    const navTextFaint = 'rgba(255,255,255,0.6)';
+
     return (
-        <div className="min-h-[100svh] flex flex-col items-center bg-[#0a0a0f] font-sans text-white relative overflow-x-hidden">
-            <MeshBackground />
-            {/* ── Desktop & Mobile Top Nav ── */}
-            <nav id="teacher-nav" className="sticky top-0 w-full z-40 bg-gray-900/60 backdrop-blur-xl border-b border-white/5">
-                <div className="w-[95%] lg:w-[80%] max-w-[1600px] mx-auto px-4 md:px-6 justify-self-center">
+        <div
+            className={`min-h-[100svh] flex flex-col items-center font-sans relative overflow-x-hidden ${config.bodyClass}`}
+            style={{ '--tt-glow': config.accentGlow } as React.CSSProperties}
+        >
+            {/* ── FULL-PAGE BACKGROUND ── */}
+            <div
+                style={{
+                    position: 'fixed',
+                    inset: 0,
+                    zIndex: 0,
+                    backgroundImage: `url(${config.bgImage})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    backgroundRepeat: 'no-repeat',
+                    transition: 'background-image 0.6s ease',
+                }}
+            />
+            {/* Overlay on top of bg image */}
+            <div
+                style={{
+                    position: 'fixed',
+                    inset: 0,
+                    zIndex: 1,
+                    transition: 'background 0.5s ease',
+                    ...config.overlayStyle,
+                }}
+            />
+
+            {/* ── TOP NAV ── */}
+            <nav
+                id="teacher-nav"
+                className="sticky top-0 w-full z-40"
+                style={{
+                    transition: 'all 0.4s ease',
+                    ...config.navStyle,
+                }}
+            >
+                <div className="w-[95%] lg:w-[80%] max-w-[1600px] mx-auto px-4 md:px-6">
                     <div className="flex items-center justify-between h-16 md:h-20">
-                        {/* Left: Logo + Desktop Links */}
-                        <div className="flex items-center gap-10">
-                            <div className="flex items-center gap-3 md:gap-4">
-                                {/* Mobile Hamburger */}
-                                <button onClick={() => setIsMobileMenuOpen(true)} className="md:hidden p-2 text-white/60 hover:text-white transition-colors">
-                                    <Menu className="w-6 h-6" />
-                                </button>
 
-                                <Link href="/teacher/dashboard" className="flex items-center gap-2 group">
-                                    <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl md:rounded-2xl bg-indigo-500/20 flex items-center justify-center border border-indigo-500/30 group-hover:bg-indigo-500/30 transition-all">
-                                        <BookOpen className="w-5 h-5 md:w-6 md:h-6 text-indigo-400" />
-                                    </div>
-                                    <span className="font-black text-lg md:text-xl tracking-tighter text-white">VocabTeacher</span>
-                                </Link>
-                            </div>
+                        {/* Left: Logo */}
+                        <div className="flex items-center gap-3 w-1/4">
+                            {/* Mobile Hamburger */}
+                            <button
+                                onClick={() => setIsMobileMenuOpen(true)}
+                                className="md:hidden p-2 transition-colors"
+                                style={{ color: navTextFaint }}
+                            >
+                                <Menu className="w-6 h-6" />
+                            </button>
 
-                            {/* Desktop Links */}
-                            <div className="hidden md:flex items-center gap-1">
-                                {navItems.map((item) => {
-                                    const isActive = pathname === item.href || (item.href !== '/teacher/dashboard' && pathname.startsWith(item.href));
-                                    return (
-                                        <Link key={item.href} href={item.href}
-                                            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-black transition-all ${isActive ? 'bg-indigo-500/10 text-white' : 'text-white/40 hover:text-white'}`}>
-                                            <item.icon className="w-4 h-4" />
-                                            {item.name}
-                                        </Link>
-                                    );
-                                })}
-                            </div>
+                            <Link href="/teacher/dashboard" className="flex items-center gap-2 group">
+                                <div
+                                    className="w-8 h-8 md:w-10 md:h-10 rounded-xl md:rounded-2xl flex items-center justify-center transition-all"
+                                    style={{
+                                        background: `${config.accentColor}25`,
+                                        border: `1.5px solid ${config.accentColor}55`,
+                                    }}
+                                >
+                                    <BookOpen className="w-5 h-5 md:w-6 md:h-6" style={{ color: config.accentColor }} />
+                                </div>
+                                <span
+                                    className="font-black text-lg md:text-xl tracking-tighter"
+                                    style={{ color: navTextColor, fontFamily: config.fontFamily }}
+                                >
+                                    VocabTeacher
+                                </span>
+                            </Link>
                         </div>
 
-                        {/* Right Actions */}
-                        <div className="flex items-center gap-4 md:gap-6">
-                            <div className="flex items-center gap-3 md:gap-4 md:pl-6 md:border-l md:border-white/10">
-                                <Link href={user?.role === 'admin' ? '/admin/dashboard' : '/teacher/settings'} className="flex items-center gap-3 md:gap-4 group cursor-pointer">
+                        {/* Center: Desktop Links */}
+                        <div className="hidden md:flex flex-1 justify-center items-center gap-1">
+                            {navItems.map((item) => {
+                                const isActive = pathname === item.href || (item.href !== '/teacher/dashboard' && pathname.startsWith(item.href));
+                                return (
+                                    <Link
+                                        key={item.href}
+                                        href={item.href}
+                                        className="flex items-center gap-2 px-4 py-2 text-sm font-black transition-all"
+                                        style={{
+                                            borderRadius: config.btnRadius,
+                                            background: isActive ? config.activeNavBg : 'transparent',
+                                            color: isActive ? config.activeNavText : navTextFaint,
+                                            fontFamily: config.fontFamily,
+                                            boxShadow: isActive ? `0 0 12px ${config.accentGlow}` : 'none',
+                                        }}
+                                    >
+                                        <item.icon className="w-4 h-4" />
+                                        {item.name}
+                                    </Link>
+                                );
+                            })}
+                        </div>
+
+                        {/* Right: Theme Toggle + User */}
+                        <div className="flex items-center justify-end gap-3 md:gap-4 w-1/4">
+                            {/* 🎨 Theme Toggle */}
+                            <ThemeToggle />
+
+                            <div className="hidden md:flex items-center gap-3 md:gap-4 pl-3 md:pl-4 border-l" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
+                                <Link href={user?.role === 'admin' ? '/admin/dashboard' : '/teacher/settings'} className="flex items-center gap-3 group cursor-pointer">
                                     <div className="hidden md:block text-right">
-                                        <p className="text-sm font-black text-white leading-none group-hover:text-indigo-400 transition-colors">{user?.name || 'Guest Teacher'}</p>
-                                        <p className="text-[10px] font-black uppercase text-indigo-400 tracking-[0.2em] mt-1">{user?.role === 'admin' ? 'Admin' : 'Teacher'}</p>
+                                        <p className="text-sm font-black leading-none transition-colors" style={{ color: navTextColor, fontFamily: config.fontFamily }}>
+                                            {user?.name || 'Guest Teacher'}
+                                        </p>
+                                        <p className="text-[10px] font-black uppercase tracking-[0.2em] mt-1" style={{ color: config.accentColor }}>
+                                            {user?.role === 'admin' ? 'Admin' : 'Teacher'}
+                                        </p>
                                     </div>
-                                    <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl md:rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-black text-xs md:text-sm shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition-transform">
+                                    <div
+                                        className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center font-black text-xs md:text-sm shadow-lg transition-transform group-hover:scale-105"
+                                        style={{
+                                            borderRadius: config.btnRadius,
+                                            background: `linear-gradient(135deg, ${config.accentColor}, ${config.accentColor}99)`,
+                                            boxShadow: `0 4px 15px ${config.accentGlow}`,
+                                            color: 'white',
+                                            fontFamily: config.fontFamily,
+                                        }}
+                                    >
                                         {(user?.name || 'T').charAt(0).toUpperCase()}
                                     </div>
                                 </Link>
-                                <button onClick={() => setShowLogoutModal(true)} className="hidden md:block p-2 text-white/20 hover:text-red-400 transition-colors">
+                                <button
+                                    onClick={() => setShowLogoutModal(true)}
+                                    className="hidden md:block p-2 transition-colors hover:text-red-400"
+                                    style={{ color: navTextFaint }}
+                                >
                                     <LogOut className="w-5 h-5" />
                                 </button>
                             </div>
@@ -111,59 +259,108 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
                 </div>
             </nav>
 
-            {/* ── Mobile Left Drawer ── */}
+            {/* ── MOBILE DRAWER ── */}
             {mounted && isMobileMenuOpen && createPortal(
                 <div className="fixed inset-0 z-[9999] md:hidden">
                     <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)} />
-                    <div className="absolute top-0 left-0 bottom-0 w-[80vw] max-w-[320px] bg-[#0f0d1e] border-r border-white/5 shadow-2xl flex flex-col pt-6 font-sans">
+                    <div
+                        className="absolute top-0 left-0 bottom-0 w-[80vw] max-w-[320px] flex flex-col pt-6 font-sans shadow-2xl"
+                        style={{
+                            background: theme === 'kids'
+                                ? 'rgba(255,252,240,0.97)'
+                                : theme === 'teen'
+                                    ? 'rgba(15,8,30,0.97)'
+                                    : 'rgba(10,18,35,0.97)',
+                            borderRight: `2px solid ${config.accentColor}40`,
+                        }}
+                    >
                         <div className="px-6 mb-8 flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 flex items-center justify-center border border-indigo-500/30">
-                                    <BookOpen className="w-6 h-6 text-indigo-400" />
+                                <div
+                                    className="w-10 h-10 flex items-center justify-center"
+                                    style={{
+                                        borderRadius: config.btnRadius,
+                                        background: `${config.accentColor}20`,
+                                        border: `1.5px solid ${config.accentColor}50`,
+                                    }}
+                                >
+                                    <BookOpen className="w-6 h-6" style={{ color: config.accentColor }} />
                                 </div>
                                 <div>
-                                    <span className="font-black text-lg tracking-tighter text-white block leading-tight">VocabTeacher</span>
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400">{user?.role === 'admin' ? 'Admin' : 'O\'qituvchi'}</span>
+                                    <span className="font-black text-lg tracking-tighter block leading-tight" style={{ color: navTextColor, fontFamily: config.fontFamily }}>
+                                        VocabTeacher
+                                    </span>
+                                    <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: config.accentColor }}>
+                                        {user?.role === 'admin' ? 'Admin' : "O'qituvchi"}
+                                    </span>
                                 </div>
                             </div>
-                            <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 bg-white/5 rounded-xl text-white/60">
+                            <button
+                                onClick={() => setIsMobileMenuOpen(false)}
+                                className="p-2"
+                                style={{ background: `${config.accentColor}15`, borderRadius: 10, color: navTextFaint }}
+                            >
                                 <X className="w-5 h-5" />
                             </button>
+                        </div>
+
+                        {/* Mobile Theme Toggle */}
+                        <div className="px-4 mb-4">
+                            <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: navTextFaint }}>
+                                Auditoriya
+                            </p>
+                            <ThemeToggle />
                         </div>
 
                         <div className="flex-1 overflow-y-auto px-4 space-y-2">
                             {navItems.map(item => {
                                 const isActive = pathname === item.href || (item.href !== '/teacher/dashboard' && pathname.startsWith(item.href));
                                 return (
-                                    <Link key={item.href} href={item.href}
+                                    <Link
+                                        key={item.href}
+                                        href={item.href}
                                         onClick={() => setIsMobileMenuOpen(false)}
-                                        className={`flex items-center gap-3 p-4 rounded-2xl transition-all ${isActive ? 'bg-indigo-500/10 border border-indigo-500/20 shadow-lg shadow-indigo-500/10' : 'border border-transparent hover:bg-white/5 hover:border-white/5'}`}>
-                                        <div className={`p-2 rounded-xl ${isActive ? 'bg-indigo-500 text-white' : 'bg-white/5 text-white/40'}`}>
+                                        className="flex items-center gap-3 p-4 transition-all"
+                                        style={{
+                                            borderRadius: config.btnRadius,
+                                            background: isActive ? config.activeNavBg : 'transparent',
+                                            border: isActive ? `1px solid ${config.accentColor}30` : '1px solid transparent',
+                                            boxShadow: isActive ? `0 2px 10px ${config.accentGlow}` : 'none',
+                                        }}
+                                    >
+                                        <div
+                                            className="p-2"
+                                            style={{
+                                                borderRadius: Math.max(8, parseInt(config.btnRadius) - 8) + 'px',
+                                                background: isActive ? config.accentColor : `${config.accentColor}15`,
+                                                color: isActive ? (theme === 'kids' ? '#3A2000' : 'white') : config.accentColor,
+                                            }}
+                                        >
                                             <item.icon className="w-5 h-5" />
                                         </div>
-                                        <span className={`font-black text-sm ${isActive ? 'text-white' : 'text-white/60'}`}>{item.name}</span>
+                                        <span
+                                            className="font-black text-sm"
+                                            style={{
+                                                color: isActive ? config.activeNavText : navTextFaint,
+                                                fontFamily: config.fontFamily,
+                                            }}
+                                        >
+                                            {item.name}
+                                        </span>
                                     </Link>
                                 );
                             })}
-
-                            {/* Pro Tip Card */}
-                            <div className="mt-6 p-5 rounded-3xl bg-gradient-to-br from-indigo-500/10 to-purple-600/10 border border-indigo-500/20 relative overflow-hidden group">
-                                <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/10 blur-3xl -mr-12 -mt-12" />
-                                <div className="flex items-center gap-3 mb-3">
-                                    <div className="w-8 h-8 rounded-xl bg-indigo-500/20 flex items-center justify-center border border-indigo-500/30">
-                                        <BookOpen className="w-4 h-4 text-indigo-400" />
-                                    </div>
-                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400">Pro Tip</span>
-                                </div>
-                                <p className="text-xs font-bold text-white/60 leading-relaxed">
-                                    Use the <span className="text-white">Smart Bulk Import</span> in your unit details to quickly add hundreds of words at once from your existing lists.
-                                </p>
-                            </div>
                         </div>
 
-                        <div className="p-4 mt-auto border-t border-white/5 space-y-2">
-                            <button onClick={() => { setIsMobileMenuOpen(false); setShowLogoutModal(true); }} className="w-full flex items-center gap-3 p-4 rounded-2xl border border-red-500/10 bg-red-500/5 text-red-400">
-                                <div className="p-2 rounded-xl bg-red-500/10"><LogOut className="w-5 h-5" /></div>
+                        <div className="p-4 mt-auto" style={{ borderTop: `1px solid ${config.accentColor}20` }}>
+                            <button
+                                onClick={() => { setIsMobileMenuOpen(false); setShowLogoutModal(true); }}
+                                className="w-full flex items-center gap-3 p-4"
+                                style={{ borderRadius: config.btnRadius, border: '1px solid rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.08)', color: '#F87171' }}
+                            >
+                                <div className="p-2" style={{ borderRadius: 10, background: 'rgba(239,68,68,0.12)' }}>
+                                    <LogOut className="w-5 h-5" />
+                                </div>
                                 <span className="font-black text-sm">Tizimdan chiqish</span>
                             </button>
                         </div>
@@ -172,22 +369,49 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
                 document.body
             )}
 
-            {/* Global Logout Modal */}
+            {/* ── LOGOUT MODAL ── */}
             {mounted && showLogoutModal && createPortal(
-                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh' }}>
-                    <div className="w-[95%] max-w-sm rounded-[2rem] p-8 text-center shadow-2xl animate-fade-in"
-                        style={{ background: 'linear-gradient(160deg,#13111f,#0f0d1e)', border: '1px solid rgba(255,255,255,0.12)' }}>
-                        <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6"
-                            style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)' }}>
+                <div
+                    className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+                    style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh' }}
+                >
+                    <div
+                        className="w-[95%] max-w-sm p-8 text-center shadow-2xl"
+                        style={{
+                            borderRadius: config.btnRadius,
+                            background: theme === 'kids'
+                                ? 'rgba(255,252,240,0.97)'
+                                : 'linear-gradient(160deg,#13111f,#0f0d1e)',
+                            border: `1px solid ${config.accentColor}30`,
+                            color: theme === 'kids' ? '#1a1a2e' : 'white',
+                        }}
+                    >
+                        <div
+                            className="w-16 h-16 flex items-center justify-center mx-auto mb-6"
+                            style={{ borderRadius: '50%', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)' }}
+                        >
                             <LogOut className="w-8 h-8 text-red-400" />
                         </div>
-                        <h2 className="text-2xl font-black text-white mb-2">Chiqish</h2>
-                        <p className="text-white/50 mb-8 text-sm">Siz rostdan ham chiqmoqchimisiz?</p>
+                        <h2 className="text-2xl font-black mb-2" style={{ fontFamily: config.fontFamily }}>Chiqish</h2>
+                        <p className="mb-8 text-sm" style={{ opacity: 0.6 }}>Siz rostdan ham chiqmoqchimisiz?</p>
                         <div className="grid grid-cols-2 gap-3">
-                            <button onClick={() => setShowLogoutModal(false)} className="btn-action justify-center text-sm">Bekor</button>
-                            <button onClick={handleSignOut}
-                                className="py-3 rounded-xl font-black text-white text-sm transition-all hover:opacity-90"
-                                style={{ background: 'linear-gradient(135deg,#ef4444,#dc2626)', boxShadow: '0 4px 15px rgba(239,68,68,0.3)' }}>
+                            <button
+                                onClick={() => setShowLogoutModal(false)}
+                                className="py-3 font-black text-sm transition-all"
+                                style={{
+                                    borderRadius: config.btnRadius,
+                                    border: `1.5px solid ${config.accentColor}40`,
+                                    background: `${config.accentColor}10`,
+                                    color: config.accentColor,
+                                }}
+                            >
+                                Bekor
+                            </button>
+                            <button
+                                onClick={handleSignOut}
+                                className="py-3 font-black text-white text-sm transition-all hover:opacity-90"
+                                style={{ borderRadius: config.btnRadius, background: 'linear-gradient(135deg,#ef4444,#dc2626)', boxShadow: '0 4px 15px rgba(239,68,68,0.3)' }}
+                            >
                                 Ha, chiqish
                             </button>
                         </div>
@@ -196,6 +420,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
                 document.body
             )}
 
+            {/* ── MAIN CONTENT ── */}
             <main className="w-[95%] lg:w-[80%] max-w-[1600px] mx-auto relative z-10 w-full">
                 {children}
             </main>
@@ -203,10 +428,11 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
     );
 }
 
-const MeshBackground = () => (
-    <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-600/20 blur-[120px] rounded-full animate-pulse" />
-        <div className="absolute bottom-[10%] right-[-5%] w-[35%] h-[35%] bg-purple-600/20 blur-[120px] rounded-full animate-pulse delay-700" />
-        <div className="absolute top-[20%] left-[60%] w-[30%] h-[30%] bg-blue-600/10 blur-[100px] rounded-full animate-pulse delay-1000" />
-    </div>
-);
+// ── Outer wrapper provides the context ───────────────────────────────────────
+export default function TeacherLayout({ children }: { children: React.ReactNode }) {
+    return (
+        <TeacherThemeProvider>
+            <TeacherLayoutInner>{children}</TeacherLayoutInner>
+        </TeacherThemeProvider>
+    );
+}

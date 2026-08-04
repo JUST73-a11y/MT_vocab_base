@@ -237,6 +237,8 @@ function AdminNavContent() {
 
 const MeshBackground = () => (
     <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
+        <div className="absolute inset-0 bg-[url('/themes/adult-bg.jpg')] bg-cover bg-center bg-fixed opacity-40 mix-blend-luminosity" />
+        <div className="absolute inset-0 bg-black/60" />
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-600/20 blur-[120px] rounded-full animate-pulse" />
         <div className="absolute bottom-[10%] right-[-5%] w-[35%] h-[35%] bg-purple-600/20 blur-[120px] rounded-full animate-pulse delay-700" />
         <div className="absolute top-[20%] left-[60%] w-[30%] h-[30%] bg-blue-600/10 blur-[100px] rounded-full animate-pulse delay-1000" />
@@ -245,7 +247,7 @@ const MeshBackground = () => (
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
     return (
-        <div className="flex flex-col items-center min-h-[100svh] w-full bg-[#0a0a0f] font-sans text-white relative overflow-x-hidden">
+        <div className="flex flex-col items-center min-h-[100svh] w-full bg-transparent font-sans text-white relative overflow-x-hidden">
             <MeshBackground />
             <Suspense fallback={<div className="min-h-screen bg-[#0a0a0f]" />}>
                 <AdminNavContent />

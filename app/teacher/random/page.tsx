@@ -154,7 +154,8 @@ export default function RandomPracticePage() {
             const settings = await getRandomTeacherSettings(user.role === 'teacher' ? user.id : undefined);
             setTimerDuration(settings?.timerDuration || 10);
             const sel = settings?.selectedUnits;
-            setSelectedUnitIds(sel?.length ? sel : unitsRes.map(u => u.id));
+            // Odatiy holatda hech qaysi tanlanmagan bo'lishi kerak
+            setSelectedUnitIds(sel?.length ? sel : []);
         } catch { setError('Yuklab bo\'lmadi.'); }
         finally { setLoadingData(false); }
     };
@@ -195,7 +196,7 @@ export default function RandomPracticePage() {
 
         // Small delay to ensure cancel clears properly before speaking again
         setTimeout(() => {
-            const u = new SpeechSynthesisUtterance(currentWord.englishWord);
+            const u = new SpeechSynthesisUtterance(currentWord.englishWord.toLowerCase());
             u.lang = lang;
             u.rate = speechRate;
 
@@ -231,8 +232,8 @@ export default function RandomPracticePage() {
         const seen = [...wordsSeen, currentWord.id];
         setWordsSeen(seen);
         const timeSpent = Math.floor((Date.now() - wordServedAt) / 1000);
-        await updateSession(sessionId, seen, timeSpent);
-        await updateUserWordCount(user.id, user.totalWordsSeen + 1);
+        updateSession(sessionId, seen, timeSpent).catch(console.error);
+        updateUserWordCount(user.id, user.totalWordsSeen + 1).catch(console.error);
         const next = getRandomWord(allWords, getBalancedExclusions(allWords, seen), currentWord.unitId)
             || getRandomWord(allWords, [], currentWord.unitId);
         if (next) {
@@ -299,8 +300,8 @@ export default function RandomPracticePage() {
 
     if (isSelectionMode) {
         return (
-            <div className="flex-1 w-full flex items-center justify-center p-4">
-                <main className="glass-card w-full max-w-lg flex flex-col max-h-[85vh] animate-fade-in">
+            <div className="flex-1 w-full flex items-center justify-center p-4 relative h-[calc(100vh-80px)]">
+                <main className="glass-card max-w-lg w-full flex flex-col p-8 md:p-10 text-center relative animate-fade-in overflow-hidden">
                     {/* Header */}
                     <header className="px-8 py-6 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
                         <div className="flex items-center gap-4">
@@ -373,6 +374,28 @@ export default function RandomPracticePage() {
                                                 <div className="flex-1 h-px bg-white/5" />
                                             </div>
                                         )}
+
+                                        {/* Select All / Cancel All for root units */}
+                                        {(() => {
+                                            const rootUnits = availableUnits.filter(u => !u.category || u.category === 'Kategoriyasiz' || u.category === 'Uncategorized');
+                                            if (rootUnits.length === 0) return null;
+                                            return (
+                                                <div className="flex items-center gap-2 mb-3">
+                                                    <button onClick={() => {
+                                                        const ids = rootUnits.map(u => u.id);
+                                                        setSelectedUnitIds(p => Array.from(new Set([...p, ...ids])));
+                                                    }} className="flex-1 py-2.5 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 transition-all active:scale-95 hover:bg-emerald-500/20">
+                                                        ✓ Hammasini tanlash
+                                                    </button>
+                                                    <button onClick={() => {
+                                                        const ids = rootUnits.map(u => u.id);
+                                                        setSelectedUnitIds(p => p.filter(id => !ids.includes(id)));
+                                                    }} className="flex-1 py-2.5 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest bg-red-500/10 border border-red-500/20 text-red-400 transition-all active:scale-95 hover:bg-red-500/20">
+                                                        ✕ Bekor qilish
+                                                    </button>
+                                                </div>
+                                            );
+                                        })()}
 
                                         {/* Root Units */}
                                         <div className="space-y-2">

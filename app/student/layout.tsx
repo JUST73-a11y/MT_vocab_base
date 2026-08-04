@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { BookOpen, Play, LogOut, LayoutDashboard, Menu, X, Brain, BarChart2, Users } from 'lucide-react';
+import { BookOpen, Play, LogOut, LayoutDashboard, Menu, X, Brain, BarChart2, Users, Gamepad2, Award } from 'lucide-react';
 import StudentOnboarding from './onboarding/page';
 
 export default function StudentLayout({ children }: { children: React.ReactNode }) {
@@ -33,6 +33,8 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
         { name: 'Dashboard', href: '/student/dashboard', icon: LayoutDashboard },
         { name: 'Mashq', href: '/student/random', icon: Play },
         { name: 'Quiz', href: '/student/quiz', icon: Brain },
+        { name: 'O\'yinlar', href: '/student/games', icon: Gamepad2 },
+        { name: 'Sertifikatlar', href: '/student/certificates', icon: Award },
         { name: 'Yodlash', href: '/student/mistakes', icon: BookOpen },
         { name: 'Statistika', href: '/student/stats', icon: BarChart2 },
         { name: 'Mening guruhim', href: '/student/group', icon: Users },
@@ -51,66 +53,117 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
     }
 
     return (
-        <div className="min-h-[100svh] flex flex-col items-center font-sans text-white overflow-x-hidden" style={{ background: 'linear-gradient(160deg,#0d0d1f 0%,#12102e 50%,#0d0d1f 100%)' }}>
+        <div className="min-h-[100svh] flex flex-col items-center font-sans text-white overflow-x-hidden" style={{ position: 'relative' }}>
+            {/* Adult theme background */}
+            <div style={{
+                position: 'fixed', inset: 0, zIndex: 0,
+                backgroundImage: 'url(/themes/adult-bg.jpg)',
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat',
+            }} />
+            {/* Dark overlay so text stays readable */}
+            <div style={{ position: 'fixed', inset: 0, zIndex: 1, background: 'rgba(10,20,40,0.60)' }} />
 
-            {/* ── Desktop & Mobile Top Nav ── */}
-            <nav id="student-nav" className="sticky top-0 w-full z-40 bg-gray-900/60 backdrop-blur-xl border-b border-white/5">
-                <div className="w-[95%] lg:w-[80%] max-w-[1600px] mx-auto px-4 md:px-6 justify-self-center">
+            {/* ── TOP NAV ── */}
+            <nav
+                id="student-nav"
+                className="sticky top-0 w-full z-40"
+                style={{
+                    transition: 'all 0.4s ease',
+                    background: 'rgba(10,20,40,0.80)',
+                    backdropFilter: 'blur(20px)',
+                    borderBottom: '1px solid rgba(255,255,255,0.1)',
+                }}
+            >
+                <div className="w-[95%] lg:w-[80%] max-w-[1600px] mx-auto px-4 md:px-6">
                     <div className="flex items-center justify-between h-16 md:h-20">
-                        {/* Left: Logo + Desktop Links */}
-                        <div className="flex items-center gap-10">
-                            <div className="flex items-center gap-3 md:gap-4">
-                                {/* Mobile Hamburger */}
-                                <button onClick={() => setIsMobileMenuOpen(true)} className="md:hidden p-2 text-white/60 hover:text-white transition-colors">
-                                    <Menu className="w-6 h-6" />
-                                </button>
 
-                                <Link href="/student/dashboard" className="flex items-center gap-2 group">
-                                    <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl md:rounded-2xl bg-indigo-500/20 flex items-center justify-center border border-indigo-500/30 group-hover:bg-indigo-500/30 transition-all">
-                                        <BookOpen className="w-5 h-5 md:w-6 md:h-6 text-indigo-400" />
-                                    </div>
-                                    <span className="font-black text-lg md:text-xl tracking-tighter text-white">VocabApp</span>
-                                </Link>
-                            </div>
+                        {/* Left: Logo */}
+                        <div className="flex items-center gap-3 w-1/4">
+                            {/* Mobile Hamburger */}
+                            <button
+                                onClick={() => setIsMobileMenuOpen(true)}
+                                className="md:hidden p-2 transition-colors"
+                                style={{ color: 'rgba(255,255,255,0.6)' }}
+                            >
+                                <Menu className="w-6 h-6" />
+                            </button>
 
-                            {/* Desktop Links */}
-                            <div className="hidden md:flex items-center gap-2 p-1.5 rounded-xl" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', backdropFilter: 'blur(20px)' }}>
-                                {navItems.map(item => {
-                                    const active = pathname === item.href || (item.href !== '/student/dashboard' && pathname.startsWith(item.href));
-                                    return (
-                                        <Link key={item.href} href={item.href}
-                                            className={`flex items-center gap-2.5 px-5 lg:px-6 py-2.5 rounded-lg text-[13px] lg:text-sm font-black transition-all duration-300 group relative overflow-hidden ${active ? 'text-white' : 'text-white/50 hover:text-white hover:bg-white/5'}`}
-                                            style={{
-                                                background: active ? 'linear-gradient(135deg, rgba(99,102,241,0.15), rgba(168,85,247,0.15))' : 'transparent',
-                                                border: active ? '1px solid rgba(168,85,247,0.3)' : '1px solid transparent',
-                                                boxShadow: active ? '0 0 20px rgba(168,85,247,0.15), inset 0 0 10px rgba(99,102,241,0.1)' : 'none',
-                                            }}>
-                                            {/* Active Glow Accent */}
-                                            {active && <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 blur-xl z-0" />}
-                                            <item.icon className={`w-4 h-4 z-10 transition-all duration-300 ${active ? 'text-purple-400 drop-shadow-[0_0_8px_rgba(168,85,247,0.8)] scale-110' : 'group-hover:text-white group-hover:scale-110 group-hover:-rotate-3'}`} />
-                                            <span className="z-10 tracking-wide" style={{ textShadow: active ? '0 0 10px rgba(255,255,255,0.3)' : 'none' }}>{item.name}</span>
-                                        </Link>
-                                    );
-                                })}
-                            </div>
+                            <Link href="/student/dashboard" className="flex items-center gap-2 group">
+                                <div
+                                    className="w-8 h-8 md:w-10 md:h-10 rounded-xl md:rounded-2xl flex items-center justify-center transition-all"
+                                    style={{
+                                        background: '#3B82F625',
+                                        border: '1.5px solid #3B82F655',
+                                    }}
+                                >
+                                    <BookOpen className="w-5 h-5 md:w-6 md:h-6" style={{ color: '#3B82F6' }} />
+                                </div>
+                                <span
+                                    className="font-black text-lg md:text-xl tracking-tighter"
+                                    style={{ color: 'white' }}
+                                >
+                                    VocabApp
+                                </span>
+                            </Link>
+                        </div>
+
+                        {/* Center: Desktop Links */}
+                        <div className="hidden md:flex flex-1 justify-center items-center gap-1">
+                            {navItems.map((item) => {
+                                const isActive = pathname === item.href || (item.href !== '/student/dashboard' && pathname.startsWith(item.href));
+                                return (
+                                    <Link
+                                        key={item.href}
+                                        href={item.href}
+                                        className={`flex flex-col md:flex-row items-center gap-1.5 md:gap-2 px-3 md:px-4 py-2 md:py-2.5 transition-all group relative overflow-hidden`}
+                                        style={{
+                                            borderRadius: '8px',
+                                            background: isActive ? 'rgba(59,130,246,0.15)' : 'transparent',
+                                            color: isActive ? '#60A5FA' : 'rgba(255,255,255,0.6)',
+                                        }}
+                                    >
+                                        <item.icon
+                                            className={`w-4 h-4 transition-all duration-300 ${isActive ? 'scale-110 drop-shadow-md' : 'group-hover:scale-110 group-hover:-rotate-3'}`}
+                                            style={{ color: isActive ? '#60A5FA' : 'inherit' }}
+                                        />
+                                        <span className="text-[10px] md:text-[13px] font-bold tracking-wide">
+                                            {item.name}
+                                        </span>
+                                    </Link>
+                                );
+                            })}
                         </div>
 
                         {/* Right: Profile */}
-                        <div className="flex items-center gap-4 md:gap-6">
-                            <div className="flex items-center gap-3 md:gap-4 md:pl-6 md:border-l md:border-white/10">
-                                <Link href="/student/dashboard" className="flex items-center gap-3 md:gap-4 group cursor-pointer">
-                                    <div className="hidden md:block text-right">
-                                        <p className="text-sm font-black text-white group-hover:text-indigo-400 transition-colors">{user.name}</p>
-                                        <p className="text-[10px] font-black uppercase text-indigo-400 tracking-[0.2em]">Student</p>
-                                    </div>
-                                    <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl md:rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center font-black text-white text-xs md:text-sm shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition-transform">
-                                        {user.name.charAt(0).toUpperCase()}
-                                    </div>
-                                </Link>
-                                <button onClick={() => setShowLogoutModal(true)} className="hidden md:block p-2 text-white/20 hover:text-red-400 transition-colors">
-                                    <LogOut className="w-5 h-5" />
-                                </button>
+                        <div className="flex items-center justify-end gap-3 md:gap-4 w-1/4">
+                            {/* Profile Info */}
+                            <div className="hidden md:flex items-center gap-3">
+                                <div className="text-right">
+                                    <p className="text-[13px] font-bold text-white transition-colors">
+                                        {user.name}
+                                    </p>
+                                    <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: '#3B82F6' }}>
+                                        Student
+                                    </p>
+                                </div>
+                                <div
+                                    className="w-9 h-9 rounded-xl flex items-center justify-center font-black text-white shadow-lg transition-transform"
+                                    style={{ background: '#3B82F6' }}
+                                >
+                                    {user.name.charAt(0).toUpperCase()}
+                                </div>
                             </div>
+                            
+                            {/* Logout */}
+                            <button
+                                onClick={() => setShowLogoutModal(true)}
+                                className="p-2 transition-colors hover:scale-110"
+                                style={{ color: 'rgba(255,255,255,0.6)' }}
+                            >
+                                <LogOut className="w-5 h-5" />
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -196,7 +249,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
                 document.body
             )}
 
-            <main className="flex-1 flex flex-col items-center w-[95%] lg:w-[80%] max-w-[1600px] mx-auto overflow-y-auto min-w-0">{children}</main>
+            <main className="flex-1 flex flex-col items-center w-[95%] lg:w-[80%] max-w-[1600px] mx-auto overflow-y-auto min-w-0 relative z-10">{children}</main>
         </div>
     );
 }

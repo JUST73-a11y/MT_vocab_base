@@ -169,7 +169,7 @@ export default function RandomPracticePage() {
         if (e) e.stopPropagation();
         if (!currentWord) return;
         window.speechSynthesis.cancel();
-        const u = new SpeechSynthesisUtterance(currentWord.englishWord);
+        const u = new SpeechSynthesisUtterance(currentWord.englishWord.toLowerCase());
         u.lang = lang; u.rate = speechRate;
         const v = window.speechSynthesis.getVoices().find(v => v.lang === lang || v.lang.startsWith(lang));
         if (v) u.voice = v;
@@ -189,8 +189,8 @@ export default function RandomPracticePage() {
         const seen = [...wordsSeen, currentWord.id];
         setWordsSeen(seen);
         const timeSpent = Math.floor((Date.now() - wordServedAt) / 1000);
-        await updateSession(sessionId, seen, timeSpent);
-        await updateUserWordCount(user.id, user.totalWordsSeen + 1);
+        updateSession(sessionId, seen, timeSpent).catch(console.error);
+        updateUserWordCount(user.id, user.totalWordsSeen + 1).catch(console.error);
         const next = getRandomWord(allWords, getBalancedExclusions(allWords, seen), currentWord.unitId)
             || getRandomWord(allWords, [], currentWord.unitId);
         if (next) {

@@ -144,7 +144,7 @@ export default function StudentGroupPage() {
                             {group.memberCount} talaba
                         </div>
                     </div>
-                    <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-white tracking-tighter mb-2" style={{ textShadow: '0 4px 20px rgba(0,0,0,0.5)' }}>
+                    <h1 className="text-4xl md:text-5xl lg:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-br from-white via-indigo-100 to-indigo-400 tracking-tighter mb-2 drop-shadow-2xl py-2">
                         {group.name}
                     </h1>
                     <p className="text-white/40 text-sm font-medium mt-3 flex items-center gap-2">

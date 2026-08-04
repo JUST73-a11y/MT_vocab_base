@@ -50,7 +50,7 @@ export async function GET(req: Request) {
                 ...groupAccess.map((ga: any) => ga.unitId.toString())
             ]));
             query._id = { $in: authorizedUnitIds };
-        } else if (user.role === 'teacher' || (user.role === 'admin' && !teacherId)) {
+        } else if (user.role === 'teacher') {
             const filterUserId = user.id;
             
             // 1. Get all ACCEPTED shares for this teacher to find shared unit IDs

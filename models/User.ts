@@ -16,9 +16,19 @@ const UserSchema = new Schema({
     otpExpiry: { type: Date, default: null },
     lastLoginAt: { type: Date, default: null },
 
+    // Active Tracking & Device
+    lastActiveAt: { type: Date, default: null },
+    lastDevice: { type: String, default: null },
+    lastOs: { type: String, default: null },
+    lastBrowser: { type: String, default: null },
+
     // Teacher-Student Binding
     teacherCode: { type: String, unique: true, sparse: true }, // Only for teachers
     teacherId: { type: Schema.Types.ObjectId, ref: 'User', default: null }, // Only for students
+
+    // Vocabulary Game
+    warningCard: { type: Boolean, default: false }, // True if student scored 0 in a vocab session
+    needsPasswordSetup: { type: Boolean, default: false }, // True for teacher-created students on first login
 });
 
 // In development, clear the cached model so schema changes don't require a full restart

@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth/AuthContext";
 import { Toaster } from "react-hot-toast";
+import ActiveUserTracker from "@/components/ActiveUserTracker";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -30,6 +31,7 @@ export default function RootLayout({
           }}
         />
         <AuthProvider>
+          <ActiveUserTracker />
           {children}
         </AuthProvider>
       </body>

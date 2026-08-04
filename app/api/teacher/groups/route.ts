@@ -43,13 +43,16 @@ export async function POST(req: Request) {
             return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
         }
 
-        const { name } = await req.json();
+        const { name, level, course, vocabularyMode } = await req.json();
         if (!name) return NextResponse.json({ message: 'Name is required' }, { status: 400 });
 
         await dbConnect();
         const newGroup = await Group.create({
             teacherId: teacher.id,
-            name
+            name,
+            level: level || '',
+            course: course || '',
+            vocabularyMode: vocabularyMode !== false, // default true
         });
 
         return NextResponse.json(newGroup, { status: 201 });

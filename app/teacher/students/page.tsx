@@ -6,7 +6,7 @@ import { useAuth } from '@/lib/auth/AuthContext';
 import {
     Users, Loader2, Search, Settings2, CheckCircle2, XCircle,
     Copy, Check, FolderOpen, ChevronRight, ChevronDown,
-    Coins, BarChart2, Info, Target, TrendingUp, GraduationCap, AlertCircle, Trash2
+    Coins, BarChart2, Info, Target, TrendingUp, GraduationCap, AlertCircle, Trash2, UserPlus, AlertTriangle
 } from 'lucide-react';
 import { getUnits } from '@/lib/firestore';
 import { Unit } from '@/lib/types';
@@ -107,6 +107,14 @@ export default function TeacherStudentsPage() {
     const [studentMistakes, setStudentMistakes] = useState<MistakeWord[]>([]);
     const [loadingMistakes, setLoadingMistakes] = useState(false);
 
+    // Create Student Modal
+    const [showCreateStudent, setShowCreateStudent] = useState(false);
+    const [createStudentGroups, setCreateStudentGroups] = useState<{_id: string; name: string}[]>([]);
+    const [newStudentName, setNewStudentName] = useState('');
+    const [newStudentEmail, setNewStudentEmail] = useState('');
+    const [newStudentGroupId, setNewStudentGroupId] = useState('');
+    const [creatingStudent, setCreatingStudent] = useState(false);
+
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
@@ -134,17 +142,18 @@ export default function TeacherStudentsPage() {
         setLoadingData(true);
         try {
             const url = targetUnitId ? `/api/teacher/students?unitId=${targetUnitId}` : '/api/teacher/students';
-            const [sRes, uData, catData] = await Promise.all([
+            const [sRes, uData, catData, gRes] = await Promise.all([
                 apiFetch(url),
                 getUnits(user?.id),
-                apiFetch('/api/teacher/categories/tree').catch(() => [])
+                apiFetch('/api/teacher/categories/tree').catch(() => []),
+                apiFetch('/api/teacher/groups').catch(() => []),
             ]);
             setStudents(sRes);
             setFilteredStudents(sRes);
             setUnits(uData);
             setCategoriesTree(catData || []);
+            setCreateStudentGroups(gRes || []);
         } catch (error) {
-            
         } finally {
             setLoadingData(false);
         }
@@ -337,6 +346,14 @@ export default function TeacherStudentsPage() {
                             className="pl-9 pr-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all w-full sm:w-56 text-gray-900 dark:text-white"
                         />
                     </div>
+                    {/* Create Student */}
+                    <button
+                        onClick={() => setShowCreateStudent(true)}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl font-black text-sm transition-all"
+                        style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', color: '#a5b4fc' }}
+                    >
+                        <UserPlus className="w-4 h-4" /> Yangi Talaba
+                    </button>
                     {/* Teacher code */}
                     <div className="flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
                         <span className="text-xs text-gray-500">Kod:</span>
@@ -778,6 +795,93 @@ export default function TeacherStudentsPage() {
                                 Yopish
                             </button>
                         </footer>
+                    </div>
+                </div>,
+                document.body
+            )}
+            {/* ── Create Student Modal ── */}
+            {mounted && showCreateStudent && createPortal(
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+                    <div className="max-w-md w-full p-8 flex flex-col gap-6 rounded-[2rem]"
+                        style={{ background: 'linear-gradient(160deg,#13111f,#0f0d1e)', border: '1px solid rgba(255,255,255,0.12)' }}>
+                        <header>
+                            <h2 className="text-2xl font-black text-white tracking-tight flex items-center gap-3">
+                                <UserPlus className="w-6 h-6 text-indigo-400" /> Yangi Talaba Yaratish
+                            </h2>
+                            <p className="text-sm text-white/40 font-medium mt-1">Talaba Gmail va ismi yetarli</p>
+                        </header>
+                        <form
+                            onSubmit={async (e) => {
+                                e.preventDefault();
+                                if (!newStudentName.trim() || !newStudentEmail.trim()) return;
+                                setCreatingStudent(true);
+                                try {
+                                    await apiFetch('/api/teacher/students/create', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                            name: newStudentName,
+                                            email: newStudentEmail,
+                                            groupId: newStudentGroupId || undefined,
+                                        }),
+                                    });
+                                    toast.success(`${newStudentName} muvaffaqiyatli yaratildi!`);
+                                    setShowCreateStudent(false);
+                                    setNewStudentName('');
+                                    setNewStudentEmail('');
+                                    setNewStudentGroupId('');
+                                    loadData();
+                                } catch (err: any) {
+                                    toast.error(err.message || 'Xatolik yuz berdi');
+                                } finally {
+                                    setCreatingStudent(false);
+                                }
+                            }}
+                            className="space-y-4"
+                        >
+                            <input
+                                type="text"
+                                value={newStudentName}
+                                onChange={e => setNewStudentName(e.target.value)}
+                                placeholder="To'liq ism (masalan, Ali Karimov)"
+                                className="w-full rounded-2xl px-5 py-4 bg-white/5 border border-white/10 text-white font-bold outline-none focus:border-indigo-500 transition-all"
+                                autoFocus
+                                required
+                            />
+                            <input
+                                type="email"
+                                value={newStudentEmail}
+                                onChange={e => setNewStudentEmail(e.target.value)}
+                                placeholder="Gmail manzili (masalan, ali@gmail.com)"
+                                className="w-full rounded-2xl px-5 py-4 bg-white/5 border border-white/10 text-white font-bold outline-none focus:border-indigo-500 transition-all"
+                                required
+                            />
+                            <select
+                                value={newStudentGroupId}
+                                onChange={e => setNewStudentGroupId(e.target.value)}
+                                className="w-full rounded-2xl px-5 py-4 bg-white/5 border border-white/10 text-white font-bold outline-none focus:border-indigo-500 transition-all"
+                            >
+                                <option value="" className="bg-gray-900">— Guruhni tanlang (ixtiyoriy) —</option>
+                                {createStudentGroups.map((g: any) => (
+                                    <option key={g._id || g.id} value={g._id || g.id} className="bg-gray-900">{g.name}</option>
+                                ))}
+                            </select>
+                            <div className="p-4 rounded-xl text-xs text-white/40 font-bold space-y-1"
+                                style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.12)' }}>
+                                <p>ℹ️ Talaba birinchi marta Gmail manzili bilan kirganda parol o'rnatishga yo'naltiriladi.</p>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3 pt-2">
+                                <button type="button" onClick={() => setShowCreateStudent(false)}
+                                    className="py-4 rounded-2xl font-black text-white/40 hover:text-white transition-all"
+                                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                                    Bekor
+                                </button>
+                                <button type="submit" disabled={creatingStudent}
+                                    className="btn-premium py-4">
+                                    {creatingStudent ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Yaratish'}
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>,
                 document.body

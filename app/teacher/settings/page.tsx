@@ -1,10 +1,18 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth/AuthContext';
-import { User, Mail, Shield, BookOpen } from 'lucide-react';
+import { User, Mail, Shield, BookOpen, Star } from 'lucide-react';
 
 export default function TeacherSettings() {
     const { user } = useAuth();
+    const [celebrationEnabled, setCelebrationEnabled] = useState(false);
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            setCelebrationEnabled(localStorage.getItem('teacher_celebration_enabled') === 'true');
+        }
+    }, []);
 
     if (!user) return null;
 
@@ -66,6 +74,35 @@ export default function TeacherSettings() {
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+
+                    {/* Game Settings */}
+                    <div className="card space-y-6 !p-8">
+                        <h3 className="text-lg font-bold text-white flex items-center gap-2 border-b border-gray-800 pb-4">
+                            <Star className="w-5 h-5 text-amber-400" />
+                            Game Settings
+                        </h3>
+
+                        <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
+                            <div>
+                                <p className="text-white font-medium">Final Celebration Animation</p>
+                                <p className="text-xs text-gray-400 mt-1 max-w-sm">
+                                    Play a premium award ceremony with fireworks and podiums when all students finish the vocabulary session.
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    const newVal = !celebrationEnabled;
+                                    setCelebrationEnabled(newVal);
+                                    if (typeof window !== 'undefined') {
+                                        localStorage.setItem('teacher_celebration_enabled', String(newVal));
+                                    }
+                                }}
+                                className={`w-14 h-8 rounded-full p-1 transition-colors ${celebrationEnabled ? 'bg-emerald-500' : 'bg-gray-700'}`}
+                            >
+                                <div className={`w-6 h-6 bg-white rounded-full transition-transform ${celebrationEnabled ? 'translate-x-6 shadow-md' : 'translate-x-0'}`} />
+                            </button>
                         </div>
                     </div>
 

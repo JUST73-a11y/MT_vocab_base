@@ -40,3 +40,31 @@ export async function DELETE(req: Request, { params }: { params: Params }) {
         return NextResponse.json({ message: 'Error deleting group' }, { status: 500 });
     }
 }
+
+export async function PATCH(req: Request, { params }: { params: Params }) {
+    try {
+        const { id } = await params;
+        const teacher = await getServerSession();
+        if (!teacher || (teacher.role !== 'teacher' && teacher.role !== 'admin')) {
+            return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+        }
+
+        await dbConnect();
+        const group = await Group.findById(id);
+        if (!group) return NextResponse.json({ message: 'Group not found' }, { status: 404 });
+        if (teacher.role !== 'admin' && group.teacherId.toString() !== teacher.id) {
+            return NextResponse.json({ message: 'Forbidden' }, { status: 403 });
+        }
+
+        const updates = await req.json();
+        const allowed = ['name', 'level', 'course', 'vocabularyMode'];
+        for (const key of allowed) {
+            if (updates[key] !== undefined) (group as any)[key] = updates[key];
+        }
+        await group.save();
+
+        return NextResponse.json({ success: true, group });
+    } catch (error) {
+        return NextResponse.json({ message: 'Error updating group' }, { status: 500 });
+    }
+}

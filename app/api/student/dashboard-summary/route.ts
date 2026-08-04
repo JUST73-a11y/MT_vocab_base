@@ -5,6 +5,9 @@ import User from '@/models/User';
 import Wallet from '@/models/Wallet';
 import DailyStudentStats from '@/models/DailyStudentStats';
 import Unit from '@/models/Unit';
+import StudentUnitAccess from '@/models/StudentUnitAccess';
+import GroupMember from '@/models/GroupMember';
+import GroupUnitAccess from '@/models/GroupUnitAccess';
 import { getServerSession } from '@/lib/serverAuth';
 
 export async function GET() {
@@ -18,12 +21,28 @@ export async function GET() {
 
         const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Tashkent' });
 
-        const [user, wallet, todayStats, unitCount] = await Promise.all([
+        const [user, wallet, todayStats] = await Promise.all([
             User.findById(student.id).lean(),
             Wallet.findOne({ studentId: student.id }).lean(),
-            DailyStudentStats.findOne({ studentId: student.id, date: todayStr }).lean(),
-            Unit.countDocuments({ teacherId: (student as any).teacherId })
+            DailyStudentStats.findOne({ studentId: student.id, date: todayStr }).lean()
         ]);
+
+        // Calculate authorized units correctly
+        const [directAccess, myGroups] = await Promise.all([
+            StudentUnitAccess.find({ studentId: student.id }).select('unitId').lean(),
+            GroupMember.find({ studentId: student.id }).select('groupId').lean(),
+        ]);
+
+        const groupIds = myGroups.map((gm: any) => gm.groupId);
+        const groupAccess = groupIds.length > 0
+            ? await GroupUnitAccess.find({ groupId: { $in: groupIds } }).select('unitId').lean()
+            : [];
+
+        const authorizedUnitIds = new Set([
+            ...directAccess.map((da: any) => da.unitId.toString()),
+            ...groupAccess.map((ga: any) => ga.unitId.toString())
+        ]);
+        const unitCount = authorizedUnitIds.size;
 
         const todayAccuracy = todayStats?.wordsSeen
             ? Math.round((todayStats.correct / todayStats.wordsSeen) * 100)

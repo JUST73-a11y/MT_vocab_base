@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, Suspense } from 'react';
-import { Users, GraduationCap, BookOpen, Clock, Loader2, UserPlus, ListPlus, Plus, LayoutDashboard, KeyRound, X, Shield, TrendingUp, Activity, Eye, EyeOff, Calendar, Timer, Hash, ChevronRight, AlertCircle, Trash2, Ban, Unlock, Check } from 'lucide-react';
+import { Users, GraduationCap, BookOpen, Clock, Loader2, UserPlus, ListPlus, Plus, LayoutDashboard, KeyRound, X, Shield, TrendingUp, Activity, Eye, EyeOff, Calendar, Timer, Hash, ChevronRight, AlertCircle, Trash2, Ban, Unlock, Check, Database, HardDrive, Trash } from 'lucide-react';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { useRouter, useSearchParams } from 'next/navigation';
 
@@ -65,6 +65,13 @@ function AdminDashboardInner() {
     const [tempTeacherCode, setTempTeacherCode] = useState('');
     const [assigningStudentId, setAssigningStudentId] = useState<string | null>(null);
 
+    const [systemStats, setSystemStats] = useState<any>(null);
+    const [loadingSystem, setLoadingSystem] = useState(false);
+    const [showCacheModal, setShowCacheModal] = useState(false);
+    const [showOnlineUsersModal, setShowOnlineUsersModal] = useState(false);
+    const [clearOptions, setClearOptions] = useState({ oldSessions: true, unverifiedUsers: true });
+    const [clearingCache, setClearingCache] = useState(false);
+
     useEffect(() => {
         const tab = searchParams.get('tab') as 'overview' | 'users' | 'units' | 'groups';
         if (tab && ['overview', 'users', 'units', 'groups'].includes(tab)) {
@@ -80,8 +87,45 @@ function AdminDashboardInner() {
             fetchUsers();
             fetchAdminUnits();
             fetchAdminGroups();
+            fetchSystemStats();
         }
     }, [user]);
+
+    const fetchSystemStats = async () => {
+        try {
+            setLoadingSystem(true);
+            const res = await fetch('/api/admin/system', { cache: 'no-store' });
+            if (res.ok) setSystemStats(await res.json());
+        } catch (e) {
+        } finally {
+            setLoadingSystem(false);
+        }
+    };
+
+    const handleClearCache = async () => {
+        try {
+            setClearingCache(true);
+            const res = await fetch('/api/admin/system', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    clearOldSessions: clearOptions.oldSessions,
+                    clearUnverifiedUsers: clearOptions.unverifiedUsers
+                })
+            });
+            if (res.ok) {
+                const resData = await res.json();
+                alert(`Muvaffaqiyatli tozalandi!\nO'chirilgan Sessiyalar: ${resData.deleted.vocabSessions + resData.deleted.quizSessions}\nO'chirilgan Foydalanuvchilar: ${resData.deleted.unverifiedUsers}`);
+                setShowCacheModal(false);
+                fetchSystemStats();
+                fetchStats();
+            }
+        } catch (e) {
+            alert('Xatolik yuz berdi');
+        } finally {
+            setClearingCache(false);
+        }
+    };
 
     const fetchAdminGroups = async () => {
         try {
@@ -354,19 +398,22 @@ function AdminDashboardInner() {
                 <div className="flex flex-col gap-10">
 
                     {/* Stats Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
                         {[
+                            { label: "Hozir Onlayn", value: systemStats?.activeUsers || 0, icon: Activity, color: "text-green-400", bg: "from-green-500/20 to-green-600/5", borderColor: "border-green-500/20", pulse: true, onClick: () => setShowOnlineUsersModal(true) },
                             { label: "Barcha Foydalanuvchilar", value: data.stats.totalUsers, icon: Users, color: "text-indigo-400", bg: "from-indigo-500/20 to-indigo-600/5", borderColor: "border-indigo-500/20" },
                             { label: "O'qituvchilar", value: data.stats.teachers, icon: Shield, color: "text-emerald-400", bg: "from-emerald-500/20 to-emerald-600/5", borderColor: "border-emerald-500/20" },
                             { label: "O'quvchilar", value: data.stats.students, icon: GraduationCap, color: "text-blue-400", bg: "from-blue-500/20 to-blue-600/5", borderColor: "border-blue-500/20" },
-                            { label: "Jami Unitlar", value: data.stats.totalUnits, icon: BookOpen, color: "text-amber-400", bg: "from-amber-500/20 to-amber-600/5", borderColor: "border-amber-500/20", onClick: () => router.push('/teacher/units') },
+                            { label: "Jami Unitlar", value: data.stats.totalUnits, icon: BookOpen, color: "text-amber-400", bg: "from-amber-500/20 to-amber-600/5", borderColor: "border-amber-500/20", onClick: () => { setActiveTab('units'); router.push('/admin/dashboard?tab=units'); } },
                         ].map((card) => (
                             <div
                                 key={card.label}
                                 onClick={card.onClick}
                                 className={`glass-card p-10 flex flex-col items-center text-center relative overflow-hidden group transition-all duration-500 ${card.onClick ? 'cursor-pointer hover:border-indigo-500/50 hover:bg-indigo-500/5' : ''}`}
                             >
-                                <div className={`w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 mb-8 ${card.color}`}>
+                                <div className={`w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 mb-8 relative ${card.color}`}>
+                                    {card.pulse && <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-green-500 rounded-full animate-ping" />}
+                                    {card.pulse && <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-[#0a0a0f]" />}
                                     <card.icon className="w-7 h-7" />
                                 </div>
                                 <h3 className="text-5xl font-black text-white tracking-tighter mb-2">{card.value}</h3>
@@ -472,6 +519,37 @@ function AdminDashboardInner() {
                             </div>
                         </section>
                     </div>
+
+                    {/* Database & Cache Management */}
+                    {systemStats && (
+                        <div className="glass-card flex flex-col sm:flex-row items-center justify-between p-8 gap-6 w-full mt-2">
+                            <div className="flex items-center gap-6">
+                                <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20 text-indigo-400">
+                                    <Database className="w-8 h-8" />
+                                </div>
+                                <div className="flex flex-col">
+                                    <h2 className="text-xl font-black text-white tracking-tight">Ma'lumotlar Bazasi</h2>
+                                    <div className="flex items-center gap-4 mt-2">
+                                        <div className="flex items-center gap-2 text-white/50 text-xs font-bold uppercase tracking-widest">
+                                            <HardDrive className="w-4 h-4 text-emerald-400" />
+                                            Hajmi: <span className="text-white">{systemStats.dbStats.dataSizeMB} MB</span>
+                                        </div>
+                                        <div className="flex items-center gap-2 text-white/50 text-xs font-bold uppercase tracking-widest">
+                                            <TrendingUp className="w-4 h-4 text-amber-400" />
+                                            Keraksiz: <span className="text-white">{systemStats.junkStats.oldVocabSessions + systemStats.junkStats.oldQuizSessions + systemStats.junkStats.unverifiedUsers} ta</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setShowCacheModal(true)}
+                                className="px-6 py-4 rounded-xl font-black text-sm uppercase tracking-widest flex items-center gap-3 transition-all hover:-translate-y-1 bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500 hover:text-white"
+                            >
+                                <Trash className="w-5 h-5" />
+                                Keshni Tozalash
+                            </button>
+                        </div>
+                    )}
                 </div>
             )
             }
@@ -1086,6 +1164,113 @@ function AdminDashboardInner() {
                     </div>
                 )
             }
+
+            {/* Cache Clear Modal */}
+            {showCacheModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+                    <div className="glass-card max-w-md w-full p-8 shadow-2xl relative">
+                        <button onClick={() => setShowCacheModal(false)} className="absolute top-6 right-6 text-white/40 hover:text-white transition-colors">
+                            <X className="w-5 h-5" />
+                        </button>
+                        <div className="flex flex-col items-center text-center gap-4 mb-8">
+                            <div className="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center border border-red-500/20 text-red-400">
+                                <Trash2 className="w-8 h-8" />
+                            </div>
+                            <div>
+                                <h3 className="text-2xl font-black text-white tracking-tighter">Keshni Tozalash</h3>
+                                <p className="text-white/50 text-xs font-bold mt-2 leading-relaxed">
+                                    Quyidagilardan qaysi birini o'chirishni xohlaysiz? O'chirilgan ma'lumotlar qayta tiklanmaydi.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4 mb-8">
+                            <label className="flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/10 cursor-pointer hover:bg-white/10 transition-colors">
+                                <input
+                                    type="checkbox"
+                                    checked={clearOptions.oldSessions}
+                                    onChange={(e) => setClearOptions(p => ({ ...p, oldSessions: e.target.checked }))}
+                                    className="w-5 h-5 rounded border-white/20 text-indigo-500 bg-white/5 focus:ring-indigo-500 focus:ring-offset-gray-900"
+                                />
+                                <div className="flex flex-col">
+                                    <span className="text-sm font-black text-white">Eski o'yin sessiyalari</span>
+                                    <span className="text-[10px] text-white/40 font-bold uppercase tracking-widest mt-1">
+                                        24 soatdan oshgan, tugallanmagan
+                                    </span>
+                                </div>
+                            </label>
+                            
+                            <label className="flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/10 cursor-pointer hover:bg-white/10 transition-colors">
+                                <input
+                                    type="checkbox"
+                                    checked={clearOptions.unverifiedUsers}
+                                    onChange={(e) => setClearOptions(p => ({ ...p, unverifiedUsers: e.target.checked }))}
+                                    className="w-5 h-5 rounded border-white/20 text-indigo-500 bg-white/5 focus:ring-indigo-500 focus:ring-offset-gray-900"
+                                />
+                                <div className="flex flex-col">
+                                    <span className="text-sm font-black text-white">Tasdiqlanmagan foydalanuvchilar</span>
+                                    <span className="text-[10px] text-white/40 font-bold uppercase tracking-widest mt-1">
+                                        7 kundan oshgan (Email verify qilinmagan)
+                                    </span>
+                                </div>
+                            </label>
+                        </div>
+
+                        <button
+                            onClick={handleClearCache}
+                            disabled={clearingCache || (!clearOptions.oldSessions && !clearOptions.unverifiedUsers)}
+                            className="w-full h-14 rounded-xl font-black text-sm uppercase tracking-widest transition-all bg-red-500 hover:bg-red-600 text-white disabled:opacity-50 flex items-center justify-center gap-2"
+                        >
+                            {clearingCache ? <Loader2 className="w-5 h-5 animate-spin" /> : <Trash2 className="w-5 h-5" />}
+                            {clearingCache ? 'Tozalanmoqda...' : 'Tozalash'}
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Online Users Modal */}
+            {showOnlineUsersModal && systemStats && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+                    <div className="glass-card max-w-2xl w-full p-8 shadow-2xl relative max-h-[80vh] overflow-hidden flex flex-col">
+                        <button onClick={() => setShowOnlineUsersModal(false)} className="absolute top-6 right-6 text-white/40 hover:text-white transition-colors">
+                            <X className="w-5 h-5" />
+                        </button>
+                        <div className="flex flex-col gap-2 mb-6">
+                            <h3 className="text-2xl font-black text-white tracking-tighter flex items-center gap-3">
+                                <Activity className="w-6 h-6 text-green-400" /> Hozir Onlayn
+                            </h3>
+                            <p className="text-white/50 text-xs font-bold uppercase tracking-widest">
+                                So'nggi 5 daqiqada faol bo'lganlar ({systemStats.activeUsersList?.length || 0} ta)
+                            </p>
+                        </div>
+                        <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
+                            {systemStats.activeUsersList && systemStats.activeUsersList.length > 0 ? (
+                                systemStats.activeUsersList.map((u: any) => (
+                                    <div key={u._id} className="p-4 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between hover:bg-white/10 transition-colors">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center border border-green-500/20 text-green-400">
+                                                <Users className="w-5 h-5" />
+                                            </div>
+                                            <div className="flex flex-col">
+                                                <span className="text-sm font-black text-white">{u.name}</span>
+                                                <span className="text-[10px] text-white/40 font-bold uppercase tracking-widest mt-0.5">{u.role}</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col items-end text-right">
+                                            <span className="text-xs font-bold text-white/80">{u.lastDevice || 'Noma\'lum'} • {u.lastOs || '-'}</span>
+                                            <span className="text-[10px] text-white/40 font-bold tracking-widest uppercase mt-0.5">{u.lastBrowser || 'Noma\'lum'}</span>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="text-center py-10 text-white/40 text-sm font-bold uppercase tracking-widest">
+                                    Hozircha hech kim onlayn emas
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div >
     );
 }

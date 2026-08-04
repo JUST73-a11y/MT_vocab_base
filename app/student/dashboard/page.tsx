@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { apiFetch } from '@/lib/apiFetch';
-import { Play, Loader2, TrendingUp, BookOpen, Flame, Star, Award, Zap, Trophy } from 'lucide-react';
+import { Play, Loader2, TrendingUp, BookOpen, Flame, Star, Award, Zap, Trophy, Gamepad2 } from 'lucide-react';
 
 const LEVELS = [
     { level: 1, name: "Yangi boshlovchi", xpNeeded: 0, icon: "🌱", color: '#6ee7b7' },
@@ -296,17 +296,28 @@ export default function StudentDashboard() {
                 {/* Start Button or Empty State */}
                 <div className="flex flex-col items-center mt-4 w-full min-w-0">
                     {stats?.availableUnits > 0 ? (
-                        <div className="text-center w-full px-2 min-w-0 flex flex-col items-center">
-                            <Link
-                                href="/student/random"
-                                className="btn-premium w-full md:w-auto px-6 py-6 md:px-16 md:py-8 text-xl md:text-2xl group flex items-center justify-center gap-3 mx-auto max-w-full sm:max-w-[400px] md:max-w-none shadow-[0_20px_40px_-15px_rgba(99,102,241,0.5)] hover:shadow-[0_30px_60px_-15px_rgba(99,102,241,0.6)] min-w-0"
-                            >
-                                <Play className="w-6 h-6 md:w-8 md:h-8 fill-current shrink-0" />
-                                <span className="whitespace-normal sm:whitespace-nowrap break-words text-center leading-tight">Mashqni boshlash</span>
-                                <div className="shimmer-active" />
-                            </Link>
-                            <p className="text-white/20 mt-6 font-black text-[9px] md:text-[10px] uppercase tracking-[0.3em] md:tracking-[0.4em] px-4 break-words text-center max-w-full">
-                                RANDOM REJIMIDA SO'ZLARNI TAKRORLASH
+                        <div className="text-center w-full px-2 min-w-0 flex flex-col items-center gap-6">
+                            <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto items-center justify-center">
+                                <Link
+                                    href="/student/random"
+                                    className="btn-premium w-full md:w-auto px-6 py-6 md:px-12 md:py-6 text-lg md:text-xl group flex items-center justify-center gap-3 shadow-[0_20px_40px_-15px_rgba(99,102,241,0.5)] hover:shadow-[0_30px_60px_-15px_rgba(99,102,241,0.6)] min-w-0"
+                                >
+                                    <Play className="w-5 h-5 md:w-6 md:h-6 fill-current shrink-0" />
+                                    <span className="whitespace-normal sm:whitespace-nowrap break-words text-center leading-tight">Mashqni boshlash</span>
+                                    <div className="shimmer-active" />
+                                </Link>
+
+                                <Link
+                                    href="/student/games"
+                                    className="btn-accent w-full md:w-auto px-6 py-6 md:px-12 md:py-6 text-lg md:text-xl group flex items-center justify-center gap-3 shadow-[0_20px_40px_-15px_rgba(16,185,129,0.4)] hover:shadow-[0_30px_60px_-15px_rgba(16,185,129,0.5)] min-w-0"
+                                >
+                                    <Gamepad2 className="w-5 h-5 md:w-6 md:h-6 shrink-0" />
+                                    <span className="whitespace-normal sm:whitespace-nowrap break-words text-center leading-tight">O'yinlarni o'ynash</span>
+                                    <div className="shimmer-active" />
+                                </Link>
+                            </div>
+                            <p className="text-white/20 mt-2 font-black text-[9px] md:text-[10px] uppercase tracking-[0.3em] md:tracking-[0.4em] px-4 break-words text-center max-w-full">
+                                RANDOM REJIMIDA SO'ZLARNI TAKRORLASH YOKI O'YINLAR ORQALI O'RGANISH
                             </p>
                         </div>
                     ) : !loadingData && (

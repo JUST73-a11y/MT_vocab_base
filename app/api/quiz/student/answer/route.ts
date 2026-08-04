@@ -256,15 +256,14 @@ export async function POST(req: Request) {
                 timeSpentSeconds: timeToAdd
             }
         };
-        if (process.env.NODE_ENV !== 'production') {
-            // Logs removed for production security
-        }
+        
         if (unitIdStr) {
             dailyUpdate.$inc[`unitStats.${unitIdStr}.seen`] = 1;
             if (isCorrect) dailyUpdate.$inc[`unitStats.${unitIdStr}.correct`] = 1;
         }
 
-        await DailyStudentStats.findOneAndUpdate(
+        // Fire-and-forget stats update to avoid blocking response
+        DailyStudentStats.findOneAndUpdate(
             { studentId: student.id, date: todayStr },
             dailyUpdate,
             { upsert: true }
@@ -287,31 +286,26 @@ export async function POST(req: Request) {
         // ───────────────────────────────────────────────
 
         // 4. PREPARE NEXT STEP OR END QUIZ
-        const allWordsInUnits = await Word.find({ unitId: { $in: attempt.unitIds } }).lean();
-        const sessionTargetWords = attempt.wordIds && attempt.wordIds.length > 0
-            ? allWordsInUnits.filter((w: any) => attempt.wordIds.some((id: any) => id.toString() === w._id.toString()))
-            : allWordsInUnits;
-
         let usedWordIds = attempt.usedWordIds || [];
         usedWordIds.push(wordId);
-
         const usedSet = new Set<string>(usedWordIds.map((id: any) => id.toString()));
-        let remainingWords = sessionTargetWords.filter((w: any) => !usedSet.has(w._id.toString()));
 
+        let remainingWordIds = (attempt.wordIds || []).filter((id: any) => !usedSet.has(id.toString()));
         let sessionActive = true;
+        let isEndlessReset = false;
 
         // ENDLESS GROUP QUIZ LOGIC
         if (attempt.mode === 'GROUP_SESSION' && attempt.sessionId) {
-            const groupSession = await GroupQuizSession.findById(attempt.sessionId).lean() as any;
+            const groupSession = await GroupQuizSession.findById(attempt.sessionId).select('status').lean() as any;
             if (!groupSession || groupSession.status !== 'ACTIVE') {
                 sessionActive = false;
-            } else if (remainingWords.length === 0) {
+            } else if (remainingWordIds.length === 0) {
                 // The session is STILL active, but words ran out! 
-                // We don't want to show an 'end screen' because teacher hasn't stopped it.
-                // We will reset usedWordIds conceptually (or pick any random word) so the loop continues.
-                remainingWords = sessionTargetWords; // Serve from the entire pool again endlessly!
+                // We will reset usedWordIds so the loop continues.
+                remainingWordIds = attempt.wordIds || [];
+                isEndlessReset = true;
             }
-        } else if (remainingWords.length === 0) {
+        } else if (remainingWordIds.length === 0) {
             // Self-study quizzes just end naturally.
             sessionActive = false;
         }
@@ -319,17 +313,32 @@ export async function POST(req: Request) {
         let nextClientQuestion = null;
         let coinsEarned = 0;
         const updateDoc: any = {
-            $push: { usedWordIds: wordId },
             $set: {
                 correctCount: newCorrectCount,
                 answeredCount: newAnsweredCount,
             }
         };
 
-        if (sessionActive && remainingWords.length > 0) {
-            // Serve the next question
-            const nextWord = remainingWords[Math.floor(Math.random() * remainingWords.length)];
-            const { clientQuestion, correctOptionId } = buildQuestionData(nextWord, allWordsInUnits);
+        if (isEndlessReset) {
+            updateDoc.$set.usedWordIds = [wordId]; // Reset usedWordIds to only current word
+        } else {
+            updateDoc.$push = { usedWordIds: wordId };
+        }
+
+        if (sessionActive && remainingWordIds.length > 0) {
+            // Serve the next question efficiently
+            const nextWordId = remainingWordIds[Math.floor(Math.random() * remainingWordIds.length)];
+            const nextWord = await Word.findById(nextWordId).lean() as any;
+            
+            // Get distractors fast using aggregate sample
+            const unitObjectIds = (attempt.unitIds || []).map((id: any) => new mongoose.Types.ObjectId(id));
+            const distractors = await Word.aggregate([
+                { $match: { unitId: { $in: unitObjectIds }, _id: { $ne: nextWord._id } } },
+                { $sample: { size: 4 } }
+            ]);
+            
+            const pool = [nextWord, ...distractors];
+            const { clientQuestion, correctOptionId } = buildQuestionData(nextWord, pool);
 
             const newServedAt = new Date();
             nextClientQuestion = {
