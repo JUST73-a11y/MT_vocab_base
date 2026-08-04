@@ -30,7 +30,8 @@ export async function POST(req: Request) {
 
         await dbConnect();
 
-        let user = await User.findOne({ email });
+        const searchEmail = email.trim();
+        let user = await User.findOne({ email: { $regex: new RegExp('^' + searchEmail + '$', 'i') } });
 
         const adminAllowlist = process.env.ADMIN_EMAIL_ALLOWLIST || '';
         const adminInitialPass = process.env.ADMIN_INITIAL_PASSWORD || '';

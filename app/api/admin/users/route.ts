@@ -93,7 +93,8 @@ export async function POST(req: Request) {
         }
 
         // Ensure email uniqueness
-        const existing = await User.findOne({ email });
+        const searchEmail = email.trim();
+        const existing = await User.findOne({ email: { $regex: new RegExp('^' + searchEmail + '$', 'i') } });
         if (existing) {
             return createApiError('CONFLICT', 'Email already in use', 409);
         }
