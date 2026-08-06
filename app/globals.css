@@ -351,9 +351,17 @@ body {
 .btn-accent:hover { transform: translateY(-1px); filter: brightness(1.08); }
 
 /* Legacy aliases */
-.btn-premium { @apply btn-base btn-primary; }
-.btn-glass   { @apply btn-base btn-ghost; }
-.btn-action  { @apply btn-base btn-ghost; }
+.btn-premium {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);
+  font-weight: 700; border-radius: var(--radius-md); transition: all 0.2s; cursor: pointer;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+  color: #fff; border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: var(--shadow-primary);
+}
+.btn-glass, .btn-action {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);
+  font-weight: 700; border-radius: var(--radius-md); transition: all 0.2s; cursor: pointer;
+  background: rgba(255,255,255,0.05); border: 1px solid var(--border-subtle); color: var(--text-secondary);
+}
 
 /* ══════════════════════════════════════════════════════════════════════════
    INPUT SYSTEM
