@@ -466,7 +466,13 @@ body {
 .form-error { font-size: var(--text-xs); color: #f87171; font-weight: 600; margin-top: var(--space-1); }
 
 /* Legacy alias */
-.input-premium { @apply input; }
+.input-premium {
+  width: 100%; height: var(--input-h); padding: 0 var(--space-4);
+  background: rgba(255,255,255,0.04); border: 1px solid var(--border-default);
+  border-radius: var(--radius-md); color: var(--text-primary);
+  font-size: var(--text-base); font-weight: 500; outline: none;
+  font-family: inherit; transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
 
 /* ══════════════════════════════════════════════════════════════════════════
    TABLE SYSTEM
