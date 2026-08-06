@@ -34,18 +34,20 @@ export async function POST(req: Request) {
         }
 
         const body = await req.json();
-        const { unitId, activeSecondsToAdd = 0 } = body;
+        const { unitId, activeSecondsToAdd = 0, accuracyPercentage = 96 } = body;
         if (!unitId) return NextResponse.json({ message: 'unitId is required' }, { status: 400 });
 
         await dbConnect();
 
         // 1. Fetch progress & Unit total words
-        const [progress, totalWords, unitDoc, userDoc, groupMember] = await Promise.all([
+        const StudentProfile = (await import('@/models/StudentProfile')).default;
+        const [progress, totalWords, unitDoc, userDoc, groupMember, studentProfile] = await Promise.all([
             SmartLexProgress.findOne({ studentId: student.id, unitId }).lean(),
             Word.countDocuments({ unitId }),
             Unit.findById(unitId).lean(),
             User.findById(student.id).select('name teacherId').lean(),
             GroupMember.findOne({ studentId: student.id }).populate('groupId').lean(),
+            StudentProfile.findOne({ userId: student.id }).select('teacherId').lean(),
         ]);
 
         if (!unitDoc) return NextResponse.json({ message: 'Unit topilmadi' }, { status: 404 });
@@ -97,7 +99,7 @@ export async function POST(req: Request) {
         const completionTime = now.toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit', hour12: false });
 
         let teacherName = "Ustoz";
-        let teacherId = (userDoc as any)?.teacherId || null;
+        let teacherId = (userDoc as any)?.teacherId || (studentProfile as any)?.teacherId || (groupMember as any)?.groupId?.teacherId || null;
         let groupName = (groupMember as any)?.groupId?.name || 'Guruh';
 
         if (!teacherId && (groupMember as any)?.groupId?.teacherId) {
@@ -126,7 +128,8 @@ export async function POST(req: Request) {
             activeLearningTimeSeconds: totalActiveSeconds,
             formattedLearningTime,
             totalWords,
-            activitiesCompleted: 8,
+            accuracyPercentage,
+            activitiesCompleted: 9,
             coinsAwarded: 100,
             status: 'VERIFIED',
             earnedAt: now,
@@ -203,5 +206,48 @@ export async function POST(req: Request) {
     } catch (e: any) {
         console.error('Certificate generation error:', e);
         return NextResponse.json({ message: 'Certificate generation error', error: e.message }, { status: 500 });
+    }
+}
+
+/** DELETE /api/smartlex/certificate?unitId=xxx
+ * Deletes the earned certificate for the unit & resets progress so student can retake the unit from scratch.
+ */
+export async function DELETE(req: Request) {
+    try {
+        const student = await getServerSession();
+        if (!student || student.role !== 'student') {
+            return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+        }
+
+        const { searchParams } = new URL(req.url);
+        const unitId = searchParams.get('unitId');
+        if (!unitId) return NextResponse.json({ message: 'unitId is required' }, { status: 400 });
+
+        await dbConnect();
+
+        // 1. Delete Certificate
+        await Certificate.deleteOne({ studentId: student.id, unitId });
+
+        // 2. Reset SmartLexProgress
+        await SmartLexProgress.updateOne(
+            { studentId: student.id, unitId },
+            {
+                $set: {
+                    masteredWordIds: [],
+                    completedActivities: [],
+                    sessionCount: 0,
+                    activeLearningTimeSeconds: 0,
+                    completedAt: null,
+                    activeSession: null
+                }
+            }
+        );
+
+        return NextResponse.json({
+            success: true,
+            message: 'Eski sertifikat va natijalar o\'chirildi. Bo\'limni qayta topshirishingiz mumkin.'
+        });
+    } catch (e: any) {
+        return NextResponse.json({ message: 'Reset error', error: e.message }, { status: 500 });
     }
 }

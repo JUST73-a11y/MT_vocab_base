@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Volume2, VolumeX, Flame, ArrowRight } from 'lucide-react';
+import { Volume2, VolumeX, Flame, ArrowRight, Loader2 } from 'lucide-react';
 import { Word } from './games/types';
 
 import LearnGame from './games/LearnGame';
@@ -72,7 +72,6 @@ export default function NativeQuiz({
   const [step, setStep] = useState<'intro' | 'playing' | 'result'>('intro');
   const audioCtxRef = useRef<AudioContext | null>(null);
   const emojisContainerRef = useRef<HTMLDivElement>(null);
-  const hasInitialized = useRef(false);
 
   const getWordId = (w: Word) => (w._id || w.id || '').toString();
 
@@ -162,9 +161,6 @@ export default function NativeQuiz({
   const shuffle = <T,>(arr: T[]): T[] => [...arr].sort(() => Math.random() - 0.5);
 
   useEffect(() => {
-    if (hasInitialized.current) return;
-    hasInitialized.current = true;
-
     const formattedWords: Word[] = allWords.map(w => ({
       _id: w._id || w.id,
       englishWord: w.englishWord || w.en || '',
@@ -179,11 +175,13 @@ export default function NativeQuiz({
     if (initialSessionWordIds && initialSessionWordIds.length > 0) {
       const sessionMap = new Map(formattedWords.map(w => [getWordId(w), w]));
       const selected = initialSessionWordIds.map(id => sessionMap.get(id)).filter(Boolean) as Word[];
-      setSessionWords(selected);
-      setCurrentIndex(0);
-      setStep('intro');
-      setTimeLeft(activityId === 'match' ? 30 : (activityId === 'memory' ? 90 : 15));
-      return;
+      if (selected.length > 0) {
+        setSessionWords(selected);
+        setCurrentIndex(0);
+        setStep('intro');
+        setTimeLeft(activityId === 'match' ? 30 : (activityId === 'memory' ? 90 : 15));
+        return;
+      }
     }
 
     const masteredSet = new Set(masteredWordIds.map(id => id.toString()));
@@ -202,8 +200,9 @@ export default function NativeQuiz({
     setStep('intro');
     setTimeLeft(activityId === 'match' ? 30 : (activityId === 'memory' ? 90 : 15));
   }, [
-    allWords.map(w => w.id || w._id).join(','), 
-    masteredWordIds.join(','), 
+    unitId,
+    currentStageIndex,
+    allWords.length,
     (initialSessionWordIds || []).join(',')
   ]);
 
@@ -236,12 +235,28 @@ export default function NativeQuiz({
     }
   };
 
+  const [levelMistakes, setLevelMistakes] = useState(0);
+  const [showFailedModal, setShowFailedModal] = useState(false);
+  const [correctCount, setCorrectCount] = useState(0);
+  const [totalAttempts, setTotalAttempts] = useState(0);
+
+  const restartCurrentLevel = () => {
+    setLevelMistakes(0);
+    setCurrentIndex(0);
+    setIsCorrect(null);
+    setShowFailedModal(false);
+    setStep('playing');
+    setTimeLeft(activityId === 'match' ? 30 : (activityId === 'memory' ? 90 : 15));
+  };
+
   const handleCorrect = () => {
-    if (isCorrect !== null) return;
+    if (isCorrect !== null || showFailedModal) return;
     setIsCorrect(true);
     playSuccess();
     spawnEmojis(false);
     setCombo(c => c + 1);
+    setCorrectCount(c => c + 1);
+    setTotalAttempts(t => t + 1);
     
     const nextIdx = currentIndex + 1;
 
@@ -257,11 +272,23 @@ export default function NativeQuiz({
   };
 
   const handleWrong = () => {
-    if (isCorrect !== null) return;
+    if (isCorrect !== null || showFailedModal) return;
     setIsCorrect(false);
     playWrong();
     spawnEmojis(true);
     setCombo(0);
+    setTotalAttempts(t => t + 1);
+
+    const newMistakes = levelMistakes + 1;
+    setLevelMistakes(newMistakes);
+
+    if (newMistakes >= 3) {
+      setTimeout(() => {
+        setIsCorrect(null);
+        setShowFailedModal(true);
+      }, 1000);
+      return;
+    }
 
     const nextIdx = currentIndex + 1;
 
@@ -277,6 +304,7 @@ export default function NativeQuiz({
   };
 
   const finishStage = () => {
+    setLevelMistakes(0);
     setStep('result');
     playWin();
     spawnEmojis(false);
@@ -298,19 +326,30 @@ export default function NativeQuiz({
     );
   }
 
+  if (sessionWords.length === 0 && step !== 'result') {
+    return (
+      <div className="w-full min-h-[350px] flex flex-col items-center justify-center gap-3 text-center my-auto animate-in fade-in duration-200">
+        <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 animate-spin">
+          <Loader2 className="w-6 h-6" />
+        </div>
+        <p className="text-white/60 text-sm font-bold animate-pulse">Mashq tayyorlanmoqda...</p>
+      </div>
+    );
+  }
+
   if (step === 'intro') {
     return (
       <div className="w-full h-full flex flex-col items-center justify-center animate-in fade-in zoom-in duration-300">
-        <div className="w-full max-w-lg mx-auto flex flex-col items-center justify-center p-10 bg-white/5 rounded-3xl backdrop-blur-2xl border border-white/10 text-center shadow-2xl relative">
-          <div className="absolute top-4 right-4 flex items-center gap-2">
-            <button onClick={() => setSoundEnabled(!soundEnabled)} className="p-2 rounded-xl bg-white/5 hover:text-white text-white/70">
+        <div className="w-full max-w-lg mx-auto flex flex-col items-center justify-center p-6 text-center relative">
+          <div className="absolute top-0 right-0 flex items-center gap-2">
+            <button onClick={() => setSoundEnabled(!soundEnabled)} className="p-2.5 rounded-2xl bg-white/5 hover:bg-white/10 text-white/70 transition-all border border-white/10">
               {soundEnabled ? <Volume2 className="w-5 h-5 text-amber-400" /> : <VolumeX className="w-5 h-5 text-red-400" />}
             </button>
           </div>
-          <div className="text-7xl mb-6 transform hover:scale-110 transition-transform">{ACTIVITIES[currentStageIndex]?.ic || '🎮'}</div>
-          <h2 className="text-3xl font-black text-white mb-2">Tayyormisiz?</h2>
-          <p className="text-white/50 text-base mb-8 max-w-xs">{sessionWords.length} ta saralangan so'zlar bo'yicha {ACTIVITIES[currentStageIndex]?.label} bosqichini boshlaymiz.</p>
-          <button onClick={startGame} className="w-full py-4 bg-gradient-to-r from-amber-500 to-orange-500 text-gray-950 font-black text-xl rounded-2xl shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+          <div className="text-7xl mb-6 transform hover:scale-110 transition-transform drop-shadow-2xl">{ACTIVITIES[currentStageIndex]?.ic || '🎮'}</div>
+          <h2 className="text-3xl md:text-4xl font-black text-white mb-2">Tayyormisiz?</h2>
+          <p className="text-white/60 text-sm md:text-base mb-8 max-w-xs">{sessionWords.length} ta saralangan so'zlar bo'yicha {ACTIVITIES[currentStageIndex]?.label} bosqichini boshlaymiz.</p>
+          <button onClick={startGame} className="w-full py-4.5 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 text-gray-950 font-black text-xl rounded-2xl shadow-2xl shadow-amber-500/30 hover:scale-[1.03] active:scale-[0.97] transition-all flex items-center justify-center gap-3">
             <span>Boshlash</span>
             <ArrowRight className="w-6 h-6" />
           </button>
@@ -391,6 +430,30 @@ export default function NativeQuiz({
           />}
           {activityId === 'pronounce' && <PronounceGame word={w} allWords={sessionWords} activityId={activityId} onCorrect={handleCorrect} onWrong={handleWrong} speak={speak} isCorrect={isCorrect} />}
         </div>
+
+        {/* ── 3 Mistakes Failed Level Modal ── */}
+        {showFailedModal && (
+          <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl animate-fade-in">
+            <div className="glass-card max-w-md w-full p-8 text-center flex flex-col items-center gap-5 border-red-500/40 shadow-[0_0_50px_rgba(239,68,68,0.3)] my-auto">
+              <div className="w-20 h-20 rounded-3xl bg-red-500/10 border border-red-500/30 flex items-center justify-center animate-bounce">
+                <span className="text-4xl">⚠️</span>
+              </div>
+              <div>
+                <h3 className="text-2xl font-black text-white">3 ta xatolik yetdi!</h3>
+                <p className="text-sm text-red-400 font-bold mt-1">Ushbu bosqich yakunlanmadi</p>
+              </div>
+              <p className="text-xs text-white/60 leading-relaxed">
+                O'quv bo'limida bir bosqichda 3 ta yoki undan ko'p xato qilinsa, o'sha mashqni qaytadan topshirishingiz kerak.
+              </p>
+              <button
+                onClick={restartCurrentLevel}
+                className="w-full py-4 rounded-2xl bg-gradient-to-r from-red-500 to-rose-600 text-white font-black text-sm uppercase tracking-wider shadow-lg shadow-red-500/30 hover:scale-105 active:scale-95 transition-all"
+              >
+                🔄 Qaytadan topshirish
+              </button>
+            </div>
+          </div>
+        )}
         </div>
       </div>
     );

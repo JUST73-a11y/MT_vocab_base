@@ -90,6 +90,7 @@ export default function StudentGamesPage() {
   const [showRewardModal, setShowRewardModal] = useState(false);
 
   const [deleteConfirmUnit, setDeleteConfirmUnit] = useState<{ id: string; title: string } | null>(null);
+  const [showResetCertConfirmModal, setShowResetCertConfirmModal] = useState(false);
 
   useEffect(() => {
     if (!loading && (!user || user.role !== 'student')) {
@@ -164,23 +165,21 @@ export default function StudentGamesPage() {
   }, [isPlaying]);
 
   const checkCertificateCondition = async (prog: UnitProgress, currentUnit: AccessibleUnit) => {
-    if (prog.pct >= 100) {
-      try {
-        const res = await apiFetch('/api/smartlex/certificate', {
-          method: 'POST',
-          body: JSON.stringify({
-            unitId: currentUnit.id,
-            activeSecondsToAdd: activeSeconds,
-          }),
-        });
-        if (res.certificate) {
-          setCertData(res.certificate);
-          setShowCertModal(true);
-          setActiveSeconds(0);
-        }
-      } catch (e) {
-        console.error('Certificate claim error:', e);
+    try {
+      const res = await apiFetch('/api/smartlex/certificate', {
+        method: 'POST',
+        body: JSON.stringify({
+          unitId: currentUnit.id,
+          activeSecondsToAdd: activeSeconds,
+        }),
+      });
+      if (res.certificate) {
+        setCertData(res.certificate);
+        setShowCertModal(true);
+        setActiveSeconds(0);
       }
+    } catch (e) {
+      console.error('Certificate claim check:', e);
     }
   };
 
@@ -214,6 +213,9 @@ export default function StudentGamesPage() {
       });
       setCurrentStageIndex(nextStageIndex);
       setUnitProgress(updatedProg);
+      toast.success("+15 MT Coins taqdirlandi!", { icon: '🪙' });
+
+      await checkCertificateCondition(updatedProg, selectedUnit);
       loadActiveSessions();
     } catch (e) {
       console.error('Failed to save stage progress:', e);
@@ -290,6 +292,21 @@ export default function StudentGamesPage() {
       toast.error("O'chirishda xatolik yuz berdi");
     } finally {
       setDeleteConfirmUnit(null);
+    }
+  };
+
+  const handleResetCertificateAndProgress = async () => {
+    if (!selectedUnit) return;
+    try {
+      await apiFetch(`/api/smartlex/certificate?unitId=${selectedUnit.id}`, {
+        method: 'DELETE',
+      });
+      toast.success("Eski sertifikat va natijalar o'chirildi. Bo'limni qayta topshirishingiz mumkin!");
+      setShowResetCertConfirmModal(false);
+      handleSelectUnit(selectedUnit);
+      loadActiveSessions();
+    } catch (e) {
+      toast.error("Qayta topshirishda xatolik yuz berdi.");
     }
   };
 
@@ -536,9 +553,27 @@ export default function StudentGamesPage() {
                 </div>
 
                 {unitProgress?.pct === 100 ? (
-                  <div className="w-full py-5 rounded-2xl bg-gradient-to-r from-emerald-500 via-green-500 to-emerald-600 font-black text-xl text-gray-950 shadow-xl shadow-emerald-500/25 flex flex-col items-center justify-center gap-1">
-                    <div className="flex items-center gap-2"><CheckCircle className="w-6 h-6 fill-current" /> Bo'lim to'liq yakunlangan!</div>
-                    <span className="text-sm font-bold opacity-75">Sertifikat tayyor.</span>
+                  <div className="flex flex-col gap-3">
+                    <div className="w-full p-4 rounded-2xl bg-gradient-to-r from-emerald-500 via-green-500 to-emerald-600 font-black text-gray-950 shadow-xl shadow-emerald-500/20 flex flex-col items-center justify-center text-center gap-1">
+                      <div className="flex items-center gap-2 text-base md:text-lg"><CheckCircle className="w-5 h-5 fill-current" /> Bo'lim to'liq yakunlangan!</div>
+                      <span className="text-xs font-bold opacity-80">Sertifikat berilgan.</span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <Link
+                        href="/student/certificates"
+                        className="btn-base btn-primary btn-md w-full flex items-center justify-center gap-2 text-xs font-bold"
+                      >
+                        <Award className="w-4 h-4" /> Sertifikat
+                      </Link>
+
+                      <button
+                        onClick={() => setShowResetCertConfirmModal(true)}
+                        className="btn-base btn-ghost btn-md w-full flex items-center justify-center gap-2 text-xs font-bold text-rose-400 border-rose-500/30 hover:bg-rose-500/10"
+                      >
+                        <RotateCcw className="w-4 h-4" /> Qayta Topshirish
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <>
@@ -648,6 +683,38 @@ export default function StudentGamesPage() {
                 className="flex-1 py-3 rounded-xl bg-red-500 hover:bg-red-400 text-white font-black text-xs shadow-lg shadow-red-500/30 transition-all"
               >
                 Ha, bekor qilinsin
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Retake Unit Confirmation Modal ── */}
+      {showResetCertConfirmModal && selectedUnit && (
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl animate-fade-in">
+          <div className="glass-card max-w-md w-full p-8 text-center flex flex-col items-center gap-5 border-amber-500/40 shadow-[0_0_50px_rgba(245,158,11,0.2)] my-auto">
+            <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 text-3xl">
+              ⚠️
+            </div>
+            <div>
+              <h3 className="text-2xl font-black text-white">Bo'limni qayta topshirasizmi?</h3>
+              <p className="text-xs text-amber-300 font-bold mt-1">{selectedUnit.title}</p>
+            </div>
+            <p className="text-xs text-white/60 leading-relaxed">
+              Diqqat! Ushbu bo'limni qayta topshirsangiz, ilgari olgan <strong>sertifikatingiz hamda o'zlashtirgan barcha natijalaringiz o'chiriladi</strong> va bo'limni boshidan qaytadan o'rganasiz.
+            </p>
+            <div className="flex flex-col gap-2 w-full mt-2">
+              <button
+                onClick={handleResetCertificateAndProgress}
+                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-rose-500 to-red-600 text-white font-black text-xs uppercase tracking-wider shadow-lg shadow-red-500/25 hover:scale-[1.02] active:scale-95 transition-all"
+              >
+                Ha, Qayta Topshirish (Sertifikat o'chiriladi)
+              </button>
+              <button
+                onClick={() => setShowResetCertConfirmModal(false)}
+                className="w-full py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white/60 font-bold text-xs transition-colors"
+              >
+                Bekor qilish
               </button>
             </div>
           </div>

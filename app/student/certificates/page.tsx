@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/apiFetch';
@@ -14,6 +15,11 @@ export default function MyCertificatesPage() {
     const [certificates, setCertificates] = useState<CertificateData[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedCert, setSelectedCert] = useState<CertificateData | null>(null);
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     useEffect(() => {
         if (!authLoading && !user) {
@@ -153,18 +159,19 @@ export default function MyCertificatesPage() {
             )}
 
             {/* Modal for viewing certificate */}
-            {selectedCert && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in overflow-y-auto">
-                    <div className="w-full max-w-5xl relative z-10 py-6">
+            {mounted && selectedCert && createPortal(
+                <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 md:p-6 bg-black/90 backdrop-blur-xl animate-fade-in overflow-y-auto">
+                    <div className="w-full max-w-4xl relative z-10 my-auto py-4">
                         <button
                             onClick={() => setSelectedCert(null)}
-                            className="mb-4 btn-base btn-ghost btn-sm"
+                            className="mb-3 btn-base btn-ghost btn-sm text-xs"
                         >
                             ← Qaytish
                         </button>
                         <CertificateCard cert={selectedCert} onClose={() => setSelectedCert(null)} showActions={true} />
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );

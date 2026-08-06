@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { BookOpen, Play, LogOut, LayoutDashboard, Menu, X, Brain, BarChart2, Users, Gamepad2, Award } from 'lucide-react';
+import { BookOpen, Play, LogOut, LayoutDashboard, Menu, X, Brain, BarChart2, Users, Gamepad2, Award, Settings } from 'lucide-react';
 import StudentOnboarding from './onboarding/page';
 
 export default function StudentLayout({ children }: { children: React.ReactNode }) {
@@ -66,18 +66,15 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
             <div style={{ position: 'fixed', inset: 0, zIndex: 1, background: 'rgba(10,20,40,0.60)' }} />
 
             {/* ── TOP NAV ── */}
-            <nav
-                id="student-nav"
-                className="sticky top-0 w-full z-40"
-                style={{
-                    transition: 'all 0.4s ease',
-                    background: 'rgba(10,20,40,0.80)',
-                    backdropFilter: 'blur(20px)',
-                    borderBottom: '1px solid rgba(255,255,255,0.1)',
-                }}
-            >
-                <div className="w-[95%] lg:w-[80%] max-w-[1600px] mx-auto px-4 md:px-6">
-                    <div className="flex items-center justify-between h-16 md:h-20">
+            <div className="w-full sticky top-6 z-40 flex justify-center px-4">
+                <nav
+                    id="student-nav"
+                    className="w-[95%] lg:w-[85%] max-w-[1200px] flex items-center transition-all duration-400"
+                    style={{
+                        height: '72px',
+                    }}
+                >
+                    <div className="w-full h-full px-6 flex items-center justify-between">
 
                         {/* Left: Logo */}
                         <div className="flex items-center gap-3 w-1/4">
@@ -110,7 +107,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
                         </div>
 
                         {/* Center: Desktop Links */}
-                        <div className="hidden md:flex flex-1 justify-center items-center gap-1">
+                        <div className="hidden md:flex flex-1 justify-center items-center gap-3">
                             {navItems.map((item) => {
                                 const isActive = pathname === item.href || (item.href !== '/student/dashboard' && pathname.startsWith(item.href));
                                 return (
@@ -119,16 +116,18 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
                                         href={item.href}
                                         className={`flex flex-col md:flex-row items-center gap-1.5 md:gap-2 px-3 md:px-4 py-2 md:py-2.5 transition-all group relative overflow-hidden`}
                                         style={{
-                                            borderRadius: '8px',
-                                            background: isActive ? 'rgba(59,130,246,0.15)' : 'transparent',
-                                            color: isActive ? '#60A5FA' : 'rgba(255,255,255,0.6)',
+                                            borderRadius: '999px',
+                                            background: isActive ? 'rgba(77,124,254,0.15)' : 'rgba(255,255,255,0.03)',
+                                            color: isActive ? '#5B8CFF' : 'rgba(255,255,255,0.7)',
+                                            border: isActive ? '1px solid rgba(91,140,255,0.3)' : '1px solid rgba(255,255,255,0.1)',
+                                            boxShadow: isActive ? '0 0 10px rgba(91,140,255,0.2)' : 'none',
                                         }}
                                     >
                                         <item.icon
                                             className={`w-4 h-4 transition-all duration-300 ${isActive ? 'scale-110 drop-shadow-md' : 'group-hover:scale-110 group-hover:-rotate-3'}`}
                                             style={{ color: isActive ? '#60A5FA' : 'inherit' }}
                                         />
-                                        <span className="text-[10px] md:text-[13px] font-bold tracking-wide">
+                                        <span className="text-[10px] md:text-[13px] font-bold tracking-wide whitespace-nowrap">
                                             {item.name}
                                         </span>
                                     </Link>
@@ -138,23 +137,27 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
 
                         {/* Right: Profile */}
                         <div className="flex items-center justify-end gap-3 md:gap-4 w-1/4">
-                            {/* Profile Info */}
-                            <div className="hidden md:flex items-center gap-3">
+                            {/* Profile Info (Clickable link to Settings) */}
+                            <Link
+                                href="/student/settings"
+                                className="hidden md:flex items-center gap-3 group p-1.5 rounded-xl hover:bg-white/5 transition-all"
+                                title="Sozlamalar va Profil"
+                            >
                                 <div className="text-right">
-                                    <p className="text-[13px] font-bold text-white transition-colors">
+                                    <p className="text-[13px] font-bold text-white group-hover:text-blue-400 transition-colors">
                                         {user.name}
                                     </p>
-                                    <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: '#3B82F6' }}>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-blue-400">
                                         Student
                                     </p>
                                 </div>
                                 <div
-                                    className="w-9 h-9 rounded-xl flex items-center justify-center font-black text-white shadow-lg transition-transform"
-                                    style={{ background: '#3B82F6' }}
+                                    className="w-10 h-10 rounded-full flex items-center justify-center font-black text-white shadow-lg transition-transform group-hover:scale-105 border border-[#5B8CFF]/30"
+                                    style={{ background: 'linear-gradient(135deg, #4D7CFE, #7A5AF8)' }}
                                 >
                                     {user.name.charAt(0).toUpperCase()}
                                 </div>
-                            </div>
+                            </Link>
                             
                             {/* Logout */}
                             <button
@@ -166,8 +169,8 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
                             </button>
                         </div>
                     </div>
-                </div>
-            </nav>
+                </nav>
+            </div>
 
             {/* ── Mobile Left Drawer ── */}
             {mounted && isMobileMenuOpen && createPortal(
@@ -214,7 +217,18 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
                             })}
                         </div>
 
-                        <div className="p-4 mt-auto border-t border-white/5">
+                        <div className="p-4 mt-auto border-t border-white/5 space-y-3">
+                            <Link 
+                                href="/student/settings" 
+                                onClick={() => setIsMobileMenuOpen(false)}
+                                className={`w-full flex items-center gap-4 p-4 rounded-xl transition-all hover:bg-white/5 group border ${pathname === '/student/settings' ? 'border-indigo-500/30 bg-indigo-500/10' : 'border-transparent'}`}
+                            >
+                                <div className={`p-3 rounded-lg transition-colors ${pathname === '/student/settings' ? 'bg-indigo-500/20 text-indigo-400' : 'bg-white/5 text-white/40 group-hover:bg-white/10 group-hover:text-white/90'}`}>
+                                    <Settings className="w-5 h-5" />
+                                </div>
+                                <span className={`font-black text-[15px] ${pathname === '/student/settings' ? 'text-white' : 'text-white/60 group-hover:text-white'}`}>Sozlamalar</span>
+                            </Link>
+                            
                             <button onClick={() => { setIsMobileMenuOpen(false); setShowLogoutModal(true); }} className="w-full flex items-center gap-4 p-4 rounded-xl border border-red-500/10 bg-red-500/5 text-red-400 transition-all hover:bg-red-500/10 group">
                                 <div className="p-3 rounded-lg bg-red-500/10 group-hover:bg-red-500/20 transition-colors"><LogOut className="w-5 h-5" /></div>
                                 <span className="font-black text-[15px]">Tizimdan chiqish</span>

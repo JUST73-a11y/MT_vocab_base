@@ -218,10 +218,15 @@ export default function RandomPracticePage() {
 
     // ── Loading ──
     if (loading || (loadingData && !isSelectionMode)) return (
-        <div className="min-h-screen flex items-center justify-center bg-[#0a0a0f]">
-            <div className="text-center animate-pulse">
-                <Loader2 className="w-16 h-16 text-indigo-500 mx-auto mb-6 animate-spin" />
-                <p className="text-white/40 font-black uppercase tracking-[0.3em] text-xs">Tayyorlaning...</p>
+        <div className="flex-1 w-full min-h-[60vh] flex items-center justify-center p-4">
+            <div className="glass-card max-w-sm w-full p-8 text-center animate-fade-in flex flex-col items-center gap-4 my-auto">
+                <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                    <Loader2 className="w-8 h-8 animate-spin text-amber-400" />
+                </div>
+                <div>
+                    <p className="text-white font-black text-xl tracking-tight">Tayyorlaning...</p>
+                    <p className="text-white/40 text-xs mt-1 font-bold">So'zlar va mashqlar yuklanmoqda</p>
+                </div>
             </div>
         </div>
     );
@@ -576,12 +581,13 @@ export default function RandomPracticePage() {
                                             setFeedbackColor('none');
                                         }, 300);
                                     }
-                                }} className="btn-premium flex-1 h-16 md:h-20 text-2xl uppercase tracking-widest">
+                                }} className="btn-premium flex-1 h-16 md:h-20 text-xl md:text-2xl uppercase tracking-wider flex items-center justify-center gap-2">
                                     Ko'rsatish
                                 </button>
                             ) : (
-                                <button onClick={handleNext} className="btn-accent flex-1 h-16 md:h-20 text-2xl uppercase tracking-widest">
-                                    Keyingi <SkipForward className="w-6 h-6 fill-current" />
+                                <button onClick={handleNext} className="flex-1 h-16 md:h-20 rounded-2xl bg-gradient-to-r from-emerald-400 via-emerald-500 to-green-500 hover:from-emerald-300 hover:to-green-400 text-gray-950 font-black text-xl md:text-2xl uppercase tracking-wider flex items-center justify-center gap-3 shadow-xl shadow-emerald-500/30 hover:scale-[1.02] active:scale-95 transition-all">
+                                    <span>Keyingi</span>
+                                    <SkipForward className="w-6 h-6 shrink-0 fill-current" />
                                 </button>
                             )}
                         </div>

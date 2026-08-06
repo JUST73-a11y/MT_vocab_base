@@ -8,6 +8,12 @@ export default function PronounceGame({ word, onCorrect, onWrong, speak, isCorre
   const [notSupported, setNotSupported] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
 
+  React.useEffect(() => {
+    setIsListening(false);
+    setTranscript('');
+    setHasSubmitted(false);
+  }, [word.id, word.englishWord]);
+
   const startListening = () => {
     try {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;

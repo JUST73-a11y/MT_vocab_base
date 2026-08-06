@@ -316,18 +316,18 @@ export default function TeacherStudentsPage() {
         <div className="page-container flex flex-col gap-8 animate-fade-in">
 
             {/* ── Header ── */}
-            <div className="page-header">
+            <div className="page-header flex flex-col md:flex-row items-start md:items-center justify-between gap-6 p-6 rounded-2xl bg-[#0a1226]/60 backdrop-blur-xl border border-white/10 shadow-2xl">
                 <div>
-                    <h1 className="page-title">Studentlar</h1>
-                    <div className="flex items-center gap-2 mt-1">
-                        <p className="page-subtitle">{students.length} o&apos;quvchi ro&apos;yxatda</p>
+                    <h1 className="page-title text-white drop-shadow-md">Studentlar</h1>
+                    <div className="flex items-center gap-2 mt-2">
+                        <p className="page-subtitle text-white/70 font-medium">{students.length} o&apos;quvchi ro&apos;yxatda</p>
                         {unitId && (
                             <>
-                                <span className="text-gray-600">•</span>
-                                <div className="flex items-center gap-2 bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded-md text-xs font-bold border border-indigo-500/20 animate-fade-in">
+                                <span className="text-white/30">•</span>
+                                <div className="flex items-center gap-2 bg-indigo-500/20 text-indigo-300 px-3 py-1 rounded-lg text-xs font-bold border border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.2)] animate-fade-in">
                                     <span>Unit bo'yicha filtrlangan</span>
-                                    <button onClick={handleClearFilter} className="hover:text-white transition-colors" title="Filtrni tozalash">
-                                        <XCircle className="w-3.5 h-3.5" />
+                                    <button onClick={handleClearFilter} className="hover:text-white transition-colors ml-1" title="Filtrni tozalash">
+                                        <XCircle className="w-4 h-4" />
                                     </button>
                                 </div>
                             </>
@@ -336,15 +336,15 @@ export default function TeacherStudentsPage() {
                 </div>
                 <div className="flex items-center gap-3 flex-wrap">
                     {/* Search */}
-                    <div className="input-group" style={{width:'220px'}}>
-                        <Search className="input-group-icon" style={{width:'16px',height:'16px'}} />
+                    <div className="input-group relative" style={{width:'240px'}}>
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" style={{width:'18px',height:'18px'}} />
                         <input
                             type="text"
                             placeholder="Ism yoki email..."
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
-                            className="input"
-                            style={{paddingLeft:'2.5rem'}}
+                            className="w-full rounded-2xl bg-white/10 border border-white/20 text-white placeholder-white/40 font-semibold focus:border-indigo-500 focus:bg-white/15 outline-none transition-all shadow-inner"
+                            style={{padding: '0.875rem 1rem 0.875rem 2.75rem', height: '48px'}}
                         />
                     </div>
                     {/* Create Student */}

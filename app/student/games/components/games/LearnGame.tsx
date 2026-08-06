@@ -69,10 +69,10 @@ export default function LearnGame({ word, onCorrect, speak }: GameProps) {
       <div className="flex gap-4 w-full max-w-sm mt-4">
         <button 
           onClick={handleKnowIt}
-          className="w-full py-4 bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-400 hover:to-green-400 text-gray-950 font-black rounded-2xl shadow-lg shadow-emerald-500/20 transition-all active:scale-95 flex items-center justify-center gap-2"
+          className="w-full py-4 px-6 bg-gradient-to-r from-emerald-400 via-emerald-500 to-green-500 hover:from-emerald-300 hover:to-green-400 text-gray-950 font-black rounded-2xl shadow-xl shadow-emerald-500/30 transition-all active:scale-95 flex items-center justify-center gap-2.5 text-lg uppercase tracking-wider"
         >
-          <CheckCircle className="w-5 h-5" />
-          {revealed ? "Keyingisi" : "Bildim (O'tkazish)"}
+          <CheckCircle className="w-6 h-6 shrink-0" />
+          <span>{revealed ? "Keyingisi" : "Bildim (O'tkazish)"}</span>
         </button>
       </div>
     </div>

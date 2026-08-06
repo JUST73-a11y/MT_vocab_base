@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { BookOpen, Settings, LogOut, LayoutDashboard, Menu, X, Share2, Play, Users, UsersRound, Gamepad2 } from 'lucide-react';
+import { BookOpen, Settings, LogOut, LayoutDashboard, Menu, X, Share2, Play, Users, UsersRound, Gamepad2, Bell } from 'lucide-react';
 import { TeacherThemeProvider, useTeacherTheme } from '@/lib/teacherTheme';
 import ThemeToggle from '@/components/teacher/ThemeToggle';
 
@@ -18,6 +18,30 @@ function TeacherLayoutInner({ children }: { children: React.ReactNode }) {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [mounted, setMounted] = useState(false);
     const { config, theme } = useTeacherTheme();
+    
+    // Notifications State
+    const [notifications, setNotifications] = useState<any[]>([]);
+    const [showNotifications, setShowNotifications] = useState(false);
+    const [selectedNotification, setSelectedNotification] = useState<any>(null);
+    const unreadCount = notifications.filter(n => !n.isRead).length;
+
+    useEffect(() => {
+        if (user && (user.role === 'teacher' || user.role === 'admin')) {
+            fetch('/api/teacher/notifications')
+                .then(r => r.json())
+                .then(data => {
+                    if (Array.isArray(data)) setNotifications(data);
+                })
+                .catch(console.error);
+        }
+    }, [user]);
+
+    const handleMarkAsRead = async () => {
+        if (unreadCount > 0) {
+            await fetch('/api/teacher/notifications', { method: 'PUT' }).catch(console.error);
+            setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+        }
+    };
 
     useEffect(() => {
         setMounted(true);
@@ -220,6 +244,46 @@ function TeacherLayoutInner({ children }: { children: React.ReactNode }) {
 
                         {/* Right: Theme Toggle + User */}
                         <div className="flex items-center justify-end gap-3 md:gap-4 w-1/4">
+                            {/* 🔔 Notifications */}
+                            <div className="relative">
+                                <button 
+                                    onClick={() => {
+                                        setShowNotifications(!showNotifications);
+                                        if (!showNotifications) handleMarkAsRead();
+                                    }}
+                                    className="p-2 transition-colors relative hover:text-white"
+                                    style={{ color: navTextFaint }}
+                                >
+                                    <Bell className="w-5 h-5" />
+                                    {unreadCount > 0 && (
+                                        <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full border-2 border-[#0a1226]" style={{boxSizing: 'content-box'}}></span>
+                                    )}
+                                </button>
+                                {showNotifications && (
+                                    <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-[#0f0d1e] border border-white/10 rounded-xl shadow-2xl p-4 flex flex-col gap-3 z-50 animate-fade-in" style={{scrollbarWidth:'thin'}}>
+                                        <h3 className="text-white font-bold text-sm mb-1">Xabarnomalar</h3>
+                                        {notifications.length === 0 ? (
+                                            <p className="text-white/40 text-xs text-center py-4">Xabarnomalar yo'q</p>
+                                        ) : (
+                                            notifications.map(n => (
+                                                <button 
+                                                    key={n._id} 
+                                                    onClick={() => {
+                                                        setSelectedNotification(n);
+                                                        setShowNotifications(false);
+                                                    }}
+                                                    className="w-full text-left p-3 rounded-xl bg-white/5 border border-white/5 flex flex-col gap-1 hover:bg-white/10 transition-colors cursor-pointer"
+                                                >
+                                                    <p className="text-xs font-black text-white">{n.title}</p>
+                                                    <p className="text-[11px] text-white/60 leading-relaxed line-clamp-2">{n.message}</p>
+                                                    <p className="text-[9px] text-white/30 uppercase font-bold mt-1 tracking-wider">{new Date(n.createdAt).toLocaleDateString()}</p>
+                                                </button>
+                                            ))
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
                             {/* 🎨 Theme Toggle */}
                             <ThemeToggle />
 
@@ -415,6 +479,64 @@ function TeacherLayoutInner({ children }: { children: React.ReactNode }) {
                                 Ha, chiqish
                             </button>
                         </div>
+                    </div>
+                </div>,
+                document.body
+            )}
+
+            {/* ── NOTIFICATION MODAL ── */}
+            {mounted && selectedNotification && createPortal(
+                <div
+                    className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+                    style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh' }}
+                >
+                    <div
+                        className="w-[95%] max-w-md p-8 shadow-2xl flex flex-col gap-4 animate-fade-in"
+                        style={{
+                            borderRadius: config.btnRadius,
+                            background: theme === 'kids'
+                                ? 'rgba(255,252,240,0.97)'
+                                : 'linear-gradient(160deg,#13111f,#0f0d1e)',
+                            border: `1px solid ${config.accentColor}30`,
+                            color: theme === 'kids' ? '#1a1a2e' : 'white',
+                        }}
+                    >
+                        <div className="flex items-center justify-between border-b pb-4" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
+                            <div className="flex items-center gap-3">
+                                <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: `${config.accentColor}20`, color: config.accentColor }}>
+                                    <Bell className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <h2 className="text-lg font-black">{selectedNotification.title}</h2>
+                                    <p className="text-xs uppercase tracking-wider font-bold" style={{ opacity: 0.5 }}>{new Date(selectedNotification.createdAt).toLocaleString()}</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setSelectedNotification(null)} className="p-2 transition-colors hover:text-red-400" style={{ opacity: 0.6 }}>
+                                <X className="w-6 h-6" />
+                            </button>
+                        </div>
+                        <div className="py-2">
+                            <p className="text-sm leading-relaxed" style={{ opacity: 0.9 }}>{selectedNotification.message}</p>
+                            {selectedNotification.unitTitle && (
+                                <div className="mt-4 p-4 rounded-xl" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                                    <p className="text-xs font-bold uppercase tracking-wider mb-1" style={{ opacity: 0.5 }}>Tafsilotlar</p>
+                                    <p className="text-sm font-bold">O'quvchi: <span style={{color: config.accentColor}}>{selectedNotification.studentName}</span></p>
+                                    <p className="text-sm font-bold mt-1">Bo'lim: <span style={{color: config.accentColor}}>{selectedNotification.unitTitle}</span></p>
+                                </div>
+                            )}
+                        </div>
+                        <button
+                            onClick={() => setSelectedNotification(null)}
+                            className="mt-2 py-3 font-black text-sm transition-all w-full"
+                            style={{
+                                borderRadius: config.btnRadius,
+                                border: `1.5px solid ${config.accentColor}40`,
+                                background: `${config.accentColor}10`,
+                                color: config.accentColor,
+                            }}
+                        >
+                            Yopish
+                        </button>
                     </div>
                 </div>,
                 document.body

@@ -3,6 +3,8 @@ export const dynamic = 'force-dynamic';
 import dbConnect from '@/lib/db';
 import SmartLexProgress from '@/models/SmartLexProgress';
 import Word from '@/models/Word';
+import Wallet from '@/models/Wallet';
+import CoinTransaction from '@/models/CoinTransaction';
 import { getServerSession } from '@/lib/serverAuth';
 import mongoose from 'mongoose';
 
@@ -138,6 +140,7 @@ export async function POST(req: Request) {
 
         const updateOps: any = {};
 
+        let stageCoinsAwarded = 0;
         if (startNewSession && wordIds) {
             updateOps.$set = {
                 activeSession: {
@@ -154,6 +157,20 @@ export async function POST(req: Request) {
                 ...(updateOps.$set || {}),
                 'activeSession.lastActivity': new Date()
             };
+
+            stageCoinsAwarded = 15;
+            await Wallet.findOneAndUpdate(
+                { studentId: student.id },
+                { $inc: { balance: 15 } },
+                { upsert: true }
+            );
+            await CoinTransaction.create({
+                studentId: student.id,
+                teacherId: null,
+                type: 'EARN_QUIZ',
+                amount: 15,
+                meta: { reason: `${currentStageIndex + 1}-bosqich bajarildi (+15 MT Coins)`, unitId },
+            });
         } else if (completeSession && wordIds) {
             const wordObjIds = wordIds.map((id: string) => new mongoose.Types.ObjectId(id));
             updateOps.$addToSet = { masteredWordIds: { $each: wordObjIds } };
@@ -175,6 +192,7 @@ export async function POST(req: Request) {
             totalWords,
             pct: totalWords > 0 ? Math.round((masteredCount / totalWords) * 100) : 0,
             activeSession: updated?.activeSession ?? null,
+            coinsAwarded: stageCoinsAwarded,
         });
     } catch (e: any) {
         return NextResponse.json({ message: 'Error', error: e.message }, { status: 500 });
