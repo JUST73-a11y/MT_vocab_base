@@ -66,12 +66,12 @@ async function dbConnect() {
     if (!cached.promise) {
         const opts = {
             bufferCommands: false,
-            serverSelectionTimeoutMS: 30000, // Faster failure if DB is down
-            socketTimeoutMS: 60000,
+            serverSelectionTimeoutMS: 5000, // Faster failure if DB is down (Vercel kills function in 10s)
+            socketTimeoutMS: 45000,
             maxPoolSize: 100, // Increased for 200+ concurrent users
             minPoolSize: 10,  // Keep some connections ready
             retryWrites: true,
-            connectTimeoutMS: 30000,
+            connectTimeoutMS: 10000,
         };
 
         console.log('[DB] Initializing new MongoDB connection...');
