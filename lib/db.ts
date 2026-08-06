@@ -2,14 +2,13 @@ import mongoose from 'mongoose';
 import path from 'path';
 import dotenv from 'dotenv';
 
-// Force load .env.local from the current project directory 
-const envPath = path.resolve(process.cwd(), '.env.local');
-const envResult = dotenv.config({ path: envPath });
-
-if (envResult.error) {
-    // Try absolute fallback if CWD is wrong (e.g. Next.js root detection issue)
-    const fallbackPath = path.join(__dirname, '..', '.env.local');
-    dotenv.config({ path: fallbackPath });
+if (!process.env.MONGODB_URI) {
+    const envPath = path.resolve(process.cwd(), '.env.local');
+    const envResult = dotenv.config({ path: envPath });
+    if (envResult.error) {
+        const fallbackPath = path.join(__dirname, '..', '.env.local');
+        dotenv.config({ path: fallbackPath });
+    }
 }
 
 const MONGODB_URI = process.env.MONGODB_URI;

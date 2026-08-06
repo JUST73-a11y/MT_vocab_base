@@ -297,22 +297,40 @@ export default function StudentDashboard() {
                 <div className="flex flex-col items-center mt-4 w-full min-w-0">
                     {stats?.availableUnits > 0 ? (
                         <div className="text-center w-full px-2 min-w-0 flex flex-col items-center gap-6">
-                            <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto items-center justify-center">
+                            <div className="flex flex-col md:flex-row gap-5 w-full items-stretch md:items-center justify-center">
                                 <Link
                                     href="/student/random"
-                                    className="btn-premium w-full md:w-auto px-6 py-6 md:px-12 md:py-6 text-lg md:text-xl group flex items-center justify-center gap-3 shadow-[0_20px_40px_-15px_rgba(99,102,241,0.5)] hover:shadow-[0_30px_60px_-15px_rgba(99,102,241,0.6)] min-w-0"
+                                    className="group relative flex items-center justify-center gap-4 rounded-2xl font-black text-white transition-all duration-300 hover:-translate-y-1 overflow-hidden"
+                                    style={{
+                                        background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                                        boxShadow: '0 20px 50px -12px rgba(99,102,241,0.55)',
+                                        padding: '22px 40px',
+                                        fontSize: '18px',
+                                        minWidth: '260px',
+                                    }}
                                 >
-                                    <Play className="w-5 h-5 md:w-6 md:h-6 fill-current shrink-0" />
-                                    <span className="whitespace-normal sm:whitespace-nowrap break-words text-center leading-tight">Mashqni boshlash</span>
+                                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                                        style={{background: 'linear-gradient(135deg, #4f46e5, #7c3aed)'}} />
+                                    <Play className="relative z-10 shrink-0" style={{width:'26px',height:'26px',fill:'currentColor'}} />
+                                    <span className="relative z-10">Mashqni boshlash</span>
                                     <div className="shimmer-active" />
                                 </Link>
 
                                 <Link
                                     href="/student/games"
-                                    className="btn-accent w-full md:w-auto px-6 py-6 md:px-12 md:py-6 text-lg md:text-xl group flex items-center justify-center gap-3 shadow-[0_20px_40px_-15px_rgba(16,185,129,0.4)] hover:shadow-[0_30px_60px_-15px_rgba(16,185,129,0.5)] min-w-0"
+                                    className="group relative flex items-center justify-center gap-4 rounded-2xl font-black text-white transition-all duration-300 hover:-translate-y-1 overflow-hidden"
+                                    style={{
+                                        background: 'linear-gradient(135deg, #10b981, #059669)',
+                                        boxShadow: '0 20px 50px -12px rgba(16,185,129,0.50)',
+                                        padding: '22px 40px',
+                                        fontSize: '18px',
+                                        minWidth: '260px',
+                                    }}
                                 >
-                                    <Gamepad2 className="w-5 h-5 md:w-6 md:h-6 shrink-0" />
-                                    <span className="whitespace-normal sm:whitespace-nowrap break-words text-center leading-tight">O'yinlarni o'ynash</span>
+                                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                                        style={{background: 'linear-gradient(135deg, #059669, #047857)'}} />
+                                    <Gamepad2 className="relative z-10 shrink-0" style={{width:'26px',height:'26px'}} />
+                                    <span className="relative z-10">O&apos;yinlarni o&apos;ynash</span>
                                     <div className="shimmer-active" />
                                 </Link>
                             </div>

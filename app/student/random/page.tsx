@@ -133,7 +133,7 @@ export default function RandomPracticePage() {
             const settings = await getRandomTeacherSettings(user.role === 'teacher' ? user.id : undefined);
             setTimerDuration(settings?.timerDuration || 10);
             const sel = settings?.selectedUnits;
-            setSelectedUnitIds(sel?.length ? sel : unitsRes.map(u => u.id));
+            setSelectedUnitIds(sel?.length ? sel : []);
         } catch { setError('Yuklab bo\'lmadi.'); }
         finally { setLoadingData(false); }
     };

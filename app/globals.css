@@ -1,5 +1,6 @@
 @import "tailwindcss";
 
+
 /* ═══════════════════════════════════════════════════════════════════════════
    MT-VOCAB DESIGN SYSTEM — v2.0
    8px grid · Consistent tokens · SaaS-grade quality
@@ -732,7 +733,6 @@ body {
    THEME OVERRIDES (Kids / Teen / Adult)
    ══════════════════════════════════════════════════════════════════════════ */
 
-@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700;800;900&display=swap');
 
 @keyframes tt-bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
 @keyframes tt-wiggle { 0%,100%{transform:rotate(0)} 25%{transform:rotate(-2deg)} 75%{transform:rotate(2deg)} }
