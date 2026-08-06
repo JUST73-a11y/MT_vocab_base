@@ -1,9 +1,9 @@
 import mongoose, { Schema, model, models } from 'mongoose';
 
 function genCertId(): string {
-    const rand = Math.random().toString(36).slice(2, 8).toUpperCase();
+    const num = Math.floor(100000 + Math.random() * 900000);
     const year = new Date().getFullYear();
-    return `MTVC-${year}-${rand}`;
+    return `MTV-${year}-${num}`;
 }
 
 const CertificateSchema = new Schema({
@@ -11,16 +11,23 @@ const CertificateSchema = new Schema({
     studentId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     unitId: { type: Schema.Types.ObjectId, ref: 'Unit', required: true },
     studentName: { type: String, required: true },
-    groupName: { type: String, default: '' },
-    teacherName: { type: String, default: '' },
+    groupName: { type: String, default: 'General' },
+    teacherName: { type: String, default: 'Ustoz' },
     teacherId: { type: Schema.Types.ObjectId, ref: 'User' },
     unitTitle: { type: String, required: true },
+    completionDate: { type: String, default: '' },
+    completionTime: { type: String, default: '' },
+    activeLearningTimeSeconds: { type: Number, default: 0 },
+    formattedLearningTime: { type: String, default: '0 Daqiqa' },
     totalWords: { type: Number, default: 0 },
-    activitiesCompleted: { type: Number, default: 10 },
+    activitiesCompleted: { type: Number, default: 8 },
     coinsAwarded: { type: Number, default: 100 },
-    status: { type: String, default: 'verified' },
+    status: { type: String, default: 'VERIFIED' },
     earnedAt: { type: Date, default: Date.now },
 }, { timestamps: true });
 
+CertificateSchema.index({ studentId: 1, unitId: 1 }, { unique: true });
+
 const Certificate = models.Certificate || model('Certificate', CertificateSchema);
 export default Certificate;
+

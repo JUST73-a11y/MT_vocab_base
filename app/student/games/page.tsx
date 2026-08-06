@@ -8,6 +8,8 @@ import toast from 'react-hot-toast';
 import { Play, Award, CheckCircle, Trophy, ArrowLeft, Layers, Zap, Lock, Trash2, Clock, RotateCcw } from 'lucide-react';
 import Link from 'next/link';
 import NativeQuiz from './components/NativeQuiz';
+import CertificateCelebrationModal from '@/components/CertificateCelebrationModal';
+import { CertificateData } from '@/components/CertificateCard';
 
 interface AccessibleUnit {
   id: string;
@@ -149,25 +151,32 @@ export default function StudentGamesPage() {
     }
   };
 
+  const [activeSeconds, setActiveSeconds] = useState(0);
+
+  useEffect(() => {
+    if (!isPlaying) return;
+    const interval = setInterval(() => {
+      if (!document.hidden) {
+        setActiveSeconds(prev => prev + 1);
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isPlaying]);
+
   const checkCertificateCondition = async (prog: UnitProgress, currentUnit: AccessibleUnit) => {
     if (prog.pct >= 100) {
       try {
         const res = await apiFetch('/api/smartlex/certificate', {
           method: 'POST',
-          body: JSON.stringify({ unitId: currentUnit.id }),
+          body: JSON.stringify({
+            unitId: currentUnit.id,
+            activeSecondsToAdd: activeSeconds,
+          }),
         });
         if (res.certificate) {
           setCertData(res.certificate);
           setShowCertModal(true);
-
-          import('canvas-confetti').then((confetti) => {
-            const fire = confetti.default;
-            fire({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-            setTimeout(() => fire({ particleCount: 50, angle: 60, spread: 55, origin: { x: 0 } }), 500);
-            setTimeout(() => fire({ particleCount: 50, angle: 120, spread: 55, origin: { x: 1 } }), 500);
-          });
-
-          if (res.isNew) setShowRewardModal(true);
+          setActiveSeconds(0);
         }
       } catch (e) {
         console.error('Certificate claim error:', e);
@@ -645,47 +654,15 @@ export default function StudentGamesPage() {
         </div>
       )}
 
-      {/* ── Certificate Modal ── */}
+      {/* ── Certificate Celebration Modal ── */}
       {showCertModal && certData && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-xl p-4">
-          <div className="bg-gradient-to-b from-gray-900 to-gray-950 border border-amber-500/40 rounded-3xl p-8 max-w-sm w-full text-center shadow-[0_0_50px_rgba(245,158,11,0.2)]">
-            <div className="w-20 h-20 bg-amber-500/15 border border-amber-500/40 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
-              <Trophy className="w-10 h-10 text-amber-400" />
-            </div>
-            <h2 className="text-2xl font-black text-white">TABRIKLAYMIZ! 🎉</h2>
-            <p className="text-white/50 text-sm mt-2 mb-6">Barcha bosqichlarni tugatdingiz va so'zlarni 100% o'rgandingiz! Sertifikat sizniki!</p>
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-left text-xs space-y-1.5 mb-6">
-              <p className="text-white/60">ID: <span className="text-amber-400 font-mono font-bold">{certData.certId}</span></p>
-              <p className="text-white/60">Bo&apos;lim: <span className="text-white font-bold">{certData.unitTitle}</span></p>
-            </div>
-            <div className="flex flex-col gap-2">
-              <Link href="/student/certificates" onClick={() => setShowCertModal(false)}
-                className="w-full py-3.5 rounded-xl bg-amber-500 text-gray-950 font-black text-sm text-center shadow-lg shadow-amber-500/30 hover:scale-105 transition-transform">
-                Sertifikatni Ko&apos;rish
-              </Link>
-              <button onClick={() => setShowCertModal(false)}
-                className="w-full py-2.5 rounded-xl bg-white/5 text-white/50 text-xs font-bold hover:bg-white/10 transition-colors">
-                Yopish
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── 100 Coins Modal ── */}
-      {showRewardModal && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/85 backdrop-blur-xl p-4">
-          <div className="bg-gradient-to-b from-amber-950/80 to-gray-950 border border-amber-400/40 rounded-3xl p-10 max-w-xs w-full text-center shadow-[0_0_80px_rgba(245,158,11,0.3)] animate-in zoom-in duration-500">
-            <div className="text-7xl mb-3 animate-bounce">🪙</div>
-            <h2 className="text-4xl font-black text-amber-400">+100</h2>
-            <p className="text-lg font-bold text-amber-300 mb-1">MT Coin</p>
-            <p className="text-white/50 text-sm mt-2 mb-8">Bo&apos;limni 100% tugatganingiz uchun mukofot!</p>
-            <button onClick={() => setShowRewardModal(false)}
-              className="w-full py-3 rounded-xl bg-amber-500 text-gray-950 font-black hover:scale-105 active:scale-95 transition-all shadow-lg shadow-amber-500/40">
-              Ajoyib! 🚀
-            </button>
-          </div>
-        </div>
+        <CertificateCelebrationModal
+          isOpen={showCertModal}
+          onClose={() => setShowCertModal(false)}
+          unitTitle={selectedUnit?.title || certData.unitTitle}
+          totalWords={unitProgress?.totalWords || 25}
+          certificate={certData}
+        />
       )}
     </div>
   );

@@ -814,22 +814,22 @@ export default function UnitsPage() {
                             )}
                         </div>
 
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 flex-wrap">
                             <button
                                 onClick={() => setShowShareModal(true)}
-                                className="btn-secondary h-14 px-6 text-xs"
+                                className="btn-base btn-secondary btn-md"
                             >
-                                <Share2 className="w-4 h-4" /> Ulashish
+                                <Share2 className="w-4 h-4 shrink-0" /> Ulashish
                             </button>
                             <button
                                 onClick={() => { setShowNewFolder(true); setTimeout(() => newFolderInputRef.current?.focus(), 100); }}
-                                className="btn-secondary h-14 px-6 text-xs shadow-purple-500/10"
+                                className="btn-base btn-secondary btn-md"
                             >
-                                <Plus className="w-5 h-5" /> Yangi Papka
+                                <Plus className="w-4 h-4 shrink-0" /> Yangi Papka
                             </button>
                             <Link href={`/teacher/units/new${currentCatId ? `?categoryId=${currentCatId}` : ''}`}
-                                className="btn-premium h-14 px-8 text-xs font-black shadow-indigo-500/20">
-                                <Plus className="w-5 h-5" /> Yangi Unit
+                                className="btn-base btn-primary btn-md">
+                                <Plus className="w-4 h-4 shrink-0" /> Yangi Unit
                             </Link>
                         </div>
                     </div>
@@ -1050,7 +1050,7 @@ export default function UnitsPage() {
                                             <div className="flex items-center gap-3">
                                                 <button
                                                     onClick={toggleAllCurrentUnits}
-                                                    className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-[10px] font-black text-white/40 hover:text-white hover:bg-white/10 uppercase tracking-widest transition-all"
+                                                    className="btn-base btn-ghost btn-sm text-xs font-bold"
                                                 >
                                                     {selectedUnits.size > 0 && selectedUnits.size >= currentUnits.length ? (
                                                         <>Bekor qilish</>
@@ -1059,8 +1059,8 @@ export default function UnitsPage() {
                                                     )}
                                                 </button>
                                                 <Link href={`/teacher/units/new?categoryId=${currentCatId}`}
-                                                    className="px-4 py-2 rounded-xl bg-indigo-500/20 border border-indigo-500/30 text-[10px] font-black text-indigo-300 hover:text-indigo-200 hover:bg-indigo-500/30 uppercase tracking-widest transition-all">
-                                                    <Plus className="w-3.5 h-3.5 inline mr-1" /> Unit qo'shish
+                                                    className="btn-base btn-secondary btn-sm text-xs font-bold">
+                                                    <Plus className="w-4 h-4 shrink-0" /> Unit qo'shish
                                                 </Link>
                                             </div>
                                         )}
@@ -1141,7 +1141,7 @@ export default function UnitsPage() {
                                             </div>
                                             <button
                                                 onClick={toggleAllCurrentUnits}
-                                                className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-[10px] font-black text-white/40 hover:text-white hover:bg-white/10 uppercase tracking-widest transition-all"
+                                                className="btn-base btn-ghost btn-sm text-xs font-bold"
                                             >
                                                 {selectedUnits.size > 0 && selectedUnits.size >= currentUnits.length ? 'Bekor qilish' : 'Barchasini tanlash'}
                                             </button>

@@ -31,7 +31,13 @@ export async function POST(req: Request) {
         await dbConnect();
 
         const searchEmail = email.trim();
-        let user = await User.findOne({ email: { $regex: new RegExp('^' + searchEmail + '$', 'i') } });
+        const escapedEmail = searchEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        let user = await User.findOne({
+            $or: [
+                { email: searchEmail.toLowerCase() },
+                { email: { $regex: new RegExp('^' + escapedEmail + '$', 'i') } }
+            ]
+        });
 
         const adminAllowlist = process.env.ADMIN_EMAIL_ALLOWLIST || '';
         const adminInitialPass = process.env.ADMIN_INITIAL_PASSWORD || '';

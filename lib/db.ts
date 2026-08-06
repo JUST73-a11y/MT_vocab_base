@@ -56,19 +56,12 @@ async function dbConnect() {
         return cached.conn;
     }
 
-    // Reset stale cache if connection is not healthy
-    if (mongoose.connection.readyState !== 1) {
-        cached.conn = null;
-        cached.promise = null;
-    }
-
-    if (!cached.promise) {
+    if (!cached.promise || mongoose.connection.readyState === 0) {
         const opts = {
-            bufferCommands: false,
-            serverSelectionTimeoutMS: 5000, // Faster failure if DB is down (Vercel kills function in 10s)
+            serverSelectionTimeoutMS: 5000, // Faster failure if DB is down
             socketTimeoutMS: 45000,
-            maxPoolSize: 100, // Increased for 200+ concurrent users
-            minPoolSize: 10,  // Keep some connections ready
+            maxPoolSize: 100, // Increased for concurrent users
+            minPoolSize: 5,   // Keep pool ready
             retryWrites: true,
             connectTimeoutMS: 10000,
         };
