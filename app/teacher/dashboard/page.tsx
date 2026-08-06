@@ -216,7 +216,7 @@ export default function TeacherDashboard() {
 
     return (
         <div className="min-h-screen text-white">
-            <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 flex flex-col gap-10 animate-fade-in" style={{ justifySelf: "center" }}>
+            <main className="page-container flex flex-col gap-8 animate-fade-in">
 
                 {/* ── Hero Header ── */}
                 <header className="relative overflow-hidden rounded-3xl p-8 md:p-10"
@@ -268,51 +268,57 @@ export default function TeacherDashboard() {
                 </header>
 
                 {/* ── Stats Grid ── */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid-stats">
                     {stats.map((stat) => (
-                        <Link key={stat.label} href={stat.href}
-                            className={`glass-card p-5 md:p-6 group hover:-translate-y-1 hover:shadow-lg hover:${stat.glow} transition-all duration-300 flex flex-col items-center text-center gap-3 relative overflow-hidden`}>
-                            <div className={`absolute top-0 right-0 w-28 h-28 bg-gradient-to-br ${stat.gradient} rounded-full blur-2xl -mr-8 -mt-8 pointer-events-none`} />
-                            <div className={`w-11 h-11 rounded-2xl bg-gradient-to-br ${stat.gradient} ${stat.border} border flex items-center justify-center group-hover:scale-110 transition-transform shadow-sm`}>
-                                <stat.icon className={`w-5 h-5 ${stat.iconColor}`} />
+                        <Link key={stat.label} href={stat.href} className="stat-card">
+                            <div
+                                className="stat-card-icon"
+                                style={{
+                                    background: `linear-gradient(135deg, ${stat.gradient.split(' ')[0].replace('from-', '').replace('[', '').replace(']', '')}`,
+                                    border: `1px solid ${stat.border}`,
+                                }}
+                            >
+                                <stat.icon className={`w-6 h-6 ${stat.iconColor}`} />
                             </div>
                             <div>
-                                <p className="text-white/30 text-[10px] font-black uppercase tracking-widest mb-1">{stat.label}</p>
+                                <p className="stat-card-label">{stat.label}</p>
                                 {stat.isText ? (
-                                    <p className="text-sm font-black text-white leading-tight line-clamp-1">{stat.value}</p>
+                                    <p className="font-black text-white text-lg leading-tight line-clamp-1 mt-1">{stat.value}</p>
                                 ) : (
-                                    <p className="text-3xl font-black text-white leading-none">{stat.value}</p>
+                                    <p className="stat-card-value">{stat.value}</p>
                                 )}
                             </div>
-                            <ExternalLink className="absolute bottom-4 right-4 w-3.5 h-3.5 text-white/10 group-hover:text-white/30 transition-colors" />
                         </Link>
                     ))}
                 </div>
 
                 {/* ── Quick Actions ── */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {[
-                        { label: 'Unitlar', href: '/teacher/units', icon: BookOpen, color: 'indigo' },
-                        { label: 'Talabalar', href: '/teacher/students', icon: Users, color: 'emerald' },
-                        { label: 'Guruhlar', href: '/teacher/groups', icon: BarChart3, color: 'purple' },
-                        { label: 'Ulashilgan', href: '/teacher/shared', icon: TrendingUp, color: 'amber' },
-                    ].map(({ label, href, icon: Icon, color }) => (
+                        { label: 'Unitlar',    href: '/teacher/units',    icon: BookOpen,   color: '#818cf8', bg: 'rgba(99,102,241,0.10)',  border: 'rgba(99,102,241,0.18)' },
+                        { label: 'Talabalar',  href: '/teacher/students', icon: Users,      color: '#34d399', bg: 'rgba(16,185,129,0.10)', border: 'rgba(16,185,129,0.18)' },
+                        { label: 'Guruhlar',   href: '/teacher/groups',   icon: BarChart3,  color: '#c084fc', bg: 'rgba(168,85,247,0.10)',  border: 'rgba(168,85,247,0.18)' },
+                        { label: 'Ulashilgan', href: '/teacher/shared',   icon: TrendingUp, color: '#fbbf24', bg: 'rgba(245,158,11,0.10)', border: 'rgba(245,158,11,0.18)' },
+                    ].map(({ label, href, icon: Icon, color, bg, border }) => (
                         <Link key={href} href={href}
-                            className={`p-4 rounded-2xl flex items-center gap-3 font-bold text-sm transition-all hover:-translate-y-0.5 group`}
-                            style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                            <div className={`w-9 h-9 rounded-xl bg-${color}-500/10 border border-${color}-500/20 flex items-center justify-center group-hover:scale-110 transition-transform shrink-0`}>
-                                <Icon className={`w-4 h-4 text-${color}-400`} />
+                            className="card flex items-center gap-3 font-bold text-sm transition-all hover:-translate-y-0.5 group"
+                            style={{ padding: '16px' }}>
+                            <div
+                                className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform"
+                                style={{ background: bg, border: `1px solid ${border}`, color }}
+                            >
+                                <Icon className="w-5 h-5" />
                             </div>
-                            <span className="text-white/60 group-hover:text-white transition-colors truncate">{label}</span>
-                            <ChevronRight className="w-4 h-4 text-white/10 group-hover:text-white/40 ml-auto shrink-0 group-hover:translate-x-0.5 transition-all" />
+                            <span className="truncate" style={{ color: 'var(--text-secondary)' }}>{label}</span>
+                            <ChevronRight className="w-4 h-4 ml-auto flex-shrink-0 transition-transform group-hover:translate-x-0.5" style={{ color: 'var(--text-muted)' }} />
                         </Link>
                     ))}
                 </div>
 
                 {/* ── Categories / Units Section ── */}
-                <div className="space-y-5">
+                <div className="flex flex-col gap-5">
                     {/* Section header */}
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between flex-wrap gap-3">
                         <div className="flex items-center gap-4">
                             {selectedCategory && (
                                 <button onClick={() => setSelectedCategory(null)}

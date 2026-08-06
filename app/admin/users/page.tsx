@@ -125,35 +125,36 @@ export default function UsersPage() {
     if (loading) {
         return (
             <div className="h-full flex items-center justify-center">
-                <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                <Loader2 className="w-8 h-8 animate-spin" style={{ color: 'var(--color-primary)' }} />
             </div>
         );
     }
 
     return (
-        <div className="space-y-6 animate-fade-in">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="page-container animate-fade-in">
+            {/* Page Header */}
+            <div className="page-header">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">User Management</h1>
-                    <p className="text-gray-500 dark:text-gray-400">View and manage all registered users</p>
+                    <h1 className="page-title">User Management</h1>
+                    <p className="page-subtitle">View and manage all registered users</p>
                 </div>
-
-                <div className="flex items-center gap-3">
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <div className="flex items-center gap-3 flex-wrap">
+                    <div className="input-group" style={{ width: '240px' }}>
+                        <Search className="input-group-icon" style={{ width: '16px', height: '16px' }} />
                         <input
                             type="text"
                             placeholder="Search users..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-9 pr-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all w-full sm:w-64"
+                            className="input"
+                            style={{ paddingLeft: '2.5rem' }}
                         />
                     </div>
                     <button
                         onClick={() => { setShowCreateForm(!showCreateForm); setCreateError(''); setCreateSuccess(''); }}
-                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm transition-all shadow-md shadow-emerald-600/20 whitespace-nowrap"
+                        className="btn-base btn-accent"
                     >
-                        <UserPlus className="w-4 h-4" />
+                        <UserPlus style={{ width: '16px', height: '16px' }} />
                         Teacher yaratish
                     </button>
                 </div>
@@ -161,47 +162,45 @@ export default function UsersPage() {
 
             {/* Create Teacher Form */}
             {showCreateForm && (
-                <div className="bg-white dark:bg-gray-800 rounded-2xl border border-emerald-200 dark:border-emerald-800 p-6 shadow-lg">
-                    <div className="flex items-center justify-between mb-5">
-                        <h2 className="font-bold text-lg text-gray-900 dark:text-white flex items-center gap-2">
-                            <GraduationCap className="w-5 h-5 text-emerald-500" />
+                <div className="card animate-fade-in" style={{ borderColor: 'rgba(16,185,129,0.2)', background: 'rgba(16,185,129,0.03)' }}>
+                    <div className="flex items-center justify-between mb-6">
+                        <h2 className="card-title flex items-center gap-2">
+                            <GraduationCap style={{ width: '20px', height: '20px', color: 'var(--color-accent)' }} />
                             Yangi Teacher Akkaunt
                         </h2>
-                        <button onClick={() => setShowCreateForm(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-                            <X className="w-5 h-5" />
+                        <button
+                            onClick={() => setShowCreateForm(false)}
+                            className="btn-base btn-ghost btn-sm"
+                            style={{ width: '36px', padding: '0' }}
+                        >
+                            <X style={{ width: '16px', height: '16px' }} />
                         </button>
                     </div>
-                    {createError && <p className="text-red-500 text-sm mb-3">{createError}</p>}
-                    {createSuccess && <p className="text-emerald-500 text-sm mb-3">{createSuccess}</p>}
+                    {createError && <p className="form-error mb-4">{createError}</p>}
+                    {createSuccess && <p className="text-sm font-semibold mb-4" style={{ color: 'var(--color-accent)' }}>{createSuccess}</p>}
                     <form onSubmit={handleCreateTeacher} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-500 mb-1">Ism</label>
-                            <input value={newName} onChange={e => setNewName(e.target.value)} required placeholder="Ali Valiyev"
-                                className="input w-full" />
+                        <div className="form-field">
+                            <label className="form-label">Ism</label>
+                            <input value={newName} onChange={e => setNewName(e.target.value)} required placeholder="Ali Valiyev" className="input" />
                         </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-500 mb-1">Email</label>
-                            <input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} required placeholder="teacher@email.com"
-                                className="input w-full" />
+                        <div className="form-field">
+                            <label className="form-label">Email</label>
+                            <input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} required placeholder="teacher@email.com" className="input" />
                         </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-500 mb-1">Parol</label>
-                            <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} required minLength={6} placeholder="••••••••"
-                                className="input w-full" />
+                        <div className="form-field">
+                            <label className="form-label">Parol</label>
+                            <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} required minLength={6} placeholder="••••••••" className="input" />
                         </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-500 mb-1">Custom Teacher Code (Optional)</label>
-                            <input value={newTeacherCode} onChange={e => setNewTeacherCode(e.target.value)} placeholder="T-XXXXXX"
-                                className="input w-full uppercase" />
+                        <div className="form-field">
+                            <label className="form-label">Teacher Code (Ixtiyoriy)</label>
+                            <input value={newTeacherCode} onChange={e => setNewTeacherCode(e.target.value)} placeholder="T-XXXXXX" className="input uppercase" />
                         </div>
-                        <div>
-                            <label className="block text-xs font-semibold text-gray-500 mb-1">Admin Secret Key</label>
-                            <input type="password" value={adminSecret} onChange={e => setAdminSecret(e.target.value)} required placeholder="Secret..."
-                                className="input w-full" />
+                        <div className="form-field">
+                            <label className="form-label">Admin Secret Key</label>
+                            <input type="password" value={adminSecret} onChange={e => setAdminSecret(e.target.value)} required placeholder="Secret..." className="input" />
                         </div>
                         <div className="sm:col-span-2">
-                            <button type="submit" disabled={creating}
-                                className="btn-primary w-full disabled:opacity-50">
+                            <button type="submit" disabled={creating} className="btn-base btn-accent" style={{ width: '100%' }}>
                                 {creating ? 'Yaratilmoqda...' : 'Teacher akkaunt yaratish'}
                             </button>
                         </div>
@@ -209,97 +208,99 @@ export default function UsersPage() {
                 </div>
             )}
 
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden w-full">
-                <div className="overflow-x-auto min-w-0 w-full">
-                    <table className="w-full text-left text-sm whitespace-nowrap sm:whitespace-normal">
-                        <thead className="bg-gray-50 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400 font-medium border-b border-gray-200 dark:border-gray-700">
+            {/* Users Table */}
+            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                <div style={{ overflowX: 'auto' }}>
+                    <table className="data-table">
+                        <thead>
                             <tr>
-                                <th className="px-4 sm:px-6 py-4">User</th>
-                                <th className="px-4 sm:px-6 py-4">Role / Code</th>
-                                <th className="px-4 sm:px-6 py-4">Joined</th>
-                                <th className="px-4 sm:px-6 py-4">Activity / Coins</th>
-                                <th className="px-4 sm:px-6 py-4 text-right">Actions</th>
+                                <th style={{ paddingLeft: '24px' }}>User</th>
+                                <th>Role / Code</th>
+                                <th>Joined</th>
+                                <th>Activity</th>
+                                <th style={{ paddingRight: '24px', textAlign: 'right' }}>Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                        <tbody>
                             {filteredUsers.map((u: any) => (
-                                <tr key={u._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                                    <td className="px-4 sm:px-6 py-4 max-w-[200px] sm:max-w-none">
+                                <tr key={u._id}>
+                                    <td style={{ paddingLeft: '24px', maxWidth: '220px' }}>
                                         <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center font-bold text-gray-600 dark:text-gray-300 shrink-0">
+                                            <div
+                                                className="flex items-center justify-center font-black text-sm flex-shrink-0"
+                                                style={{
+                                                    width: '36px', height: '36px', borderRadius: '50%',
+                                                    background: 'linear-gradient(135deg, #6366f1, #a855f7)',
+                                                    color: '#fff',
+                                                }}
+                                            >
                                                 {u.name ? u.name.charAt(0).toUpperCase() : '?'}
                                             </div>
-                                            <div className="min-w-0 flex-1">
-                                                <p className="font-medium text-gray-900 dark:text-white truncate">{u.name}</p>
-                                                <p className="text-xs text-gray-500 truncate">{u.email}</p>
+                                            <div style={{ minWidth: 0 }}>
+                                                <p className="font-bold text-sm truncate" style={{ color: 'var(--text-primary)' }}>{u.name}</p>
+                                                <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>{u.email}</p>
                                             </div>
                                         </div>
                                     </td>
-                                    <td className="px-6 py-4 text-gray-500">
+                                    <td>
                                         <Badge role={u.role} />
                                         {u.role === 'teacher' && (
-                                            <div className="mt-1 flex items-center gap-2">
+                                            <div className="mt-2 flex items-center gap-2">
                                                 {editingCodeUserId === u._id ? (
                                                     <div className="flex items-center gap-1">
                                                         <input
                                                             value={tempCode}
                                                             onChange={(e) => setTempCode(e.target.value.toUpperCase())}
-                                                            className="text-[10px] font-black w-24 bg-white dark:bg-gray-800 border border-indigo-500 rounded px-1 py-0.5 outline-none text-indigo-500"
+                                                            className="input"
+                                                            style={{ height: '32px', fontSize: '12px', width: '96px', padding: '0 8px' }}
                                                             autoFocus
                                                             onKeyDown={(e) => {
                                                                 if (e.key === 'Enter') handleUpdateCode(u._id);
                                                                 if (e.key === 'Escape') setEditingCodeUserId(null);
                                                             }}
                                                         />
-                                                        <button
-                                                            onClick={() => handleUpdateCode(u._id)}
-                                                            className="p-1 hover:text-emerald-500 transition-colors"
-                                                            title="Saqlash"
-                                                        >
-                                                            <Check className="w-3 h-3" />
+                                                        <button onClick={() => handleUpdateCode(u._id)} className="btn-base btn-ghost btn-sm" style={{ width: '32px', padding: 0 }}>
+                                                            <Check style={{ width: '14px', height: '14px' }} />
                                                         </button>
-                                                        <button
-                                                            onClick={() => setEditingCodeUserId(null)}
-                                                            className="p-1 hover:text-red-500 transition-colors"
-                                                            title="Bekor qilish"
-                                                        >
-                                                            <X className="w-3 h-3" />
+                                                        <button onClick={() => setEditingCodeUserId(null)} className="btn-base btn-danger btn-sm" style={{ width: '32px', padding: 0 }}>
+                                                            <X style={{ width: '14px', height: '14px' }} />
                                                         </button>
                                                     </div>
                                                 ) : (
                                                     <div
-                                                        onClick={() => {
-                                                            setEditingCodeUserId(u._id);
-                                                            setTempCode(u.teacherCode || '');
-                                                        }}
-                                                        className="group cursor-pointer flex items-center gap-1.5 font-mono text-[10px] font-black text-indigo-500 bg-indigo-500/5 px-2 py-0.5 rounded border border-indigo-500/10 hover:bg-indigo-500/10 transition-all"
+                                                        onClick={() => { setEditingCodeUserId(u._id); setTempCode(u.teacherCode || ''); }}
+                                                        className="cursor-pointer group flex items-center gap-1.5 font-mono font-black"
                                                         title="Kodni tahrirlash"
+                                                        style={{
+                                                            fontSize: '11px', color: '#818cf8',
+                                                            background: 'rgba(99,102,241,0.08)',
+                                                            padding: '3px 8px', borderRadius: '6px',
+                                                            border: '1px solid rgba(99,102,241,0.18)',
+                                                        }}
                                                     >
-                                                        <span>{u.teacherCode || 'SET CODE'}</span>
-                                                        <Edit3 className="w-2.5 h-2.5 opacity-0 group-hover:opacity-60 transition-opacity" />
+                                                        {u.teacherCode || 'SET CODE'}
+                                                        <Edit3 style={{ width: '10px', height: '10px', opacity: 0.5 }} />
                                                     </div>
                                                 )}
                                             </div>
                                         )}
                                     </td>
-                                    <td className="px-6 py-4 text-gray-500">
+                                    <td style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>
                                         {new Date(u.createdAt).toLocaleDateString()}
                                     </td>
-                                    <td className="px-6 py-4">
-                                        <div className="space-y-1">
-                                            <div className="flex items-center gap-2">
-                                                <span className="font-medium text-gray-900 dark:text-white">{u.totalWordsSeen}</span>
-                                                <span className="text-[10px] text-gray-500 uppercase font-bold">words seen</span>
-                                            </div>
+                                    <td>
+                                        <div className="flex flex-col gap-1">
+                                            <span className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>
+                                                {u.totalWordsSeen} <span className="font-normal text-xs" style={{ color: 'var(--text-muted)' }}>words</span>
+                                            </span>
                                             {u.role === 'student' && (
-                                                <div className="flex items-center gap-2">
-                                                    <span className="font-black text-amber-500">{u.coinBalance || 0}</span>
-                                                    <span className="text-[10px] text-amber-500/60 uppercase font-bold">MT Coins</span>
-                                                </div>
+                                                <span className="text-xs font-black" style={{ color: '#fbbf24' }}>
+                                                    {u.coinBalance || 0} <span className="font-normal" style={{ color: 'rgba(251,191,36,0.6)' }}>coins</span>
+                                                </span>
                                             )}
                                         </div>
                                     </td>
-                                    <td className="px-6 py-4 text-right">
+                                    <td style={{ paddingRight: '24px' }}>
                                         <div className="flex items-center justify-end gap-2">
                                             {u.role === 'student' && (
                                                 <>
@@ -313,7 +314,8 @@ export default function UsersPage() {
                                                                 body: JSON.stringify({ teacherId: teacherId || null })
                                                             }).then(() => fetchUsers());
                                                         }}
-                                                        className="text-[10px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 py-1 outline-none focus:border-indigo-500"
+                                                        className="select"
+                                                        style={{ height: '36px', fontSize: '12px', width: 'auto', minWidth: '120px' }}
                                                     >
                                                         <option value="">No Teacher</option>
                                                         {users.filter(user => user.role === 'teacher').map(t => (
@@ -330,14 +332,14 @@ export default function UsersPage() {
                                                                 }).then(() => fetchUsers());
                                                             }
                                                         }}
-                                                        className="px-3 py-1 bg-indigo-500/10 text-indigo-500 rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-indigo-500/20 transition-all"
+                                                        className="btn-base btn-secondary btn-sm"
                                                     >
                                                         Promote
                                                     </button>
                                                 </>
                                             )}
-                                            <button className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 rounded-lg">
-                                                <MoreVertical className="w-4 h-4" />
+                                            <button className="btn-base btn-ghost btn-sm" style={{ width: '36px', padding: 0 }}>
+                                                <MoreVertical style={{ width: '16px', height: '16px' }} />
                                             </button>
                                         </div>
                                     </td>
@@ -347,8 +349,10 @@ export default function UsersPage() {
                     </table>
                 </div>
                 {filteredUsers.length === 0 && (
-                    <div className="p-8 text-center text-gray-500">
-                        No users found matching &quot;{searchTerm}&quot;
+                    <div className="empty-state">
+                        <div className="empty-state-icon"><Search style={{ width: '24px', height: '24px' }} /></div>
+                        <p className="empty-state-title">No results</p>
+                        <p className="empty-state-desc">No users found matching &quot;{searchTerm}&quot;</p>
                     </div>
                 )}
             </div>
@@ -357,17 +361,15 @@ export default function UsersPage() {
 }
 
 function Badge({ role }: { role: string }) {
-    const config = {
-        admin: { color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400', icon: Shield },
-        teacher: { color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400', icon: GraduationCap },
-        student: { color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400', icon: UserIcon },
+    const config: Record<string, { cls: string; icon: any }> = {
+        admin:   { cls: 'badge badge-primary', icon: Shield },
+        teacher: { cls: 'badge badge-success', icon: GraduationCap },
+        student: { cls: 'badge badge-ghost',   icon: UserIcon },
     };
-
-    const { color, icon: Icon } = config[role as keyof typeof config] || config.student;
-
+    const { cls, icon: Icon } = config[role] || config.student;
     return (
-        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${color}`}>
-            <Icon className="w-3.5 h-3.5" />
+        <span className={cls}>
+            <Icon style={{ width: '12px', height: '12px' }} />
             {role.charAt(0).toUpperCase() + role.slice(1)}
         </span>
     );

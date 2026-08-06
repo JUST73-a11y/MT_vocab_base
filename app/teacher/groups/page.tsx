@@ -394,72 +394,68 @@ export default function TeacherGroupsPage() {
     }
 
     return (
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 flex flex-col gap-10 animate-fade-in justify-center self-center w-full" style={{ justifySelf: 'center' }}>
+        <div className="page-container flex flex-col gap-8 animate-fade-in">
 
             {/* ── Groups Header / Actions ── */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="page-header">
                 <div>
-                    <h1 className="text-2xl font-bold text-white">Guruhlar</h1>
-                    <p className="text-gray-400 text-sm mt-0.5">Barcha guruhlarni boshqaring</p>
+                    <h1 className="page-title">Guruhlar</h1>
+                    <p className="page-subtitle">Barcha guruhlarni boshqaring</p>
                 </div>
                 <button onClick={() => setShowCreateModal(true)}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm transition-all shadow-md whitespace-nowrap">
-                    <Plus className="w-4 h-4" /> Yangi Guruh
+                    className="btn-base btn-primary">
+                    <Plus style={{width:'16px',height:'16px'}} /> Yangi Guruh
                 </button>
             </div>
 
             {/* ── Groups Table ── */}
             {loadingData ? (
-                <div className="flex flex-col items-center justify-center py-20 gap-4">
-                    <Loader2 className="w-10 h-10 text-indigo-500 animate-spin" />
+                <div className="flex items-center justify-center py-20">
+                    <Loader2 className="w-10 h-10 animate-spin" style={{color:'var(--color-primary)'}} />
                 </div>
             ) : groups.length === 0 ? (
-                <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-16 text-center">
-                    <UsersRound className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">Guruhlar mavjud emas</h3>
-                    <p className="text-gray-500 text-sm mt-2">Yangi guruh yarating va talabalarni qo&apos;shing.</p>
+                <div className="empty-state card">
+                    <div className="empty-state-icon"><UsersRound style={{width:'28px',height:'28px'}} /></div>
+                    <p className="empty-state-title">Guruhlar mavjud emas</p>
+                    <p className="empty-state-desc">Yangi guruh yarating va talabalarni qo&apos;shing.</p>
+                    <button onClick={() => setShowCreateModal(true)} className="btn-base btn-primary btn-sm">
+                        <Plus style={{width:'14px',height:'14px'}} /> Yangi Guruh
+                    </button>
                 </div>
             ) : (
-                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm">
-                            <thead className="bg-gray-50 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400 font-medium border-b border-gray-200 dark:border-gray-700">
+                <div className="card" style={{padding:0,overflow:'hidden'}}>
+                    <div style={{overflowX:'auto'}}>
+                        <table className="data-table">
+                            <thead>
                                 <tr>
-                                    <th className="px-6 py-4">Guruh</th>
-                                    <th className="px-6 py-4">A&apos;zolar</th>
-                                    <th className="px-6 py-4">Unitlar</th>
-                                    <th className="px-6 py-4">Yaratilgan</th>
-                                    <th className="px-6 py-4 text-right">Amallar</th>
+                                    <th style={{paddingLeft:'24px'}}>Guruh</th>
+                                    <th>A&apos;zolar</th>
+                                    <th>Unitlar</th>
+                                    <th>Yaratilgan</th>
+                                    <th style={{paddingRight:'24px',textAlign:'right'}}>Amallar</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                            <tbody>
                                 {groups.map(group => (
-                                    <tr key={group.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                                        <td className="px-6 py-4">
+                                    <tr key={group.id}>
+                                        <td style={{paddingLeft:'24px'}}>
                                             <div className="flex items-center gap-3">
-                                                <div className="w-9 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0">
-                                                    <UsersRound className="w-5 h-5 text-indigo-400" />
+                                                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                                                    style={{background:'rgba(99,102,241,0.10)',border:'1px solid rgba(99,102,241,0.20)'}}>
+                                                    <UsersRound style={{width:'18px',height:'18px',color:'#818cf8'}} />
                                                 </div>
-                                                <p className="font-semibold text-gray-900 dark:text-white">{group.name}</p>
+                                                <p className="font-bold text-sm" style={{color:'var(--text-primary)'}}>{group.name}</p>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4">
-                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
-                                                {group.memberCount} talaba
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
-                                                {group.unitCount} unit
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 text-gray-500">
+                                        <td><span className="badge badge-primary">{group.memberCount} talaba</span></td>
+                                        <td><span className="badge badge-success">{group.unitCount} unit</span></td>
+                                        <td style={{color:'var(--text-secondary)',fontSize:'13px'}}>
                                             {new Date(group.createdAt).toLocaleDateString()}
                                         </td>
-                                        <td className="px-6 py-4 text-right">
+                                        <td style={{paddingRight:'24px',textAlign:'right'}}>
                                             <button
                                                 onClick={() => openGroupDetails(group)}
-                                                className="px-4 py-1.5 bg-indigo-500/10 text-indigo-400 rounded-lg text-xs font-black uppercase tracking-wider hover:bg-indigo-500/20 transition-all">
+                                                className="btn-base btn-secondary btn-sm">
                                                 Ochish →
                                             </button>
                                         </td>
@@ -473,19 +469,18 @@ export default function TeacherGroupsPage() {
 
             {mounted && showCreateModal && createPortal(
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-                    <div className="max-w-md w-full p-8 flex flex-col gap-6 rounded-[2rem]"
-                        style={{ background: 'linear-gradient(160deg,#13111f,#0f0d1e)', border: '1px solid rgba(255,255,255,0.12)' }}>
+                    <div className="card max-w-md w-full p-8 flex flex-col gap-6">
                         <header>
                             <h2 className="text-2xl font-black text-white tracking-tight">Yangi Guruh</h2>
                             <p className="text-sm text-white/40 font-medium">Guruh ma'lumotlarini kiriting</p>
                         </header>
-                        <form onSubmit={handleCreateGroup} className="space-y-4">
+                        <form onSubmit={handleCreateGroup} className="flex flex-col gap-4">
                             <input
                                 type="text"
                                 value={newGroupName}
                                 onChange={e => setNewGroupName(e.target.value)}
                                 placeholder="Guruh nomi (masalan, 11-A sinf)"
-                                className="w-full rounded-2xl px-5 py-4 bg-white/5 border border-white/10 text-white font-bold outline-none focus:border-indigo-500 transition-all"
+                                className="input"
                                 autoFocus
                                 required
                             />
@@ -495,38 +490,35 @@ export default function TeacherGroupsPage() {
                                     value={newGroupLevel}
                                     onChange={e => setNewGroupLevel(e.target.value)}
                                     placeholder="Daraja (A1, B2...)"
-                                    className="w-full rounded-xl px-4 py-3 bg-white/5 border border-white/10 text-white font-bold text-sm outline-none focus:border-indigo-500 transition-all"
+                                    className="input"
                                 />
                                 <input
                                     type="text"
                                     value={newGroupCourse}
                                     onChange={e => setNewGroupCourse(e.target.value)}
                                     placeholder="Kurs (IELTS, General...)"
-                                    className="w-full rounded-xl px-4 py-3 bg-white/5 border border-white/10 text-white font-bold text-sm outline-none focus:border-indigo-500 transition-all"
+                                    className="input"
                                 />
                             </div>
                             {/* Vocabulary Mode Toggle */}
-                            <div className="flex items-center justify-between p-4 rounded-2xl" style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.18)' }}>
+                            <div className="flex items-center justify-between p-4 rounded-xl" style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.18)' }}>
                                 <div>
-                                    <p className="text-sm font-black text-white">🎯 Lug'at Mashqi</p>
-                                    <p className="text-[11px] text-white/40 mt-0.5">Bu guruh uchun lug'at o'yinini yoqish</p>
+                                    <p className="text-sm font-black text-white">🎯 Lug&apos;at Mashqi</p>
+                                    <p className="text-xs mt-0.5" style={{color:'var(--text-muted)'}}>Bu guruh uchun lug&apos;at o&apos;yinini yoqish</p>
                                 </div>
                                 <button
                                     type="button"
                                     onClick={() => setNewGroupVocabMode(v => !v)}
-                                    className={`relative w-14 h-7 rounded-full transition-all duration-300 shrink-0 ${
-                                        newGroupVocabMode ? 'bg-indigo-500' : 'bg-white/10'
-                                    }`}
+                                    className="relative w-12 h-6 rounded-full transition-all duration-300 flex-shrink-0"
+                                    style={{background: newGroupVocabMode ? 'var(--color-primary)' : 'rgba(255,255,255,0.12)'}}
                                 >
-                                    <div className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow-lg transition-all duration-300 ${
-                                        newGroupVocabMode ? 'left-8' : 'left-1'
-                                    }`} />
+                                    <div className="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-lg transition-all duration-300"
+                                        style={{left: newGroupVocabMode ? 'calc(100% - 22px)' : '2px'}} />
                                 </button>
                             </div>
                             <div className="grid grid-cols-2 gap-3 pt-2">
                                 <button type="button" onClick={() => setShowCreateModal(false)}
-                                    className="py-4 rounded-2xl font-black text-white/40 hover:text-white transition-all"
-                                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>Bekor</button>
+                                    className="btn-base btn-ghost">Bekor</button>
                                 <button type="submit" disabled={creatingGroup}
                                     className="btn-premium py-4">
                                     {creatingGroup ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Yaratish'}

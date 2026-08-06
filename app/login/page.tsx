@@ -178,39 +178,42 @@ export default function LoginPage() {
         return (
             <div className="min-h-screen flex items-center justify-center relative p-6 bg-transparent">
                 <BgDeco />
-                <div className="glass-card max-w-lg w-full p-8 md:p-12 relative z-10 animate-fade-in space-y-6">
+                <div className="glass-card max-w-lg w-full p-8 md:p-12 relative z-10 animate-fade-in flex flex-col gap-6">
                     <header className="text-center">
                         <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl mb-5">
                             <KeyRound className="w-7 h-7 text-white" />
                         </div>
                         <h2 className="text-2xl font-black text-white">Parol o&apos;rnatish</h2>
-                        <p className="text-white/40 text-sm mt-2">Salom, <span className="text-indigo-400 font-black">{foundStudentName}</span>! Yangi parolingizni kiriting</p>
+                        <p className="mt-2 text-sm" style={{ color: 'var(--text-secondary)' }}>Salom, <span style={{ color: '#818cf8', fontWeight: 800 }}>{foundStudentName}</span>! Yangi parolingizni kiriting</p>
                     </header>
-                    {error && <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-xl text-xs font-black">{error}</div>}
-                    <form onSubmit={handleSetupPassword} className="space-y-4">
+                    {error && <div className="form-error">{error}</div>}
+                    <form onSubmit={handleSetupPassword} className="flex flex-col gap-4">
                         <div className="relative">
                             <input type={showNewPw ? 'text' : 'password'} value={newPassword}
                                 onChange={e => setNewPassword(e.target.value)}
                                 placeholder="Yangi parol (kamida 6 ta belgi)"
-                                className="w-full h-14 bg-white/5 border border-white/10 rounded-2xl px-4 pr-12 text-sm font-bold text-white outline-none focus:border-indigo-500/50 transition-all placeholder:text-white/20"
+                                className="input"
+                                style={{ paddingRight: '3rem' }}
                                 required />
                             <button type="button" onClick={() => setShowNewPw(!showNewPw)}
-                                className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-white transition-colors">
+                                className="absolute right-4 top-1/2 -translate-y-1/2 transition-colors"
+                                style={{ color: 'var(--text-muted)' }}>
                                 {showNewPw ? <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
                                     : <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>}
                             </button>
                         </div>
                         <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)}
                             placeholder="Parolni qayta kiriting"
-                            className="w-full h-14 bg-white/5 border border-white/10 rounded-2xl px-4 text-sm font-bold text-white outline-none focus:border-indigo-500/50 transition-all placeholder:text-white/20"
+                            className="input"
                             required />
-                        <button type="submit" disabled={settingUp} className="btn-premium w-full h-14 text-sm">
+                        <button type="submit" disabled={settingUp} className="btn-base btn-primary btn-lg">
                             {settingUp ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle2 className="w-5 h-5" />}
                             {settingUp ? 'Saqlanmoqda...' : 'Parolni Saqlash'}
                         </button>
                     </form>
                     <button onClick={() => { setMode('gmail-check'); setError(''); }}
-                        className="w-full text-xs text-white/20 hover:text-white/50 transition-colors font-bold text-center">← Orqaga</button>
+                        className="text-xs font-bold text-center transition-colors"
+                        style={{ color: 'var(--text-muted)' }}>← Orqaga</button>
                 </div>
             </div>
         );
@@ -221,27 +224,28 @@ export default function LoginPage() {
         return (
             <div className="min-h-screen flex items-center justify-center relative p-6 bg-transparent">
                 <BgDeco />
-                <div className="glass-card max-w-lg w-full p-8 md:p-12 relative z-10 animate-fade-in space-y-6">
+                <div className="glass-card max-w-lg w-full p-8 md:p-12 relative z-10 animate-fade-in flex flex-col gap-6">
                     <header className="text-center">
                         <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl mb-5">
                             <Mail className="w-7 h-7 text-white" />
                         </div>
                         <h2 className="text-2xl font-black text-white">Gmail bilan kirish</h2>
-                        <p className="text-white/40 text-sm mt-2">O&apos;qituvchi bergan Gmail manzilingizni kiriting</p>
+                        <p className="text-sm mt-2" style={{ color: 'var(--text-secondary)' }}>O&apos;qituvchi bergan Gmail manzilingizni kiriting</p>
                     </header>
-                    {error && <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-xl text-xs font-black">{error}</div>}
-                    <form onSubmit={handleGmailCheck} className="space-y-4">
+                    {error && <div className="form-error">{error}</div>}
+                    <form onSubmit={handleGmailCheck} className="flex flex-col gap-4">
                         <input type="email" value={gmailEmail} onChange={e => setGmailEmail(e.target.value)}
                             placeholder="sizning@gmail.com"
-                            className="w-full h-14 bg-white/5 border border-white/10 rounded-2xl px-4 text-sm font-bold text-white outline-none focus:border-indigo-500/50 transition-all placeholder:text-white/20"
+                            className="input"
                             autoFocus required />
-                        <button type="submit" disabled={checkingGmail} className="btn-premium w-full h-14 text-sm">
+                        <button type="submit" disabled={checkingGmail} className="btn-base btn-primary btn-lg">
                             {checkingGmail ? <Loader2 className="w-5 h-5 animate-spin" /> : <Mail className="w-5 h-5" />}
                             {checkingGmail ? 'Tekshirilmoqda...' : 'Tekshirish'}
                         </button>
                     </form>
                     <button onClick={() => { setMode('normal'); setError(''); }}
-                        className="w-full text-xs text-white/20 hover:text-white/50 transition-colors font-bold text-center">← Odatiy kirish</button>
+                        className="text-xs font-bold text-center transition-colors"
+                        style={{ color: 'var(--text-muted)' }}>← Odatiy kirish</button>
                 </div>
             </div>
         );
@@ -272,29 +276,31 @@ export default function LoginPage() {
                         </div>
                     )}
 
-                    <form onSubmit={handleSubmit} className="space-y-5">
-                        <div className="space-y-2">
-                            <label className="text-[11px] font-black text-white/60 uppercase tracking-widest ml-1 block mb-1">Email manzilingiz</label>
+                    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                        <div className="form-field">
+                            <label className="form-label">Email manzilingiz</label>
                             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-                                className="w-full h-14 bg-white/5 border border-white/10 rounded-2xl px-4 text-sm font-bold text-white outline-none focus:border-indigo-500/50 focus:bg-white/10 transition-all placeholder:text-white/20"
+                                className="input"
                                 placeholder="nom@email.com" required />
                         </div>
-                        <div className="space-y-2">
-                            <label className="text-[11px] font-black text-white/60 uppercase tracking-widest ml-1 block mb-1">Parol</label>
-                            <div className="relative group">
+                        <div className="form-field">
+                            <label className="form-label">Parol</label>
+                            <div className="relative">
                                 <input type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full h-14 bg-white/5 border border-white/10 rounded-2xl px-4 pr-14 text-sm font-bold text-white outline-none focus:border-indigo-500/50 focus:bg-white/10 transition-all placeholder:text-white/20"
+                                    className="input"
+                                    style={{ paddingRight: '3rem' }}
                                     placeholder="••••••••" required />
                                 <button type="button" onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-white/20 hover:text-white transition-colors">
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 transition-colors"
+                                    style={{ color: 'var(--text-muted)' }}>
                                     {showPassword
                                         ? <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
                                         : <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>}
                                 </button>
                             </div>
                         </div>
-                        <button type="submit" disabled={loading} className="btn-premium w-full h-14 mt-2 text-sm group">
-                            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <LogIn className="w-5 h-5 group-hover:translate-x-1 transition-transform" />}
+                        <button type="submit" disabled={loading} className="btn-base btn-primary btn-lg mt-2">
+                            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <LogIn className="w-5 h-5" />}
                             <span>{loading ? 'Kirilmoqda...' : 'Tizimga Kirish'}</span>
                         </button>
                     </form>
@@ -305,9 +311,8 @@ export default function LoginPage() {
                     </div>
 
                     <button onClick={() => { setMode('gmail-check'); setError(''); }}
-                        className="w-full h-12 rounded-2xl flex items-center justify-center gap-3 font-black text-sm transition-all hover:bg-white/10 active:scale-[0.98]"
-                        style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)' }}>
-                        <UserPlus className="w-5 h-5 text-indigo-400" />
+                        className="btn-base btn-ghost" style={{ width: '100%' }}>
+                        <UserPlus className="w-5 h-5" style={{ color: '#818cf8' }} />
                         O&apos;qituvchi bergan Gmail bilan kirish
                     </button>
 

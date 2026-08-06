@@ -313,14 +313,14 @@ export default function TeacherStudentsPage() {
     }
 
     return (
-        <div className="space-y-6 animate-fade-in">
+        <div className="page-container flex flex-col gap-8 animate-fade-in">
 
             {/* ── Header ── */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="page-header">
                 <div>
-                    <h1 className="text-2xl font-bold text-white">Studentlar</h1>
-                    <div className="flex items-center gap-2 mt-0.5">
-                        <p className="text-gray-400 text-sm">{students.length} o&apos;quvchi ro&apos;yxatda</p>
+                    <h1 className="page-title">Studentlar</h1>
+                    <div className="flex items-center gap-2 mt-1">
+                        <p className="page-subtitle">{students.length} o&apos;quvchi ro&apos;yxatda</p>
                         {unitId && (
                             <>
                                 <span className="text-gray-600">•</span>
@@ -334,32 +334,33 @@ export default function TeacherStudentsPage() {
                         )}
                     </div>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-wrap">
                     {/* Search */}
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <div className="input-group" style={{width:'220px'}}>
+                        <Search className="input-group-icon" style={{width:'16px',height:'16px'}} />
                         <input
                             type="text"
                             placeholder="Ism yoki email..."
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
-                            className="pl-9 pr-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all w-full sm:w-56 text-gray-900 dark:text-white"
+                            className="input"
+                            style={{paddingLeft:'2.5rem'}}
                         />
                     </div>
                     {/* Create Student */}
                     <button
                         onClick={() => setShowCreateStudent(true)}
-                        className="flex items-center gap-2 px-4 py-2 rounded-xl font-black text-sm transition-all"
-                        style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', color: '#a5b4fc' }}
+                        className="btn-base btn-secondary"
                     >
-                        <UserPlus className="w-4 h-4" /> Yangi Talaba
+                        <UserPlus style={{width:'16px',height:'16px'}} /> Yangi Talaba
                     </button>
                     {/* Teacher code */}
-                    <div className="flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-                        <span className="text-xs text-gray-500">Kod:</span>
-                        <code className="text-sm font-black text-indigo-500">{user.teacherCode || '—'}</code>
-                        <button onClick={handleCopyCode} className="text-gray-400 hover:text-indigo-500 transition-colors">
-                            {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                    <div className="flex items-center gap-2 px-4 rounded-xl"
+                        style={{height:'var(--btn-md)',background:'rgba(255,255,255,0.04)',border:'1px solid var(--border-default)'}}>
+                        <span className="text-xs font-bold" style={{color:'var(--text-muted)'}}>Kod:</span>
+                        <code className="text-sm font-black" style={{color:'var(--color-primary)'}}>{user.teacherCode || '—'}</code>
+                        <button onClick={handleCopyCode} className="transition-colors" style={{color:'var(--text-muted)'}}>
+                            {copied ? <Check style={{width:'16px',height:'16px',color:'var(--color-accent)'}} /> : <Copy style={{width:'16px',height:'16px'}} />}
                         </button>
                     </div>
                 </div>
@@ -368,47 +369,52 @@ export default function TeacherStudentsPage() {
             {/* ── Table ── */}
             {loadingData ? (
                 <div className="flex items-center justify-center py-20">
-                    <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+                    <Loader2 className="w-8 h-8 animate-spin" style={{color:'var(--color-primary)'}} />
                 </div>
             ) : (
-                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm">
-                            <thead className="bg-gray-50 dark:bg-gray-900/50 text-gray-500 dark:text-gray-400 font-medium border-b border-gray-200 dark:border-gray-700">
+                <div className="card" style={{padding:0,overflow:'hidden'}}>
+                    <div style={{overflowX:'auto'}}>
+                        <table className="data-table">
+                            <thead>
                                 <tr>
-                                    <th className="px-6 py-4">Student</th>
-                                    <th className="px-6 py-4">Oxirgi faollik</th>
-                                    <th className="px-6 py-4">Ro&apos;yxatdan o&apos;tgan</th>
-                                    <th className="px-6 py-4 text-right">Amallar</th>
+                                    <th style={{paddingLeft:'24px'}}>Student</th>
+                                    <th>Oxirgi faollik</th>
+                                    <th>Ro&apos;yxatdan o&apos;tgan</th>
+                                    <th style={{paddingRight:'24px',textAlign:'right'}}>Amallar</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                            <tbody>
                                 {filteredStudents.length === 0 ? (
                                     <tr>
-                                        <td colSpan={4} className="px-6 py-16 text-center text-gray-400">
-                                            {searchTerm ? `"${searchTerm}" bo'yicha hech narsa topilmadi` : 'Studentlar mavjud emas'}
+                                        <td colSpan={4}>
+                                            <div className="empty-state">
+                                                <div className="empty-state-icon"><Users style={{width:'24px',height:'24px'}} /></div>
+                                                <p className="empty-state-title">Natija topilmadi</p>
+                                                <p className="empty-state-desc">{searchTerm ? `"${searchTerm}" bo'yicha hech narsa topilmadi` : 'Studentlar mavjud emas'}</p>
+                                            </div>
                                         </td>
                                     </tr>
                                 ) : filteredStudents.map(student => (
-                                    <tr key={student._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                                        <td className="px-6 py-4 min-w-[200px]">
-                                            <div className="flex items-center gap-3 w-full min-w-0">
-                                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center font-bold text-white text-sm shrink-0">
+                                    <tr key={student._id}>
+                                        <td style={{paddingLeft:'24px',minWidth:'200px'}}>
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-9 h-9 rounded-full flex items-center justify-center font-black text-sm flex-shrink-0"
+                                                    style={{background:'linear-gradient(135deg,#6366f1,#a855f7)',color:'#fff'}}>
                                                     {student.name.charAt(0).toUpperCase()}
                                                 </div>
-                                                <div className="min-w-0 flex-1">
-                                                    <p className="font-medium text-gray-900 dark:text-white truncate" title={student.name}>{student.name}</p>
-                                                    <p className="text-xs text-gray-500 truncate" title={student.email}>{student.email}</p>
+                                                <div style={{minWidth:0}}>
+                                                    <p className="font-bold text-sm truncate" style={{color:'var(--text-primary)'}} title={student.name}>{student.name}</p>
+                                                    <p className="text-xs truncate" style={{color:'var(--text-muted)'}} title={student.email}>{student.email}</p>
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 text-gray-500 whitespace-nowrap">
-                                            {student.lastLoginAt ? new Date(student.lastLoginAt).toLocaleDateString() : "—"}
+                                        <td style={{color:'var(--text-secondary)',fontSize:'13px',whiteSpace:'nowrap'}}>
+                                            {student.lastLoginAt ? new Date(student.lastLoginAt).toLocaleDateString() : '—'}
                                         </td>
-                                        <td className="px-6 py-4 text-gray-500 whitespace-nowrap">
+                                        <td style={{color:'var(--text-secondary)',fontSize:'13px',whiteSpace:'nowrap'}}>
                                             {new Date(student.createdAt).toLocaleDateString()}
                                         </td>
-                                        <td className="px-6 py-4 text-right">
+                                        <td style={{paddingRight:'24px'}}>
                                             <div className="flex items-center justify-end gap-2">
                                                 <button
                                                     onClick={() => openRedeemModal(student)}
