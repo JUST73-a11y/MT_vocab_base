@@ -5,9 +5,11 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { BookOpen, Settings, LogOut, LayoutDashboard, Menu, X, Share2, Play, Users, UsersRound, Gamepad2, Bell } from 'lucide-react';
+import { BookOpen, Settings, LogOut, LayoutDashboard, Menu, X, Share2, Play, Users, UsersRound, Gamepad2, Bell, Mail, Send } from 'lucide-react';
 import { TeacherThemeProvider, useTeacherTheme } from '@/lib/teacherTheme';
 import ThemeToggle from '@/components/teacher/ThemeToggle';
+import MessagesModal from '@/components/teacher/MessagesModal';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // ── Inner layout (needs access to theme context) ─────────────────────────────
 function TeacherLayoutInner({ children }: { children: React.ReactNode }) {
@@ -23,6 +25,7 @@ function TeacherLayoutInner({ children }: { children: React.ReactNode }) {
     const [notifications, setNotifications] = useState<any[]>([]);
     const [showNotifications, setShowNotifications] = useState(false);
     const [selectedNotification, setSelectedNotification] = useState<any>(null);
+    const [showMessagesModal, setShowMessagesModal] = useState(false);
     const unreadCount = notifications.filter(n => !n.isRead).length;
 
     useEffect(() => {
@@ -189,7 +192,7 @@ function TeacherLayoutInner({ children }: { children: React.ReactNode }) {
                     <div className="flex items-center justify-between h-16 md:h-20">
 
                         {/* Left: Logo */}
-                        <div className="flex items-center gap-3 w-1/4">
+                        <div className="flex items-center gap-3 w-auto lg:w-1/4 shrink-0">
                             {/* Mobile Hamburger */}
                             <button
                                 onClick={() => setIsMobileMenuOpen(true)}
@@ -219,14 +222,14 @@ function TeacherLayoutInner({ children }: { children: React.ReactNode }) {
                         </div>
 
                         {/* Center: Desktop Links */}
-                        <div className="hidden md:flex flex-1 justify-center items-center gap-1">
+                        <div className="hidden lg:flex flex-1 justify-center items-center gap-1 xl:gap-2 overflow-x-auto no-scrollbar px-4 whitespace-nowrap">
                             {navItems.map((item) => {
                                 const isActive = pathname === item.href || (item.href !== '/teacher/dashboard' && pathname.startsWith(item.href));
                                 return (
                                     <Link
                                         key={item.href}
                                         href={item.href}
-                                        className="flex items-center gap-2 px-4 py-2 text-sm font-black transition-all"
+                                        className="flex items-center gap-2 px-3 xl:px-4 py-2 text-[13px] xl:text-sm font-black transition-all shrink-0"
                                         style={{
                                             borderRadius: config.btnRadius,
                                             background: isActive ? config.activeNavBg : 'transparent',
@@ -243,45 +246,94 @@ function TeacherLayoutInner({ children }: { children: React.ReactNode }) {
                         </div>
 
                         {/* Right: Theme Toggle + User */}
-                        <div className="flex items-center justify-end gap-3 md:gap-4 w-1/4">
-                            {/* 🔔 Notifications */}
-                            <div className="relative">
+                        <div className="flex items-center justify-end gap-3 md:gap-4 w-auto lg:w-1/4 shrink-0">
+                            {/* Stacked Messages and Notifications */}
+                            <div className="flex flex-col items-center justify-center gap-0.5">
+                                {/* ✉️ Messages */}
                                 <button 
-                                    onClick={() => {
-                                        setShowNotifications(!showNotifications);
-                                        if (!showNotifications) handleMarkAsRead();
-                                    }}
-                                    className="p-2 transition-colors relative hover:text-white"
+                                    onClick={() => setShowMessagesModal(true)}
+                                    className="p-1.5 transition-colors hover:text-white rounded-lg hover:bg-white/5"
                                     style={{ color: navTextFaint }}
+                                    title="Xabarlar"
                                 >
-                                    <Bell className="w-5 h-5" />
-                                    {unreadCount > 0 && (
-                                        <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full border-2 border-[#0a1226]" style={{boxSizing: 'content-box'}}></span>
-                                    )}
+                                    <Mail className="w-4 h-4" />
                                 </button>
-                                {showNotifications && (
-                                    <div className="absolute right-0 mt-2 w-80 max-h-96 overflow-y-auto bg-[#0f0d1e] border border-white/10 rounded-xl shadow-2xl p-4 flex flex-col gap-3 z-50 animate-fade-in" style={{scrollbarWidth:'thin'}}>
-                                        <h3 className="text-white font-bold text-sm mb-1">Xabarnomalar</h3>
-                                        {notifications.length === 0 ? (
-                                            <p className="text-white/40 text-xs text-center py-4">Xabarnomalar yo'q</p>
-                                        ) : (
-                                            notifications.map(n => (
-                                                <button 
-                                                    key={n._id} 
-                                                    onClick={() => {
-                                                        setSelectedNotification(n);
-                                                        setShowNotifications(false);
-                                                    }}
-                                                    className="w-full text-left p-3 rounded-xl bg-white/5 border border-white/5 flex flex-col gap-1 hover:bg-white/10 transition-colors cursor-pointer"
-                                                >
-                                                    <p className="text-xs font-black text-white">{n.title}</p>
-                                                    <p className="text-[11px] text-white/60 leading-relaxed line-clamp-2">{n.message}</p>
-                                                    <p className="text-[9px] text-white/30 uppercase font-bold mt-1 tracking-wider">{new Date(n.createdAt).toLocaleDateString()}</p>
-                                                </button>
-                                            ))
+
+                                {/* 🔔 Notifications */}
+                                <div className="relative">
+                                    <button 
+                                        onClick={() => {
+                                            setShowNotifications(!showNotifications);
+                                            if (!showNotifications) handleMarkAsRead();
+                                        }}
+                                        className="p-1.5 transition-colors relative hover:text-white rounded-lg hover:bg-white/5"
+                                        style={{ color: navTextFaint }}
+                                    >
+                                        <Bell className="w-4 h-4" />
+                                        {unreadCount > 0 && (
+                                            <span 
+                                                className="absolute top-1 right-1 w-2 h-2 rounded-full border border-[#0a1226]"
+                                                style={{ background: config.accentColor }}
+                                            />
                                         )}
-                                    </div>
-                                )}
+                                    </button>
+
+                                    {/* Notifications Dropdown */}
+                                    <AnimatePresence>
+                                        {showNotifications && (
+                                            <motion.div 
+                                                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                className="absolute right-0 mt-2 w-80 rounded-2xl shadow-2xl overflow-hidden"
+                                                style={{
+                                                    background: theme === 'kids' 
+                                                        ? 'rgba(255,252,240,0.95)' 
+                                                        : 'rgba(15,13,30,0.95)',
+                                                    backdropFilter: 'blur(20px)',
+                                                    border: `1px solid ${config.accentColor}30`,
+                                                    color: theme === 'kids' ? '#1a1a2e' : 'white',
+                                                }}
+                                            >
+                                                <div className="p-4 border-b flex justify-between items-center" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+                                                    <h3 className="font-black text-sm uppercase tracking-widest">Xabarnomalar</h3>
+                                                    {unreadCount > 0 && (
+                                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: `${config.accentColor}20`, color: config.accentColor }}>
+                                                            {unreadCount} ta yangi
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="max-h-[300px] overflow-y-auto custom-scrollbar p-2 space-y-1">
+                                                    {notifications.length === 0 ? (
+                                                        <p className="text-white/40 text-xs text-center py-4">Xabarnomalar yo'q</p>
+                                                    ) : (
+                                                        notifications.map(n => {
+                                                            const isMessage = n.type === 'MESSAGE';
+                                                            return (
+                                                            <button 
+                                                                key={n._id} 
+                                                                onClick={() => {
+                                                                    setSelectedNotification(n);
+                                                                    setShowNotifications(false);
+                                                                }}
+                                                                className={`w-full text-left p-3 rounded-xl flex flex-col gap-1 transition-colors cursor-pointer ${
+                                                                    isMessage 
+                                                                        ? 'bg-red-500/10 border border-red-500/20 hover:bg-red-500/20' 
+                                                                        : 'bg-white/5 border border-white/5 hover:bg-white/10'
+                                                                }`}
+                                                            >
+                                                                <p className={`text-xs font-black ${isMessage ? 'text-red-400' : 'text-white'}`}>{n.title}</p>
+                                                                <p className={`text-[11px] leading-relaxed line-clamp-2 ${isMessage ? 'text-red-400/80' : 'text-white/60'}`}>{n.message}</p>
+                                                                <p className={`text-[9px] uppercase font-bold mt-1 tracking-wider ${isMessage ? 'text-red-400/50' : 'text-white/30'}`}>{new Date(n.createdAt).toLocaleDateString()}</p>
+                                                            </button>
+                                                            );
+                                                        })
+                                                    )}
+                                                </div>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </div>
                             </div>
 
                             {/* 🎨 Theme Toggle */}
@@ -322,6 +374,8 @@ function TeacherLayoutInner({ children }: { children: React.ReactNode }) {
                     </div>
                 </div>
             </nav>
+
+            <MessagesModal isOpen={showMessagesModal} onClose={() => setShowMessagesModal(false)} />
 
             {/* ── MOBILE DRAWER ── */}
             {mounted && isMobileMenuOpen && createPortal(
@@ -503,8 +557,8 @@ function TeacherLayoutInner({ children }: { children: React.ReactNode }) {
                     >
                         <div className="flex items-center justify-between border-b pb-4" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
                             <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: `${config.accentColor}20`, color: config.accentColor }}>
-                                    <Bell className="w-6 h-6" />
+                                <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: selectedNotification.type === 'MESSAGE' ? 'rgba(239,68,68,0.2)' : `${config.accentColor}20`, color: selectedNotification.type === 'MESSAGE' ? '#ef4444' : config.accentColor }}>
+                                    {selectedNotification.type === 'MESSAGE' ? <Mail className="w-6 h-6" /> : <Bell className="w-6 h-6" />}
                                 </div>
                                 <div>
                                     <h2 className="text-lg font-black">{selectedNotification.title}</h2>

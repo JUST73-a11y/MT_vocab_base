@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 import dbConnect from '@/lib/db';
 import Unit from '@/models/Unit';
+import User from '@/models/User';
 import { getServerSession } from '@/lib/serverAuth';
 import StudentUnitAccess from '@/models/StudentUnitAccess';
 import GroupMember from '@/models/GroupMember';
@@ -116,7 +117,7 @@ export async function GET(req: Request) {
             _id: u._id?.toString(),
             createdBy: u.createdBy?._id?.toString() || u.createdBy?.toString(),
             creator: u.createdBy,
-            creatorName: u.createdBy?.name,
+            creatorName: u.createdBy?.name || "Noma'lum",
             category: u.category || 'Uncategorized',
             categoryId: u.categoryId?.toString() ?? null,
         }));

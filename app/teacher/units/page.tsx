@@ -264,9 +264,15 @@ function UnitsGrid({
                                 } transition-colors`}>
                                 {unit.title}
                             </h4>
-                            <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] line-clamp-1 mb-4">
+                            <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] line-clamp-1 mb-1">
                                 {typeof unit.category === 'string' ? unit.category : (unit.category?.name || 'Asosiy')}
                             </p>
+                            {unit.creatorName && (
+                                <p className="text-[10px] font-bold text-indigo-400/60 uppercase tracking-widest line-clamp-1 mb-4 flex items-center gap-1">
+                                    <Users className="w-3 h-3" /> {unit.creatorName}
+                                </p>
+                            )}
+                            {!unit.creatorName && <div className="mb-4"></div>}
 
                             <div className="mt-auto pt-4 sm:pt-6 border-t border-white/5 flex gap-2" onClick={e => e.stopPropagation()}>
                                 <Link

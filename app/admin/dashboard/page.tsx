@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, Suspense } from 'react';
-import { Users, GraduationCap, BookOpen, Clock, Loader2, UserPlus, ListPlus, Plus, LayoutDashboard, KeyRound, X, Shield, TrendingUp, Activity, Eye, EyeOff, Calendar, Timer, Hash, ChevronRight, AlertCircle, Trash2, Ban, Unlock, Check, Database, HardDrive, Trash } from 'lucide-react';
+import { Users, GraduationCap, BookOpen, Clock, Loader2, UserPlus, ListPlus, Plus, LayoutDashboard, KeyRound, X, Shield, TrendingUp, Activity, Eye, EyeOff, Calendar, Timer, Hash, ChevronRight, AlertCircle, Trash2, Ban, Unlock, Check, Database, HardDrive, Trash, Mail } from 'lucide-react';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { useRouter, useSearchParams } from 'next/navigation';
 
@@ -23,9 +23,10 @@ function AdminDashboardInner() {
     const [allUsers, setAllUsers] = useState<any[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'units' | 'groups'>((searchParams.get('tab') as any) || 'overview');
+    const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'units' | 'groups' | 'messages'>((searchParams.get('tab') as any) || 'overview');
     const [allUnits, setAllUnits] = useState<any[]>([]);
     const [allGroups, setAllGroups] = useState<any[]>([]);
+    const [allMessages, setAllMessages] = useState<any[]>([]);
     const [actionLoading, setActionLoading] = useState<string | null>(null);
     const [visiblePasswords, setVisiblePasswords] = useState<Set<string>>(new Set());
 
@@ -87,6 +88,7 @@ function AdminDashboardInner() {
             fetchUsers();
             fetchAdminUnits();
             fetchAdminGroups();
+            fetchAdminMessages();
             fetchSystemStats();
         }
     }, [user]);
@@ -138,6 +140,13 @@ function AdminDashboardInner() {
         try {
             const res = await fetch('/api/units', { cache: 'no-store' });
             if (res.ok) setAllUnits(await res.json());
+        } catch (e) {  }
+    };
+
+    const fetchAdminMessages = async () => {
+        try {
+            const res = await fetch('/api/admin/messages', { cache: 'no-store' });
+            if (res.ok) setAllMessages(await res.json());
         } catch (e) {  }
     };
 
@@ -391,6 +400,18 @@ function AdminDashboardInner() {
                     <span className={`text-[10px] font-black px-2 py-0.5 rounded-md ${activeTab === 'groups' ? 'bg-white/20 text-white' : 'bg-white/10 text-white/30'
                         }`}>{allGroups.length}</span>
                 </button>
+                <button
+                    onClick={() => { setActiveTab('messages'); router.push('/admin/dashboard?tab=messages'); }}
+                    className={`px-8 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 flex items-center gap-3 ${activeTab === 'messages'
+                        ? 'bg-indigo-500 text-white shadow-[0_10px_20px_-5px_rgba(99,102,241,0.4)]'
+                        : 'text-white/40 hover:text-white/60 hover:bg-white/5'
+                        }`}
+                >
+                    <Mail className="w-4 h-4" />
+                    Xabarlar
+                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-md ${activeTab === 'messages' ? 'bg-white/20 text-white' : 'bg-white/10 text-white/30'
+                        }`}>{allMessages?.length || 0}</span>
+                </button>
             </nav>
 
             {/* ── OVERVIEW TAB ── */}
@@ -602,8 +623,8 @@ function AdminDashboardInner() {
                                             </td>
                                             <td className="px-6 py-5 text-center">
                                                 <div className="flex flex-col items-center">
-                                                    <p className="text-xs font-bold text-white/60">{u.createdBy?.name || 'User'}</p>
-                                                    <p className="text-[10px] text-white/20">{u.createdBy?.email || 'N/A'}</p>
+                                                    <p className="text-xs font-bold text-white/60">{u.creator?.name || u.creatorName || 'User'}</p>
+                                                    <p className="text-[10px] text-white/20">{u.creator?.email || 'N/A'}</p>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-5">
@@ -1271,6 +1292,65 @@ function AdminDashboardInner() {
                     </div>
                 </div>
             )}
+
+{/* ── MESSAGES TAB ── */}
+{activeTab === 'messages' as any && (
+    <div className="flex flex-col gap-8">
+        <div className="flex items-center justify-between">
+            <div>
+                <h2 className="text-xl font-black text-white uppercase tracking-tight">Xabarlar tarixi</h2>
+                <p className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mt-1">
+                    O'qituvchilar orasidagi barcha yozishmalar (48 soat)
+                </p>
+            </div>
+        </div>
+
+        <div className="glass-card overflow-hidden w-full">
+            <div className="overflow-x-auto custom-scrollbar min-w-0 w-full">
+                <table className="w-full text-left border-collapse whitespace-nowrap sm:whitespace-normal">
+                    <thead>
+                        <tr className="bg-white/[0.03] text-[10px] font-black text-white/40 uppercase tracking-[0.2em] border-b border-white/5">
+                            <th className="px-8 py-5">Kimdan</th>
+                            <th className="px-6 py-5">Kimga</th>
+                            <th className="px-6 py-5 w-[40%]">Xabar</th>
+                            <th className="px-6 py-5 text-right">Vaqt</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                        {allMessages?.map((msg: any) => (
+                            <tr key={msg._id} className="hover:bg-white/[0.02] transition-colors">
+                                <td className="px-8 py-5">
+                                    <p className="text-sm font-black text-white">{msg.senderId?.name || 'Noma\'lum'}</p>
+                                    <p className="text-[10px] text-white/30">{msg.senderId?.email}</p>
+                                </td>
+                                <td className="px-6 py-5">
+                                    <p className="text-sm font-black text-white">{msg.receiverId?.name || 'Noma\'lum'}</p>
+                                    <p className="text-[10px] text-white/30">{msg.receiverId?.email}</p>
+                                </td>
+                                <td className="px-6 py-5">
+                                    <p className="text-xs text-white/70 whitespace-normal break-words max-w-lg">{msg.message}</p>
+                                </td>
+                                <td className="px-6 py-5 text-right">
+                                    <p className="text-[10px] font-black text-white/40 uppercase tracking-widest">{new Date(msg.createdAt).toLocaleString()}</p>
+                                </td>
+                            </tr>
+                        ))}
+                        {(!allMessages || allMessages.length === 0) && (
+                            <tr>
+                                <td colSpan={4} className="px-8 py-24 text-center">
+                                    <div className="flex flex-col items-center gap-4 opacity-10">
+                                        <Mail className="w-16 h-16" />
+                                        <p className="text-xl font-black uppercase tracking-widest">Xabarlar yo'q</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+)}
         </div >
     );
 }

@@ -18,7 +18,28 @@ export async function GET() {
             .limit(20)
             .lean();
 
-        return NextResponse.json(notifications);
+        const messages = await (await import('@/models/TeacherMessage')).default.find({ receiverId: user.id })
+            .populate('senderId', 'name')
+            .sort({ createdAt: -1 })
+            .limit(20)
+            .lean();
+
+        const mergedMessages = messages.map((m: any) => ({
+            _id: m._id,
+            type: 'MESSAGE',
+            title: `Xabar: ${m.senderId?.name || 'Noma\'lum'}`,
+            message: m.message,
+            isRead: m.isRead,
+            createdAt: m.createdAt,
+            studentName: m.senderId?.name || 'Noma\'lum', // mapping for UI compatibility
+            unitTitle: 'Shaxsiy xabar' // mapping for UI compatibility
+        }));
+
+        const merged = [...notifications, ...mergedMessages]
+            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+            .slice(0, 20);
+
+        return NextResponse.json(merged);
     } catch (e: any) {
         return NextResponse.json({ message: 'Error fetching notifications', error: e.message }, { status: 500 });
     }
@@ -36,6 +57,11 @@ export async function PUT(req: Request) {
         // Mark all as read
         await TeacherNotification.updateMany(
             { teacherId: user.id, isRead: false },
+            { $set: { isRead: true } }
+        );
+
+        await (await import('@/models/TeacherMessage')).default.updateMany(
+            { receiverId: user.id, isRead: false },
             { $set: { isRead: true } }
         );
 
