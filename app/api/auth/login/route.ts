@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import User from '@/models/User';
+import StudentProfile from '@/models/StudentProfile';
+import TeacherProfile from '@/models/TeacherProfile';
 import bcrypt from 'bcryptjs';
 import { SignJWT } from 'jose';
 import { checkRateLimit, incrementFailedAttempt, resetRateLimit } from '@/lib/rateLimiter';
@@ -114,11 +116,9 @@ export async function POST(req: Request) {
         let teacherCode = user.teacherCode;
 
         if (user.role === 'student') {
-            const StudentProfile = (await import('@/models/StudentProfile')).default;
             const profile = await StudentProfile.findOne({ userId: user._id });
             if (profile) teacherId = profile.teacherId?.toString();
         } else if (user.role === 'teacher') {
-            const TeacherProfile = (await import('@/models/TeacherProfile')).default;
             const profile = await TeacherProfile.findOne({ userId: user._id });
             if (profile) teacherCode = profile.teacherCode;
         }
@@ -168,9 +168,9 @@ export async function POST(req: Request) {
         return response;
 
     } catch (error: any) {
-        console.error('[AUTH_LOGIN_ERROR]', error);
+        console.error('[AUTH_LOGIN_ERROR_STACK]', error.stack || error);
         return NextResponse.json(
-            { message: 'Internal server error' },
+            { message: 'Internal server error: ' + (error.message || 'Unknown') },
             { status: 500 }
         );
     }
