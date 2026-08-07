@@ -43,7 +43,7 @@ interface ActiveSessionItem {
   };
 }
 
-interface CertificateData {
+interface GameCertificateData {
   certId: string;
   studentName: string;
   groupName: string;
