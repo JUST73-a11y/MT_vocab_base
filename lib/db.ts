@@ -64,6 +64,7 @@ async function dbConnect() {
             minPoolSize: 5,   // Keep pool ready
             retryWrites: true,
             connectTimeoutMS: 10000,
+            family: 4, // Force IPv4 (Fixes SSL alert number 80 in Node 18+)
         };
 
         console.log('[DB] Initializing new MongoDB connection...');
