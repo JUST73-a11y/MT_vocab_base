@@ -16,7 +16,9 @@ export default function SpellingGame({ word, onCorrect, onWrong, speak, isCorrec
     if (hasSubmitted || !inputValue.trim()) return;
     setHasSubmitted(true);
 
-    if (inputValue.trim().toLowerCase() === word.englishWord.toLowerCase()) {
+    const normalize = (s: string) => s.trim().toLowerCase().replace(/['’‘]/g, "'").replace(/\s+/g, ' ');
+
+    if (normalize(inputValue) === normalize(word.englishWord)) {
       onCorrect();
     } else {
       onWrong();
