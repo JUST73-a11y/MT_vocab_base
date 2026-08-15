@@ -152,31 +152,36 @@ export default function UnitDetailPage() {
                 // If translation is still missing, pull from next lines
                 if (!translation && i + 1 < rawLines.length) {
                      if (!phonetic) {
-                          // Could be 3-line format. Count elements until next numbered bullet or end.
+                          let isNumberedList = false;
                           let nextNumIndex = -1;
                           for(let j = i + 1; j < rawLines.length; j++) {
                                if (/^\d+[\.\-\)]/.test(rawLines[j])) {
                                    nextNumIndex = j;
+                                   isNumberedList = true;
                                    break;
                                }
                           }
-                          const linesUntilNext = nextNumIndex !== -1 ? nextNumIndex - i : rawLines.length - i;
                           
-                          if (linesUntilNext === 3) {
-                               if (rawLines[i+2].toLowerCase().startsWith('e.g.')) {
-                                   translation = rawLines[i+1];
-                                   example = rawLines[i+2].replace(/^e\.g\.\s*/i, '').trim();
-                                   i += 2;
+                          if (isNumberedList) {
+                               const linesUntilNext = nextNumIndex - i;
+                               if (linesUntilNext === 3) {
+                                    if (rawLines[i+2].toLowerCase().startsWith('e.g.')) {
+                                        translation = rawLines[i+1];
+                                        example = rawLines[i+2].replace(/^e\.g\.\s*/i, '').trim();
+                                        i += 2;
+                                    } else {
+                                        phonetic = rawLines[i+1];
+                                        translation = rawLines[i+2];
+                                        i += 2;
+                                    }
                                } else {
-                                   phonetic = rawLines[i+1];
-                                   translation = rawLines[i+2];
-                                   i += 2;
+                                    translation = rawLines[i+1];
+                                    i += 1;
                                }
-                          } else if (linesUntilNext === 2) {
-                               translation = rawLines[i+1];
-                               i += 1;
-                          } else if (linesUntilNext > 3) {
-                               if (linesUntilNext % 3 === 0) {
+                          } else {
+                               // No numbered list. Assume alternating 2-line (Word -> Translation)
+                               // Check if next line happens to be phonetic (in brackets)
+                               if (i + 2 < rawLines.length && (rawLines[i+1].startsWith('[') || rawLines[i+1].startsWith('/'))) {
                                     phonetic = rawLines[i+1];
                                     translation = rawLines[i+2];
                                     i += 2;
@@ -184,9 +189,6 @@ export default function UnitDetailPage() {
                                     translation = rawLines[i+1];
                                     i += 1;
                                }
-                          } else {
-                               translation = rawLines[i+1];
-                               i += 1;
                           }
                      } else {
                           // Phonetic is satisfied, next line is translation
