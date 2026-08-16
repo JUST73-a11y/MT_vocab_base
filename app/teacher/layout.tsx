@@ -5,9 +5,9 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { BookOpen, Settings, LogOut, LayoutDashboard, Menu, X, Share2, Play, Users, UsersRound, Gamepad2, Bell, Mail, Send } from 'lucide-react';
+import { BookOpen, Settings, LogOut, LayoutDashboard, Menu, X, Share2, Play, Users, UsersRound, Gamepad2, Bell, Mail, Send, Palette } from 'lucide-react';
 import { TeacherThemeProvider, useTeacherTheme } from '@/lib/teacherTheme';
-import ThemeToggle from '@/components/teacher/ThemeToggle';
+import { TeacherThemeProvider as NewTeacherThemeProvider } from '@/lib/theme/TeacherThemeContext';
 import MessagesModal from '@/components/teacher/MessagesModal';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -113,7 +113,7 @@ function TeacherLayoutInner({ children }: { children: React.ReactNode }) {
         { name: 'Shared', href: '/teacher/shared', icon: Share2 },
         { name: 'Mashq', href: '/teacher/random', icon: Play },
         { name: 'Lug\'at O\'yini', href: '/teacher/vocab-game', icon: Gamepad2 },
-        { name: 'Settings', href: '/teacher/settings', icon: Settings },
+        { name: 'Dizayn', href: '/teacher/theme', icon: Palette },
     ];
 
     if (loading || !user || (user.role !== 'teacher' && user.role !== 'admin')) {
@@ -155,35 +155,50 @@ function TeacherLayoutInner({ children }: { children: React.ReactNode }) {
             className={`min-h-[100svh] flex flex-col items-center font-sans relative overflow-x-hidden ${config.bodyClass}`}
             style={{ '--tt-glow': config.accentGlow } as React.CSSProperties}
         >
-            {/* ── FULL-PAGE BACKGROUND ── */}
+            {/* ── FULL-PAGE BACKGROUND (with blur & custom theme support) ── */}
             <div
+                id="teacher-theme-bg"
                 style={{
                     position: 'fixed',
-                    inset: 0,
+                    top: '-30px',
+                    left: '-30px',
+                    right: '-30px',
+                    bottom: '-30px',
                     zIndex: 0,
-                    backgroundImage: `url(${config.bgImage})`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
+                    backgroundImage: `var(--theme-bg-image, url(${config.bgImage}))`,
+                    backgroundColor: 'var(--theme-bg-color, #0a1428)',
+                    backgroundPosition: 'var(--theme-bg-pos, center)',
+                    backgroundSize: 'var(--theme-bg-size, cover)',
                     backgroundRepeat: 'no-repeat',
-                    transition: 'background-image 0.6s ease',
+                    filter: 'var(--theme-bg-blur, none)',
+                    transform: 'translate3d(0, 0, 0)',
+                    willChange: 'filter',
+                    transition: 'background-image 0.4s ease, filter 0.3s ease',
                 }}
             />
             {/* Overlay on top of bg image */}
             <div
+                id="teacher-theme-overlay"
                 style={{
                     position: 'fixed',
                     inset: 0,
                     zIndex: 1,
-                    transition: 'background 0.5s ease',
-                    ...config.overlayStyle,
+                    backgroundColor: 'var(--theme-bg-overlay-color, rgba(10,20,40,0.55))',
+                    backgroundImage: 'var(--theme-bg-overlay, none)',
+                    pointerEvents: 'none',
+                    transition: 'background-color 0.4s ease',
                 }}
             />
 
             {/* ── TOP NAV ── */}
             <nav
                 id="teacher-nav"
-                className="sticky top-0 w-full z-40"
+                className="sticky top-0 w-full z-40 mb-8 md:mb-12"
                 style={{
+                    background: 'var(--theme-nav-bg, rgba(10, 18, 35, 0.65))',
+                    backdropFilter: 'var(--theme-nav-blur, blur(20px))',
+                    WebkitBackdropFilter: 'var(--theme-nav-blur, blur(20px))',
+                    borderBottom: 'var(--theme-nav-border, 1px solid rgba(255,255,255,0.10))',
                     transition: 'all 0.4s ease',
                     ...config.navStyle,
                 }}
@@ -336,9 +351,6 @@ function TeacherLayoutInner({ children }: { children: React.ReactNode }) {
                                 </div>
                             </div>
 
-                            {/* 🎨 Theme Toggle */}
-                            <ThemeToggle />
-
                             <div className="hidden md:flex items-center gap-3 md:gap-4 pl-3 md:pl-4 border-l" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
                                 <Link href={user?.role === 'admin' ? '/admin/dashboard' : '/teacher/settings'} className="flex items-center gap-3 group cursor-pointer">
                                     <div className="hidden md:block text-right">
@@ -384,12 +396,10 @@ function TeacherLayoutInner({ children }: { children: React.ReactNode }) {
                     <div
                         className="absolute top-0 left-0 bottom-0 w-[80vw] max-w-[320px] flex flex-col pt-6 font-sans shadow-2xl"
                         style={{
-                            background: theme === 'kids'
-                                ? 'rgba(255,252,240,0.97)'
-                                : theme === 'teen'
-                                    ? 'rgba(15,8,30,0.97)'
-                                    : 'rgba(10,18,35,0.97)',
-                            borderRight: `2px solid ${config.accentColor}40`,
+                            background: 'var(--theme-nav-bg, rgba(10, 18, 35, 0.95))',
+                            backdropFilter: 'var(--theme-nav-blur, blur(24px))',
+                            WebkitBackdropFilter: 'var(--theme-nav-blur, blur(24px))',
+                            borderRight: `1px solid var(--theme-border, ${config.accentColor}40)`,
                         }}
                     >
                         <div className="px-6 mb-8 flex items-center justify-between">
@@ -420,14 +430,6 @@ function TeacherLayoutInner({ children }: { children: React.ReactNode }) {
                             >
                                 <X className="w-5 h-5" />
                             </button>
-                        </div>
-
-                        {/* Mobile Theme Toggle */}
-                        <div className="px-4 mb-4">
-                            <p className="text-[10px] font-black uppercase tracking-widest mb-2" style={{ color: navTextFaint }}>
-                                Auditoriya
-                            </p>
-                            <ThemeToggle />
                         </div>
 
                         <div className="flex-1 overflow-y-auto px-4 space-y-2">
@@ -597,7 +599,7 @@ function TeacherLayoutInner({ children }: { children: React.ReactNode }) {
             )}
 
             {/* ── MAIN CONTENT ── */}
-            <main className="w-[95%] lg:w-[80%] max-w-[1600px] mx-auto relative z-10 w-full">
+            <main className="w-[95%] lg:w-[80%] max-w-[1600px] mx-auto relative z-10 w-full pt-6 md:pt-8 pb-16">
                 {children}
             </main>
         </div>
@@ -607,8 +609,10 @@ function TeacherLayoutInner({ children }: { children: React.ReactNode }) {
 // ── Outer wrapper provides the context ───────────────────────────────────────
 export default function TeacherLayout({ children }: { children: React.ReactNode }) {
     return (
-        <TeacherThemeProvider>
-            <TeacherLayoutInner>{children}</TeacherLayoutInner>
-        </TeacherThemeProvider>
+        <NewTeacherThemeProvider>
+            <TeacherThemeProvider>
+                <TeacherLayoutInner>{children}</TeacherLayoutInner>
+            </TeacherThemeProvider>
+        </NewTeacherThemeProvider>
     );
 }

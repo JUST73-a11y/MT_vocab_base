@@ -316,7 +316,15 @@ export default function TeacherStudentsPage() {
         <div className="page-container flex flex-col gap-8 animate-fade-in">
 
             {/* ── Header ── */}
-            <div className="page-header flex flex-col md:flex-row items-start md:items-center justify-between gap-6 p-6 rounded-2xl bg-[#0a1226]/60 backdrop-blur-xl border border-white/10 shadow-2xl">
+            <div className="page-header flex flex-col md:flex-row items-start md:items-center justify-between gap-6 p-6 md:p-8"
+                style={{
+                    background: 'var(--theme-card-bg, rgba(15,20,35,0.45))',
+                    backdropFilter: 'var(--theme-card-blur, blur(16px))',
+                    WebkitBackdropFilter: 'var(--theme-card-blur, blur(16px))',
+                    border: '1px solid var(--theme-border, rgba(255,255,255,0.12))',
+                    borderRadius: 'var(--theme-radius-card, 20px)',
+                    boxShadow: 'var(--theme-shadow-card, none)',
+                }}>
                 <div>
                     <h1 className="page-title text-white drop-shadow-md">Studentlar</h1>
                     <div className="flex items-center gap-2 mt-2">
@@ -324,7 +332,12 @@ export default function TeacherStudentsPage() {
                         {unitId && (
                             <>
                                 <span className="text-white/30">•</span>
-                                <div className="flex items-center gap-2 bg-indigo-500/20 text-indigo-300 px-3 py-1 rounded-lg text-xs font-bold border border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.2)] animate-fade-in">
+                                <div className="flex items-center gap-2 px-3 py-1 rounded-lg text-xs font-bold"
+                                    style={{
+                                        background: 'rgba(255,255,255,0.06)',
+                                        border: '1px solid var(--theme-border, rgba(255,255,255,0.15))',
+                                        color: 'var(--theme-primary, #a5b4fc)',
+                                    }}>
                                     <span>Unit bo'yicha filtrlangan</span>
                                     <button onClick={handleClearFilter} className="hover:text-white transition-colors ml-1" title="Filtrni tozalash">
                                         <XCircle className="w-4 h-4" />
@@ -343,8 +356,14 @@ export default function TeacherStudentsPage() {
                             placeholder="Ism yoki email..."
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
-                            className="w-full rounded-2xl bg-white/10 border border-white/20 text-white placeholder-white/40 font-semibold focus:border-indigo-500 focus:bg-white/15 outline-none transition-all shadow-inner"
-                            style={{padding: '0.875rem 1rem 0.875rem 2.75rem', height: '48px'}}
+                            className="w-full text-white placeholder-white/40 font-semibold outline-none transition-all"
+                            style={{
+                                padding: '0.875rem 1rem 0.875rem 2.75rem',
+                                height: '48px',
+                                borderRadius: 'var(--theme-radius-btn, 14px)',
+                                background: 'rgba(255,255,255,0.06)',
+                                border: '1px solid var(--theme-border, rgba(255,255,255,0.15))',
+                            }}
                         />
                     </div>
                     {/* Create Student */}
@@ -355,10 +374,15 @@ export default function TeacherStudentsPage() {
                         <UserPlus style={{width:'16px',height:'16px'}} /> Yangi Talaba
                     </button>
                     {/* Teacher code */}
-                    <div className="flex items-center gap-2 px-4 rounded-xl"
-                        style={{height:'var(--btn-md)',background:'rgba(255,255,255,0.04)',border:'1px solid var(--border-default)'}}>
+                    <div className="flex items-center gap-2 px-4"
+                        style={{
+                            height:'var(--btn-md)',
+                            background:'rgba(255,255,255,0.04)',
+                            border:'1px solid var(--theme-border, var(--border-default))',
+                            borderRadius:'var(--theme-radius-btn, 12px)'
+                        }}>
                         <span className="text-xs font-bold" style={{color:'var(--text-muted)'}}>Kod:</span>
-                        <code className="text-sm font-black" style={{color:'var(--color-primary)'}}>{user.teacherCode || '—'}</code>
+                        <code className="text-sm font-black" style={{color:'var(--theme-primary, #6366f1)'}}>{user.teacherCode || '—'}</code>
                         <button onClick={handleCopyCode} className="transition-colors" style={{color:'var(--text-muted)'}}>
                             {copied ? <Check style={{width:'16px',height:'16px',color:'var(--color-accent)'}} /> : <Copy style={{width:'16px',height:'16px'}} />}
                         </button>
@@ -372,7 +396,16 @@ export default function TeacherStudentsPage() {
                     <Loader2 className="w-8 h-8 animate-spin" style={{color:'var(--color-primary)'}} />
                 </div>
             ) : (
-                <div className="card" style={{padding:0,overflow:'hidden'}}>
+                <div style={{
+                    padding: 0,
+                    overflow: 'hidden',
+                    background: 'var(--theme-card-bg, rgba(15,20,35,0.45))',
+                    backdropFilter: 'var(--theme-card-blur, blur(16px))',
+                    WebkitBackdropFilter: 'var(--theme-card-blur, blur(16px))',
+                    border: '1px solid var(--theme-border, rgba(255,255,255,0.12))',
+                    borderRadius: 'var(--theme-radius-card, 20px)',
+                    boxShadow: 'var(--theme-shadow-card, none)',
+                }}>
                     <div style={{overflowX:'auto'}}>
                         <table className="data-table">
                             <thead>
@@ -398,8 +431,12 @@ export default function TeacherStudentsPage() {
                                     <tr key={student._id}>
                                         <td style={{paddingLeft:'24px',minWidth:'200px'}}>
                                             <div className="flex items-center gap-3">
-                                                <div className="w-9 h-9 rounded-full flex items-center justify-center font-black text-sm flex-shrink-0"
-                                                    style={{background:'linear-gradient(135deg,#6366f1,#a855f7)',color:'#fff'}}>
+                                                <div className="w-9 h-9 flex items-center justify-center font-black text-sm flex-shrink-0"
+                                                    style={{
+                                                        borderRadius: 'var(--theme-radius-btn, 9999px)',
+                                                        background:'var(--theme-primary, linear-gradient(135deg,#6366f1,#a855f7))',
+                                                        color:'#fff'
+                                                    }}>
                                                     {student.name.charAt(0).toUpperCase()}
                                                 </div>
                                                 <div style={{minWidth:0}}>

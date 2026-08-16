@@ -108,22 +108,30 @@ export default function StudentStatsPage() {
                     <p className="text-sm text-white/40 mt-1">Quiz natijalari va MT Coin balansi</p>
                 </div>
                 <button onClick={() => fetchStats(range)}
-                    className="p-3 rounded-2xl text-white/40 hover:text-white transition-colors"
-                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                    className="p-3 text-white/40 hover:text-white transition-all btn-hover-glow"
+                    style={{
+                        borderRadius: 'var(--theme-radius-btn, 12px)',
+                        background: 'var(--theme-card-bg, rgba(255,255,255,0.05))',
+                        border: '1px solid var(--theme-border, rgba(255,255,255,0.08))'
+                    }}>
                     <RefreshCw className="w-5 h-5" />
                 </button>
             </div>
 
             {/* MT Coin Balance Banner */}
-            <div className="rounded-3xl p-6 flex items-center justify-between"
-                style={{ background: 'linear-gradient(135deg,rgba(234,179,8,0.15),rgba(234,179,8,0.05))', border: '1px solid rgba(234,179,8,0.25)' }}>
+            <div className="glass-card p-6 flex items-center justify-between relative overflow-hidden"
+                style={{ borderColor: 'rgba(234,179,8,0.3)' }}>
                 <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-2xl flex items-center justify-center"
-                        style={{ background: 'rgba(234,179,8,0.2)', border: '1px solid rgba(234,179,8,0.4)' }}>
+                    <div className="w-14 h-14 flex items-center justify-center"
+                        style={{
+                            borderRadius: 'var(--theme-radius-btn, 16px)',
+                            background: 'rgba(234,179,8,0.15)',
+                            border: '1px solid rgba(234,179,8,0.35)'
+                        }}>
                         <Coins className="w-7 h-7 text-yellow-400" />
                     </div>
                     <div>
-                        <p className="text-xs font-black text-yellow-400/70 uppercase tracking-widest">MT Coin Balansi</p>
+                        <p className="text-xs font-black text-yellow-400/80 uppercase tracking-widest">MT Coin Balansi</p>
                         <p className="text-4xl font-black text-yellow-300">
                             {loading ? '—' : wallet?.balance ?? 0}
                             <span className="text-lg text-yellow-400/50 ml-2">MT Coin</span>
@@ -149,14 +157,15 @@ export default function StudentStatsPage() {
             </div>
 
             {/* Range Selector */}
-            <div className="flex gap-2 p-1 rounded-2xl" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <div className="glass-card flex gap-2 p-1.5" style={{ borderRadius: 'var(--theme-radius-card, 16px)' }}>
                 {RANGES.map(r => (
                     <button key={r.value} onClick={() => setRange(r.value)}
-                        className="flex-1 py-2.5 rounded-xl text-sm font-black transition-all"
+                        className="flex-1 py-2.5 text-sm font-black transition-all"
                         style={{
-                            background: range === r.value ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : 'transparent',
-                            color: range === r.value ? '#fff' : 'rgba(255,255,255,0.35)',
-                            boxShadow: range === r.value ? '0 4px 15px rgba(99,102,241,0.3)' : 'none',
+                            borderRadius: 'var(--theme-radius-btn, 10px)',
+                            background: range === r.value ? 'var(--theme-btn-bg, var(--theme-primary, #6366f1))' : 'transparent',
+                            color: range === r.value ? 'var(--theme-btn-text, #ffffff)' : 'var(--theme-text-muted, rgba(255,255,255,0.4))',
+                            boxShadow: range === r.value ? 'var(--theme-shadow-btn)' : 'none',
                         }}>
                         {r.label}
                     </button>
@@ -165,11 +174,11 @@ export default function StudentStatsPage() {
 
             {/* Stats Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <StatCard icon={<BookOpen className="w-5 h-5 text-indigo-400" />} label="Ko'rilgan so'zlar" color="#6366f1"
+                <StatCard icon={<BookOpen className="w-5 h-5 text-indigo-400" />} label="Ko'rilgan so'zlar" color="var(--theme-primary, #6366f1)"
                     value={loading ? '—' : stats?.wordsSeen ?? 0} />
-                <StatCard icon={<CheckCircle2 className="w-5 h-5 text-emerald-400" />} label="To'g'ri javoblar" color="#10b981"
+                <StatCard icon={<CheckCircle2 className="w-5 h-5 text-emerald-400" />} label="To'g'ri javoblar" color="var(--theme-accent, #10b981)"
                     value={loading ? '—' : stats?.correct ?? 0} />
-                <StatCard icon={<TrendingUp className="w-5 h-5 text-cyan-400" />} label="Aniqlik" color="#06b6d4"
+                <StatCard icon={<TrendingUp className="w-5 h-5 text-cyan-400" />} label="Aniqlik" color="var(--theme-secondary, #06b6d4)"
                     value={loading ? '—' : `${stats?.accuracy ?? 0}%`} />
                 <StatCard icon={<LayoutGrid className="w-5 h-5 text-purple-400" />} label="Unitlar" color="#a855f7"
                     value={loading ? '—' : stats?.unitsPracticed ?? 0} sub="mashq qilingan" />

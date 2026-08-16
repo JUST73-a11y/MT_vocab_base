@@ -397,10 +397,18 @@ export default function TeacherGroupsPage() {
         <div className="page-container flex flex-col gap-8 animate-fade-in">
 
             {/* ── Groups Header / Actions ── */}
-            <div className="page-header">
+            <div className="page-header flex flex-col md:flex-row items-start md:items-center justify-between gap-6 p-6 md:p-8"
+                style={{
+                    background: 'var(--theme-card-bg, rgba(15,20,35,0.45))',
+                    backdropFilter: 'var(--theme-card-blur, blur(16px))',
+                    WebkitBackdropFilter: 'var(--theme-card-blur, blur(16px))',
+                    border: '1px solid var(--theme-border, rgba(255,255,255,0.12))',
+                    borderRadius: 'var(--theme-radius-card, 20px)',
+                    boxShadow: 'var(--theme-shadow-card, none)',
+                }}>
                 <div>
-                    <h1 className="page-title">Guruhlar</h1>
-                    <p className="page-subtitle">Barcha guruhlarni boshqaring</p>
+                    <h1 className="page-title text-white drop-shadow-md">Guruhlar</h1>
+                    <p className="page-subtitle text-white/70 font-medium">Barcha guruhlarni boshqaring</p>
                 </div>
                 <button onClick={() => setShowCreateModal(true)}
                     className="btn-base btn-primary">
@@ -423,7 +431,16 @@ export default function TeacherGroupsPage() {
                     </button>
                 </div>
             ) : (
-                <div className="card" style={{padding:0,overflow:'hidden'}}>
+                <div style={{
+                    padding: 0,
+                    overflow: 'hidden',
+                    background: 'var(--theme-card-bg, rgba(15,20,35,0.45))',
+                    backdropFilter: 'var(--theme-card-blur, blur(16px))',
+                    WebkitBackdropFilter: 'var(--theme-card-blur, blur(16px))',
+                    border: '1px solid var(--theme-border, rgba(255,255,255,0.12))',
+                    borderRadius: 'var(--theme-radius-card, 20px)',
+                    boxShadow: 'var(--theme-shadow-card, none)',
+                }}>
                     <div style={{overflowX:'auto'}}>
                         <table className="data-table">
                             <thead>

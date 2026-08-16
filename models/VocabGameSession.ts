@@ -16,7 +16,7 @@ const VocabGameSessionSchema = new Schema({
     studentOrder:     [{ type: Schema.Types.ObjectId, ref: 'User' }], // randomized list
     currentStudentIndex: { type: Number, default: 0 },
     notes:            { type: String, default: '' },
-    createdAt:        { type: Date, default: Date.now },
+    createdAt:        { type: Date, default: Date.now, expires: 60 * 60 * 24 * 90 }, // Auto-delete after 90 days (3 months)
     endedAt:          { type: Date },
 });
 

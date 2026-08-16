@@ -522,11 +522,10 @@ export default function StudentQuizPage() {
                     {overallStats && (
                         <div className="grid grid-cols-2 gap-3">
                             {[
-                                { label: "Bugun to'g'ri", value: overallStats.today.correct, sub: `${overallStats.today.answered} so'z ko'rildi`, icon: Zap, color: 'rgba(99,102,241,0.15)', tc: '#818cf8' },
-                                { label: "Jami to'g'ri", value: overallStats.total.correct, sub: `${overallStats.total.answered} so'z ko'rildi`, icon: Target, color: 'rgba(16,185,129,0.15)', tc: '#34d399' },
+                                { label: "Bugun to'g'ri", value: overallStats.today.correct, sub: `${overallStats.today.answered} so'z ko'rildi`, icon: Zap, tc: 'var(--theme-primary, #818cf8)' },
+                                { label: "Jami to'g'ri", value: overallStats.total.correct, sub: `${overallStats.total.answered} so'z ko'rildi`, icon: Target, tc: 'var(--theme-accent, #34d399)' },
                             ].map(s => (
-                                <div key={s.label} className="rounded-2xl p-4 flex items-center gap-3"
-                                    style={{ background: s.color, border: `1px solid ${s.tc}30` }}>
+                                <div key={s.label} className="glass-card p-4 flex items-center gap-3">
                                     <s.icon className="w-5 h-5 shrink-0" style={{ color: s.tc }} />
                                     <div>
                                         <p className="text-2xl font-black text-white">{s.value}</p>
@@ -541,34 +540,34 @@ export default function StudentQuizPage() {
                     {/* Settings row */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {/* Question count selector */}
-                        <div className="rounded-2xl p-4 flex flex-col gap-3"
-                            style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-white/30 flex items-center gap-1.5">
+                        <div className="glass-card p-4 flex flex-col gap-3">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-white/40 flex items-center gap-1.5">
                                 <Target className="w-3.5 h-3.5" /> Savollar soni
                             </p>
-                            <div className="flex bg-white/5 rounded-xl p-1 gap-1 overflow-x-auto no-scrollbar">
+                            <div className="flex bg-white/5 rounded-xl p-1 gap-1 overflow-x-auto no-scrollbar" style={{ borderRadius: 'var(--theme-radius-btn, 12px)' }}>
                                 {[10, 15, 20, 30, 50, 100].map(n => (
                                     <button key={n} onClick={() => setPickQuestionCount(n)}
-                                        className="flex-1 min-w-[32px] py-2 rounded-lg text-xs font-black transition-all"
+                                        className="flex-1 min-w-[32px] py-2 text-xs font-black transition-all"
                                         style={pickQuestionCount === n
-                                            ? { background: 'rgba(99,102,241,0.7)', color: '#fff' }
-                                            : { color: 'rgba(255,255,255,0.3)' }}>
+                                            ? { background: 'var(--theme-btn-bg, var(--theme-primary, #6366f1))', color: 'var(--theme-btn-text, #ffffff)', borderRadius: 'var(--theme-radius-btn, 8px)', boxShadow: 'var(--theme-shadow-btn)' }
+                                            : { color: 'rgba(255,255,255,0.4)', borderRadius: 'var(--theme-radius-btn, 8px)' }}>
                                         {n}
                                     </button>
                                 ))}
                             </div>
                         </div>
 
-                        <div className="rounded-2xl p-4 flex flex-col gap-3"
-                            style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-white/30 flex items-center gap-1.5">
+                        <div className="glass-card p-4 flex flex-col gap-3">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-white/40 flex items-center gap-1.5">
                                 <Languages className="w-3.5 h-3.5" /> Savol tili
                             </p>
-                            <div className="flex bg-white/5 rounded-xl p-1 gap-1">
+                            <div className="flex bg-white/5 rounded-xl p-1 gap-1" style={{ borderRadius: 'var(--theme-radius-btn, 12px)' }}>
                                 {(['EN', 'UZ'] as QuizMode[]).map(m => (
                                     <button key={m} onClick={() => setPickMode(m)}
-                                        className="flex-1 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all"
-                                        style={pickMode === m ? { background: 'rgba(99,102,241,0.7)', color: '#fff' } : { color: 'rgba(255,255,255,0.3)' }}>
+                                        className="flex-1 py-2 text-xs font-black uppercase tracking-widest transition-all"
+                                        style={pickMode === m
+                                            ? { background: 'var(--theme-btn-bg, var(--theme-primary, #6366f1))', color: 'var(--theme-btn-text, #ffffff)', borderRadius: 'var(--theme-radius-btn, 8px)', boxShadow: 'var(--theme-shadow-btn)' }
+                                            : { color: 'rgba(255,255,255,0.4)', borderRadius: 'var(--theme-radius-btn, 8px)' }}>
                                         {m === 'EN' ? 'EN → UZ' : 'UZ → EN'}
                                     </button>
                                 ))}
@@ -577,8 +576,7 @@ export default function StudentQuizPage() {
                     </div>
 
                     {activeGroupSession && (
-                        <div className="rounded-2xl p-6 flex flex-col gap-4 animate-pulse-slow"
-                            style={{ background: activeGroupSession.status === 'PUBLISHED' ? 'rgba(16,185,129,0.1)' : 'rgba(99,102,241,0.1)', border: activeGroupSession.status === 'PUBLISHED' ? '1px solid rgba(16,185,129,0.3)' : '1px solid rgba(99,102,241,0.3)' }}>
+                        <div className="glass-card p-6 flex flex-col gap-4 animate-pulse-slow">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                     {activeGroupSession.status === 'PUBLISHED' ? <Megaphone className="w-5 h-5 text-emerald-400" /> : <Zap className="w-5 h-5 text-indigo-400 animate-pulse" />}
@@ -593,15 +591,14 @@ export default function StudentQuizPage() {
                                 </div>
                             </div>
                             <button onClick={() => startQuiz(activeGroupSession.id)}
-                                className={`w-full py-4 text-sm flex items-center justify-center gap-2 rounded-2xl font-black text-white transition-all hover:scale-[1.02] shadow-xl ${activeGroupSession.status === 'PUBLISHED' ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 shadow-emerald-500/20' : 'bg-gradient-to-r from-indigo-600 to-indigo-500 shadow-indigo-500/20'}`}>
+                                className="btn-primary w-full py-4 text-sm flex items-center justify-center gap-2 font-black">
                                 <Play className="w-4 h-4 fill-current" /> {activeGroupSession.status === 'PUBLISHED' ? 'BOSHLASH' : "QO'SHILISH"}
                             </button>
                         </div>
                     )}
 
                     {/* Unit picker */}
-                    <div className="rounded-2xl p-5 flex flex-col gap-4"
-                        style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                    <div className="glass-card p-5 flex flex-col gap-4">
                         <div className="flex items-center gap-3">
                             {viewingUnits && (
                                 <button onClick={() => { setViewingUnits(false); setActiveCategory(null); }}
@@ -636,21 +633,32 @@ export default function StudentQuizPage() {
                                             const selectedInCat = unitsInCat.filter(u => selectedUnitIds.has(u.id)).length;
                                             return (
                                                 <button key={cat} onClick={() => { setActiveCategory(cat); setViewingUnits(true); }}
-                                                    className="w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left"
-                                                    style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                                                    <div className="w-10 h-10 rounded-lg bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20 shrink-0">
-                                                        <FolderOpen className="w-5 h-5 text-indigo-400" />
+                                                    className="w-full flex items-center gap-3 p-3 transition-all text-left group"
+                                                    style={{
+                                                        borderRadius: 'var(--theme-radius-card, 12px)',
+                                                        background: 'var(--theme-card-bg, rgba(255,255,255,0.03))',
+                                                        border: '1px solid var(--theme-border, rgba(255,255,255,0.06))'
+                                                    }}>
+                                                    <div className="w-10 h-10 flex items-center justify-center shrink-0"
+                                                        style={{
+                                                            borderRadius: 'var(--theme-radius-btn, 8px)',
+                                                            background: 'rgba(255,255,255,0.06)',
+                                                            border: '1px solid var(--theme-border, rgba(255,255,255,0.1))',
+                                                            color: 'var(--theme-primary, #818cf8)'
+                                                        }}>
+                                                        <FolderOpen className="w-5 h-5" />
                                                     </div>
                                                     <div className="flex-1 min-w-0">
                                                         <p className="font-bold text-sm text-white truncate">{cat}</p>
                                                         <p className="text-[10px] text-white/30 truncate">{unitsInCat.length} bo'lim</p>
                                                     </div>
                                                     {selectedInCat > 0 ? (
-                                                        <div className="px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase">
+                                                        <div className="px-2.5 py-1 rounded-md text-[10px] font-black uppercase"
+                                                            style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)', color: '#34d399' }}>
                                                             {selectedInCat} ta
                                                         </div>
                                                     ) : (
-                                                        <ArrowRight className="w-4 h-4 text-white/20" />
+                                                        <ArrowRight className="w-4 h-4 text-white/20 group-hover:translate-x-1 transition-transform" />
                                                     )}
                                                 </button>
                                             );
@@ -676,8 +684,18 @@ export default function StudentQuizPage() {
                                                         else next.add(unit.id);
                                                         return next;
                                                     })}
-                                                        className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left border ${isSel ? 'bg-indigo-500/10 border-indigo-500/30' : 'bg-white/5 border-white/10 hover:border-white/20'}`}>
-                                                        <div className={`w-6 h-6 rounded-md flex items-center justify-center transition-all ${isSel ? 'bg-indigo-500 shadow-lg shadow-indigo-500/30' : 'bg-white/5 text-white/20'}`}>
+                                                        className="w-full flex items-center gap-3 p-3 transition-all text-left"
+                                                        style={{
+                                                            borderRadius: 'var(--theme-radius-card, 12px)',
+                                                            background: isSel ? 'rgba(99,102,241,0.15)' : 'var(--theme-card-bg, rgba(255,255,255,0.03))',
+                                                            border: `1px solid ${isSel ? 'var(--theme-primary, #6366f1)' : 'var(--theme-border, rgba(255,255,255,0.06))'}`
+                                                        }}>
+                                                        <div className="w-6 h-6 flex items-center justify-center transition-all"
+                                                            style={{
+                                                                borderRadius: 'var(--theme-radius-btn, 6px)',
+                                                                background: isSel ? 'var(--theme-btn-bg, var(--theme-primary, #6366f1))' : 'rgba(255,255,255,0.06)',
+                                                                boxShadow: isSel ? 'var(--theme-shadow-btn)' : 'none',
+                                                            }}>
                                                             {isSel && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
                                                         </div>
                                                         <div className="flex-1 min-w-0">
@@ -713,10 +731,18 @@ export default function StudentQuizPage() {
                                                 <button key={unit.id} onClick={() => setSelectedUnitIds(prev => {
                                                     const n = new Set(prev); n.has(unit.id) ? n.delete(unit.id) : n.add(unit.id); return n;
                                                 })}
-                                                    className="w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left"
-                                                    style={{ background: isSel ? 'rgba(99,102,241,0.12)' : 'rgba(255,255,255,0.03)', border: `1px solid ${isSel ? 'rgba(99,102,241,0.35)' : 'rgba(255,255,255,0.06)'}` }}>
-                                                    <div className="w-5 h-5 rounded-md flex items-center justify-center shrink-0 transition-all"
-                                                        style={{ background: isSel ? 'rgba(99,102,241,0.8)' : 'rgba(255,255,255,0.08)', border: `1px solid ${isSel ? 'transparent' : 'rgba(255,255,255,0.12)'}` }}>
+                                                    className="w-full flex items-center gap-3 p-3 transition-all text-left"
+                                                    style={{
+                                                        borderRadius: 'var(--theme-radius-card, 12px)',
+                                                        background: isSel ? 'rgba(99,102,241,0.15)' : 'var(--theme-card-bg, rgba(255,255,255,0.03))',
+                                                        border: `1px solid ${isSel ? 'var(--theme-primary, #6366f1)' : 'var(--theme-border, rgba(255,255,255,0.06))'}`
+                                                    }}>
+                                                    <div className="w-5 h-5 flex items-center justify-center shrink-0 transition-all"
+                                                        style={{
+                                                            borderRadius: 'var(--theme-radius-btn, 6px)',
+                                                            background: isSel ? 'var(--theme-btn-bg, var(--theme-primary, #6366f1))' : 'rgba(255,255,255,0.08)',
+                                                            border: `1px solid ${isSel ? 'transparent' : 'rgba(255,255,255,0.12)'}`
+                                                        }}>
                                                         {isSel && <CheckCircle2 className="w-3.5 h-3.5 text-white" />}
                                                     </div>
                                                     <div className="flex-1 min-w-0">
@@ -732,7 +758,7 @@ export default function StudentQuizPage() {
                     </div>
 
                     <button onClick={() => startQuiz()} disabled={starting || selectedUnitIds.size === 0}
-                        className="btn-premium py-4 text-base font-black flex items-center justify-center gap-3 disabled:opacity-40 disabled:cursor-not-allowed">
+                        className="btn-premium w-full py-4 text-base font-black flex items-center justify-center gap-3 disabled:opacity-40 disabled:cursor-not-allowed">
                         {starting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5" />}
                         Boshlash · {pickQuestionCount} savol · 5s
                     </button>

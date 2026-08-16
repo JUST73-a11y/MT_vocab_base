@@ -209,8 +209,15 @@ function UnitsGrid({
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.9 }}
-                        className={`glass-card group flex flex-col items-stretch overflow-hidden relative ${isSelected ? '!border-emerald-500/50 !bg-emerald-500/10 shadow-[0_0_30px_rgba(16,185,129,0.15)]' : '!bg-white/[0.02]'
-                            }`}
+                        className="group flex flex-col items-stretch overflow-hidden relative transition-all duration-300 hover:-translate-y-1.5 cursor-pointer"
+                        style={{
+                            background: isSelected ? 'rgba(16,185,129,0.15)' : 'var(--theme-card-bg, rgba(15,20,35,0.45))',
+                            backdropFilter: 'var(--theme-card-blur, blur(16px))',
+                            WebkitBackdropFilter: 'var(--theme-card-blur, blur(16px))',
+                            border: isSelected ? '1px solid rgba(16,185,129,0.5)' : '1px solid var(--theme-border, rgba(255,255,255,0.12))',
+                            borderRadius: 'var(--theme-radius-card, 16px)',
+                            boxShadow: isSelected ? '0 0 30px rgba(16,185,129,0.15)' : 'var(--theme-shadow-card, none)',
+                        }}
                         onClick={(e) => {
                             if (onToggleSelect) {
                                 onToggleSelect(unit.id, e as any);
@@ -231,8 +238,13 @@ function UnitsGrid({
 
                         <div className="p-5 sm:p-6 flex-1 flex flex-col">
                             <div className="flex items-start justify-between gap-4 mb-4 sm:mb-6">
-                                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center shadow-inner shrink-0 ${isSelected ? 'bg-emerald-500/20 text-emerald-400' : 'bg-indigo-500/20 text-indigo-400'
-                                    }`}>
+                                <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center shadow-inner shrink-0 transition-transform group-hover:scale-110"
+                                    style={{
+                                        borderRadius: 'var(--theme-radius-btn, 14px)',
+                                        background: isSelected ? 'rgba(16,185,129,0.2)' : 'rgba(255,255,255,0.06)',
+                                        border: isSelected ? '1px solid rgba(16,185,129,0.3)' : '1px solid var(--theme-border, rgba(255,255,255,0.15))',
+                                        color: isSelected ? '#34d399' : 'var(--theme-primary, #6366f1)',
+                                    }}>
                                     <BookOpen className="w-5 h-5 sm:w-6 sm:h-6" />
                                 </div>
                                 <div className="flex items-center gap-1 shrink-0 bg-black/50 p-1 rounded-xl backdrop-blur-md" onClick={e => e.stopPropagation()}>
@@ -760,19 +772,39 @@ export default function UnitsPage() {
     return (
         <div className="min-h-screen text-white flex flex-col mt-4">
             {/* ── Dashboard Explorer Header ── */}
-            <div className="glass-card mb-8 px-8 py-10 relative overflow-hidden group/header">
-                <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-indigo-500/5 rounded-full blur-[100px] -mr-48 -mt-48 transition-colors duration-700 pointer-events-none" />
+            <div className="mb-8 px-8 py-10 relative overflow-hidden group/header"
+                style={{
+                    background: 'var(--theme-card-bg, rgba(15,20,35,0.45))',
+                    backdropFilter: 'var(--theme-card-blur, blur(16px))',
+                    WebkitBackdropFilter: 'var(--theme-card-blur, blur(16px))',
+                    border: '1px solid var(--theme-border, rgba(255,255,255,0.12))',
+                    borderRadius: 'var(--theme-radius-card, 20px)',
+                    boxShadow: 'var(--theme-shadow-card, none)',
+                }}>
+                <div className="absolute top-0 right-0 w-[400px] h-[400px] rounded-full blur-[100px] -mr-48 -mt-48 transition-colors duration-700 pointer-events-none opacity-20"
+                    style={{ background: 'var(--theme-primary, #6366f1)' }} />
 
                 <div className="relative z-10 flex flex-col xl:flex-row xl:items-center justify-between gap-10">
                     <div className="flex items-center gap-6">
                         <Link href="/teacher/dashboard"
-                            className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-all active:scale-90 shadow-lg group/back">
+                            className="w-14 h-14 rounded-2xl flex items-center justify-center transition-all active:scale-90 shadow-lg group/back"
+                            style={{
+                                background: 'rgba(255,255,255,0.06)',
+                                border: '1px solid var(--theme-border, rgba(255,255,255,0.12))',
+                                borderRadius: 'var(--theme-radius-btn, 16px)',
+                            }}>
                             <ArrowLeft className="w-7 h-7 text-white/40 group-hover/back:text-white transition-colors" />
                         </Link>
                         <div>
                             <div className="flex items-center gap-4 mb-2">
                                 <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white uppercase tracking-tighter">O'quv Unitlari</h1>
-                                <div className="px-3 py-1.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-[10px] font-black text-indigo-400 uppercase tracking-widest">
+                                <div className="px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest"
+                                    style={{
+                                        background: 'rgba(255,255,255,0.06)',
+                                        border: '1px solid var(--theme-border, rgba(255,255,255,0.12))',
+                                        color: 'var(--theme-primary, #a5b4fc)',
+                                        borderRadius: 'var(--theme-radius-btn, 10px)',
+                                    }}>
                                     {units.length} Jami
                                 </div>
                             </div>
@@ -782,7 +814,8 @@ export default function UnitsPage() {
                                 <motion.button
                                     whileHover={{ x: 2 }}
                                     onClick={() => setCurrentPath([])}
-                                    className={`text-[12px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2 ${currentPath.length === 0 ? 'text-indigo-400' : 'text-white/20 hover:text-white/60'}`}
+                                    className="text-[12px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-2"
+                                    style={{ color: currentPath.length === 0 ? 'var(--theme-primary, #6366f1)' : 'rgba(255,255,255,0.3)' }}
                                 >
                                     <FolderOpen className="w-3.5 h-3.5" /> Asosiy
                                 </motion.button>
@@ -792,7 +825,8 @@ export default function UnitsPage() {
                                         <motion.button
                                             whileHover={{ x: 2 }}
                                             onClick={() => setCurrentPath(currentPath.slice(0, idx + 1))}
-                                            className={`text-[12px] font-black uppercase tracking-[0.2em] transition-all ${idx === currentPath.length - 1 ? 'text-indigo-400' : 'text-white/20 hover:text-white/60'}`}
+                                            className="text-[12px] font-black uppercase tracking-[0.2em] transition-all"
+                                            style={{ color: idx === currentPath.length - 1 ? 'var(--theme-primary, #6366f1)' : 'rgba(255,255,255,0.3)' }}
                                         >
                                             {p.name}
                                         </motion.button>
@@ -805,13 +839,18 @@ export default function UnitsPage() {
                     <div className="flex items-center gap-3 flex-wrap">
                         {/* Elegant Search */}
                         <div className="relative group/search flex-1 sm:w-72 lg:w-80">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20 group-focus-within/search:text-indigo-400 transition-colors" />
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/20 group-focus-within/search:text-white transition-colors" />
                             <input
                                 type="text"
                                 placeholder="Unit yoki kategoriya qidirish..."
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
                                 className="input-premium pl-12 h-14"
+                                style={{
+                                    borderRadius: 'var(--theme-radius-btn, 14px)',
+                                    background: 'rgba(255,255,255,0.06)',
+                                    border: '1px solid var(--theme-border, rgba(255,255,255,0.12))',
+                                }}
                             />
                             {search && (
                                 <button onClick={() => setSearch('')} className="absolute right-4 top-1/2 -translate-y-1/2 p-1 rounded-full bg-white/5 text-white/20 hover:text-white transition-all">
@@ -845,7 +884,15 @@ export default function UnitsPage() {
             <div className="flex-1 flex flex-col lg:flex-row gap-8 pb-20">
                 {/* ── Left Side: Nested Tree ── */}
                 <aside className="lg:w-80 shrink-0">
-                    <div className="glass-card p-6 flex flex-col gap-6 sticky top-28 bg-white/[0.01]">
+                    <div className="p-6 flex flex-col gap-6 sticky top-28"
+                        style={{
+                            background: 'var(--theme-card-bg, rgba(15,20,35,0.45))',
+                            backdropFilter: 'var(--theme-card-blur, blur(16px))',
+                            WebkitBackdropFilter: 'var(--theme-card-blur, blur(16px))',
+                            border: '1px solid var(--theme-border, rgba(255,255,255,0.12))',
+                            borderRadius: 'var(--theme-radius-card, 20px)',
+                            boxShadow: 'var(--theme-shadow-card, none)',
+                        }}>
                         <div className="flex items-center justify-between px-2">
                             <h3 className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em] flex items-center gap-2">
                                 <LayoutGrid className="w-3.5 h-3.5" /> Explorer
@@ -1005,7 +1052,15 @@ export default function UnitsPage() {
                                                     <motion.div
                                                         key={folder._id}
                                                         whileHover={{ y: -4 }}
-                                                        className="glass-card group flex flex-col items-stretch overflow-hidden !bg-white/[0.02]"
+                                                        className="group flex flex-col items-stretch overflow-hidden relative"
+                                                        style={{
+                                                            background: 'var(--theme-card-bg, rgba(15,20,35,0.45))',
+                                                            backdropFilter: 'var(--theme-card-blur, blur(16px))',
+                                                            WebkitBackdropFilter: 'var(--theme-card-blur, blur(16px))',
+                                                            border: '1px solid var(--theme-border, rgba(255,255,255,0.12))',
+                                                            borderRadius: 'var(--theme-radius-card, 16px)',
+                                                            boxShadow: 'var(--theme-shadow-card, none)',
+                                                        }}
                                                     >
                                                         <div className="absolute top-4 right-4 flex items-center gap-1 z-20">
                                                             <button

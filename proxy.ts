@@ -72,8 +72,9 @@ export default async function proxy(req: NextRequest) {
             return NextResponse.redirect(new URL(role === 'teacher' ? '/teacher/dashboard' : '/student/dashboard', req.url));
         }
 
-        // 2. Teacher Routes: 'teacher' and 'admin' allowed
-        if (isTeacherRoute && role !== 'teacher' && role !== 'admin') {
+        // 2. Teacher Routes: 'teacher' and 'admin' allowed (except shared category tree which supports students)
+        const isTeacherCategoryTree = path === '/api/teacher/categories/tree';
+        if (isTeacherRoute && !isTeacherCategoryTree && role !== 'teacher' && role !== 'admin') {
             if (path.startsWith('/api')) {
                 return NextResponse.json({ message: 'Forbidden: Teacher access required.' }, { status: 403 });
             }

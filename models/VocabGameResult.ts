@@ -17,7 +17,7 @@ const VocabGameResultSchema = new Schema({
     rank:         { type: Number, default: 0 },
     warningCard:  { type: Boolean, default: false }, // true if correctCount === 0
     wordIds:      [{ type: Schema.Types.ObjectId, ref: 'Word' }], // words shown to this student
-    createdAt:    { type: Date, default: Date.now },
+    createdAt:    { type: Date, default: Date.now, expires: 60 * 60 * 24 * 90 }, // Auto-delete after 90 days (3 months)
 });
 
 VocabGameResultSchema.index({ sessionId: 1, rank: 1 });

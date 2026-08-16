@@ -485,11 +485,13 @@ export default function StudentGamesPage() {
                     <button
                       key={u.id}
                       onClick={() => handleSelectUnit(u)}
-                      className={`w-full text-left px-4 py-3.5 rounded-2xl border transition-all flex items-center gap-3 group ${
-                        isSelected
-                          ? 'bg-indigo-600 border-indigo-500 shadow-lg shadow-indigo-500/20'
-                          : 'bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/15'
-                      }`}
+                      className="w-full text-left px-4 py-3.5 border transition-all flex items-center gap-3 group"
+                      style={{
+                        borderRadius: 'var(--theme-radius-btn, 16px)',
+                        background: isSelected ? 'var(--theme-primary, #6366f1)' : 'rgba(255,255,255,0.05)',
+                        borderColor: isSelected ? 'var(--theme-primary, #6366f1)' : 'rgba(255,255,255,0.08)',
+                        boxShadow: isSelected ? '0 8px 20px -4px var(--color-primary-glow)' : 'none',
+                      }}
                     >
                       <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm flex-shrink-0 ${isSelected ? 'bg-white/20' : 'bg-white/5 group-hover:bg-white/10'}`}>
                         📖
@@ -510,8 +512,15 @@ export default function StudentGamesPage() {
           <div className="lg:col-span-5 flex flex-col gap-4">
             {selectedUnit ? (
               <>
-                <div className="rounded-3xl bg-gradient-to-br from-indigo-600/20 via-purple-600/10 to-gray-900 border border-indigo-500/30 p-6 shadow-xl">
-                  <p className="text-[10px] uppercase font-black tracking-widest text-indigo-400 mb-1">Tanlangan bo&apos;lim</p>
+                <div className="border p-6 shadow-xl"
+                  style={{
+                    borderRadius: 'var(--theme-radius-card, 24px)',
+                    background: 'var(--theme-card-bg, rgba(15,20,35,0.45))',
+                    backdropFilter: 'var(--theme-card-blur, blur(16px))',
+                    WebkitBackdropFilter: 'var(--theme-card-blur, blur(16px))',
+                    borderColor: 'var(--theme-border, rgba(255,255,255,0.12))',
+                  }}>
+                  <p className="text-[10px] uppercase font-black tracking-widest mb-1" style={{ color: 'var(--theme-primary, #6366f1)' }}>Tanlangan bo&apos;lim</p>
                   <h2 className="text-2xl font-black text-white">{selectedUnit.title}</h2>
 
                   {loadingProgress ? (
@@ -519,14 +528,17 @@ export default function StudentGamesPage() {
                   ) : unitProgress && (
                     <div className="mt-4 space-y-3">
                       <div>
-                        <div className="flex justify-between text-xs font-bold mb-1.5">
-                          <span className="text-white/50">So&apos;zlarni O&apos;zlashtirish</span>
-                          <span className="text-indigo-400">{unitProgress.pct}%</span>
+                        <div className="flex justify-between text-xs font-bold text-white/60 mb-1.5">
+                          <span>O&apos;zlashtirish</span>
+                          <span className="font-mono" style={{ color: 'var(--theme-primary, #6366f1)' }}>{unitProgress.pct}%</span>
                         </div>
                         <div className="h-2.5 bg-white/10 rounded-full overflow-hidden">
                           <div
-                            className="h-full bg-gradient-to-r from-indigo-500 to-emerald-400 rounded-full transition-all duration-700"
-                            style={{ width: `${unitProgress.pct}%` }}
+                            className="h-full rounded-full transition-all duration-700"
+                            style={{
+                              width: `${unitProgress.pct}%`,
+                              background: 'linear-gradient(to right, var(--theme-primary, #6366f1), var(--theme-accent, #10b981))',
+                            }}
                           />
                         </div>
                       </div>
@@ -545,7 +557,7 @@ export default function StudentGamesPage() {
                       <div className="pt-2">
                         <div className="w-full bg-white/5 rounded-xl border border-white/10 p-3 flex justify-between items-center text-sm font-bold">
                           <span className="text-white/60">Qolgan o'rganilmagan so'zlar:</span>
-                          <span className="text-amber-400 font-mono text-base">{Math.max(0, unitProgress.totalWords - unitProgress.masteredCount)} ta</span>
+                          <span className="font-mono text-base" style={{ color: 'var(--theme-primary, #f59e0b)' }}>{Math.max(0, unitProgress.totalWords - unitProgress.masteredCount)} ta</span>
                         </div>
                       </div>
                     </div>
@@ -579,7 +591,13 @@ export default function StudentGamesPage() {
                   <>
                     <button
                       onClick={startLearningSession}
-                      className="w-full py-5 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-emerald-500 font-black text-xl text-gray-950 shadow-xl shadow-amber-500/25 hover:shadow-amber-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3"
+                      className="w-full py-5 font-black text-xl text-white shadow-xl transition-all flex items-center justify-center gap-3 cursor-pointer"
+                      style={{
+                        borderRadius: 'var(--theme-radius-btn, 16px)',
+                        background: 'var(--theme-primary, #f59e0b)',
+                        boxShadow: 'var(--theme-shadow-btn, 0 8px 24px -6px var(--color-primary-glow))',
+                        fontFamily: 'var(--theme-font-family, inherit)',
+                      }}
                     >
                       <Play className="w-6 h-6 fill-current" />
                       <span>{unitProgress?.activeSession ? "O'yinni davom ettirish" : "Yangi sessiya boshlash (15 ta so'z)"}</span>

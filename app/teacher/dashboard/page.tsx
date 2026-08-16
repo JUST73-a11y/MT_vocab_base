@@ -219,22 +219,39 @@ export default function TeacherDashboard() {
             <main className="page-container flex flex-col gap-8 animate-fade-in">
 
                 {/* ── Hero Header ── */}
-                <header className="relative overflow-hidden rounded-3xl p-8 md:p-10"
-                    style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.12) 0%, rgba(139,92,246,0.06) 50%, rgba(16,185,129,0.04) 100%)', border: '1px solid rgba(99,102,241,0.15)' }}>
+                <header className="relative overflow-hidden p-8 md:p-10"
+                    style={{
+                        background: 'linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%)',
+                        backgroundColor: 'var(--theme-card-bg, rgba(15,20,35,0.45))',
+                        border: '1px solid var(--theme-border, rgba(255,255,255,0.12))',
+                        borderRadius: 'var(--theme-radius-card, 24px)',
+                        backdropFilter: 'var(--theme-card-blur, blur(16px))',
+                        WebkitBackdropFilter: 'var(--theme-card-blur, blur(16px))',
+                        boxShadow: 'var(--theme-shadow-card, 0 8px 32px rgba(0,0,0,0.3))',
+                    }}>
 
                     {/* Glow orbs */}
-                    <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-600/10 rounded-full blur-[100px] pointer-events-none" />
-                    <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-600/8 rounded-full blur-[80px] pointer-events-none" />
+                    <div className="absolute top-0 right-0 w-96 h-96 rounded-full blur-[100px] pointer-events-none opacity-20" style={{ background: 'var(--theme-primary, #6366f1)' }} />
+                    <div className="absolute bottom-0 left-0 w-64 h-64 rounded-full blur-[80px] pointer-events-none opacity-15" style={{ background: 'var(--theme-secondary, #a855f7)' }} />
 
                     <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
                         <div>
                             <div className="flex items-center gap-3 mb-4">
-                                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+                                <div className="w-12 h-12 flex items-center justify-center shadow-lg transition-transform hover:scale-105"
+                                    style={{
+                                        borderRadius: 'var(--theme-radius-btn, 16px)',
+                                        background: 'var(--theme-primary, #6366f1)',
+                                        boxShadow: '0 8px 24px -6px var(--color-primary-glow)',
+                                    }}>
                                     <TrendingUp className="w-6 h-6 text-white" />
                                 </div>
-                                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20">
-                                    <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                                    <span className="text-[10px] font-black text-indigo-300 uppercase tracking-[0.2em]">Faol</span>
+                                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full"
+                                    style={{
+                                        background: 'rgba(255,255,255,0.06)',
+                                        border: '1px solid var(--theme-border, rgba(255,255,255,0.15))',
+                                    }}>
+                                    <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: 'var(--theme-accent, #10b981)' }} />
+                                    <span className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: 'var(--theme-primary, #a5b4fc)' }}>Faol</span>
                                 </div>
                             </div>
                             <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-white tracking-tight mb-2 break-words whitespace-normal leading-tight">
@@ -392,78 +409,109 @@ export default function TeacherDashboard() {
                     ) : selectedCategory === null ? (
                         /* ── CATEGORIES GRID ── */
                         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                            {categories.map(([cat, catUnits], idx) => {
-                                const palettes = [
-                                    { from: 'rgba(99,102,241,0.12)', to: 'rgba(99,102,241,0.04)', glow: 'rgba(99,102,241,0.25)', border: 'rgba(99,102,241,0.25)', hborder: 'rgba(99,102,241,0.5)', icon: '#818cf8', badge: 'rgba(99,102,241,0.15)', badgeText: '#a5b4fc' },
-                                    { from: 'rgba(168,85,247,0.12)', to: 'rgba(168,85,247,0.04)', glow: 'rgba(168,85,247,0.25)', border: 'rgba(168,85,247,0.25)', hborder: 'rgba(168,85,247,0.5)', icon: '#c084fc', badge: 'rgba(168,85,247,0.15)', badgeText: '#d8b4fe' },
-                                    { from: 'rgba(16,185,129,0.12)', to: 'rgba(16,185,129,0.04)', glow: 'rgba(16,185,129,0.25)', border: 'rgba(16,185,129,0.25)', hborder: 'rgba(16,185,129,0.5)', icon: '#34d399', badge: 'rgba(16,185,129,0.15)', badgeText: '#6ee7b7' },
-                                    { from: 'rgba(245,158,11,0.12)', to: 'rgba(245,158,11,0.04)', glow: 'rgba(245,158,11,0.25)', border: 'rgba(245,158,11,0.25)', hborder: 'rgba(245,158,11,0.5)', icon: '#fbbf24', badge: 'rgba(245,158,11,0.15)', badgeText: '#fde68a' },
-                                    { from: 'rgba(239,68,68,0.12)', to: 'rgba(239,68,68,0.04)', glow: 'rgba(239,68,68,0.25)', border: 'rgba(239,68,68,0.25)', hborder: 'rgba(239,68,68,0.5)', icon: '#f87171', badge: 'rgba(239,68,68,0.15)', badgeText: '#fca5a5' },
-                                ];
-                                const p = palettes[idx % palettes.length];
-                                return (
-                                    <div key={cat} onClick={() => setSelectedCategory(cat)}
-                                        className="group relative overflow-hidden rounded-2xl p-5 text-left flex flex-col gap-4 transition-all duration-300 hover:-translate-y-1.5 active:scale-[0.98] cursor-pointer"
-                                        style={{ background: `linear-gradient(135deg, ${p.from}, ${p.to})`, border: `1px solid ${p.border}`, boxShadow: 'none', transition: 'all 0.3s' }}
-                                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = `0 16px 40px ${p.glow}`; (e.currentTarget as HTMLElement).style.borderColor = p.hborder; }}
-                                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = 'none'; (e.currentTarget as HTMLElement).style.borderColor = p.border; }}>
-                                        {/* Glow orb */}
-                                        <div className="absolute top-0 right-0 w-20 h-20 rounded-full blur-2xl -mr-4 -mt-4 opacity-40 group-hover:opacity-80 transition-opacity pointer-events-none"
-                                            style={{ background: p.glow }} />
-                                        {/* Header row */}
-                                        <div className="flex items-start justify-between relative z-10">
-                                            <div className="w-11 h-11 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform"
-                                                style={{ background: p.badge, border: `1px solid ${p.border}` }}>
-                                                <FolderOpen className="w-5 h-5" style={{ color: p.icon }} />
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setDeleteModal({ isOpen: true, type: 'category', name: cat });
-                                                    }}
-                                                    className="w-8 h-8 rounded-lg flex items-center justify-center bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500 hover:text-white transition-all opacity-0 group-hover:opacity-100"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                                <span className="text-[11px] font-black px-2.5 py-1 rounded-lg"
-                                                    style={{ background: p.badge, color: p.badgeText }}>
-                                                    {catUnits.length} ta
-                                                </span>
-                                            </div>
+                            {categories.map(([cat, catUnits]) => (
+                                <div key={cat} onClick={() => setSelectedCategory(cat)}
+                                    className="group relative overflow-hidden p-5 text-left flex flex-col gap-4 transition-all duration-300 hover:-translate-y-1.5 active:scale-[0.98] cursor-pointer"
+                                    style={{
+                                        background: 'var(--theme-card-bg, rgba(15,20,35,0.45))',
+                                        backdropFilter: 'var(--theme-card-blur, blur(16px))',
+                                        WebkitBackdropFilter: 'var(--theme-card-blur, blur(16px))',
+                                        border: '1px solid var(--theme-border, rgba(255,255,255,0.12))',
+                                        borderRadius: 'var(--theme-radius-card, 16px)',
+                                        boxShadow: 'var(--theme-shadow-card, none)',
+                                    }}
+                                    onMouseEnter={e => {
+                                        (e.currentTarget as HTMLElement).style.boxShadow = `0 16px 40px var(--color-primary-glow, rgba(99,102,241,0.25))`;
+                                        (e.currentTarget as HTMLElement).style.borderColor = 'var(--theme-primary, rgba(99,102,241,0.5))';
+                                    }}
+                                    onMouseLeave={e => {
+                                        (e.currentTarget as HTMLElement).style.boxShadow = 'var(--theme-shadow-card, none)';
+                                        (e.currentTarget as HTMLElement).style.borderColor = 'var(--theme-border, rgba(255,255,255,0.12))';
+                                    }}>
+                                    {/* Glow orb */}
+                                    <div className="absolute top-0 right-0 w-20 h-20 rounded-full blur-2xl -mr-4 -mt-4 opacity-20 group-hover:opacity-60 transition-opacity pointer-events-none"
+                                        style={{ background: 'var(--theme-primary, #6366f1)' }} />
+                                    {/* Header row */}
+                                    <div className="flex items-start justify-between relative z-10">
+                                        <div className="w-11 h-11 flex items-center justify-center group-hover:scale-110 transition-transform"
+                                            style={{
+                                                borderRadius: 'var(--theme-radius-btn, 12px)',
+                                                background: 'rgba(255,255,255,0.06)',
+                                                border: '1px solid var(--theme-border, rgba(255,255,255,0.15))',
+                                            }}>
+                                            <FolderOpen className="w-5 h-5" style={{ color: 'var(--theme-primary, #6366f1)' }} />
                                         </div>
-                                        {/* Title */}
-                                        <div className="relative z-10 flex-1">
-                                            <h3 className="font-black text-white text-sm leading-snug truncate group-hover:opacity-90 transition-opacity">{cat}</h3>
-                                        </div>
-                                        {/* Footer */}
-                                        <div className="flex items-center gap-1.5 relative z-10 pt-3"
-                                            style={{ borderTop: `1px solid rgba(255,255,255,0.05)` }}>
-                                            <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: p.badgeText, opacity: 0.7 }}>Ochish</span>
-                                            <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" style={{ color: p.badgeText, opacity: 0.7 }} />
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setDeleteModal({ isOpen: true, type: 'category', name: cat });
+                                                }}
+                                                className="w-8 h-8 rounded-lg flex items-center justify-center bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500 hover:text-white transition-all opacity-0 group-hover:opacity-100"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                            <span className="text-[11px] font-black px-2.5 py-1"
+                                                style={{
+                                                    borderRadius: 'var(--theme-radius-btn, 8px)',
+                                                    background: 'rgba(255,255,255,0.06)',
+                                                    border: '1px solid var(--theme-border, rgba(255,255,255,0.1))',
+                                                    color: 'var(--theme-primary, #a5b4fc)',
+                                                }}>
+                                                {catUnits.length} ta
+                                            </span>
                                         </div>
                                     </div>
-                                );
-                            })}
+                                    {/* Title */}
+                                    <div className="relative z-10 flex-1">
+                                        <h3 className="font-black text-white text-sm leading-snug truncate group-hover:opacity-90 transition-opacity">{cat}</h3>
+                                    </div>
+                                    {/* Footer */}
+                                    <div className="flex items-center gap-1.5 relative z-10 pt-3"
+                                        style={{ borderTop: `1px solid rgba(255,255,255,0.05)` }}>
+                                        <span className="text-[9px] font-black uppercase tracking-widest opacity-70" style={{ color: 'var(--theme-primary, #a5b4fc)' }}>Ochish</span>
+                                        <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform opacity-70" style={{ color: 'var(--theme-primary, #a5b4fc)' }} />
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     ) : (
                         /* ── UNITS GRID ── */
                         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                            {unitsInSelected.map((unit, idx) => (
+                            {unitsInSelected.map((unit) => (
                                 <div key={unit.id} onClick={() => router.push(`/teacher/units/${unit.id}`)}
-                                    className="group relative overflow-hidden rounded-2xl p-5 flex flex-col gap-3 transition-all duration-300 hover:-translate-y-1.5 active:scale-[0.98] cursor-pointer"
-                                    style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.15)', boxShadow: 'none', transition: 'all 0.3s' }}
-                                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = '0 16px 40px rgba(99,102,241,0.2)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(99,102,241,0.45)'; }}
-                                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = 'none'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(99,102,241,0.15)'; }}>
+                                    className="group relative overflow-hidden p-5 flex flex-col gap-3 transition-all duration-300 hover:-translate-y-1.5 active:scale-[0.98] cursor-pointer"
+                                    style={{
+                                        background: 'var(--theme-card-bg, rgba(15,20,35,0.45))',
+                                        backdropFilter: 'var(--theme-card-blur, blur(16px))',
+                                        WebkitBackdropFilter: 'var(--theme-card-blur, blur(16px))',
+                                        border: '1px solid var(--theme-border, rgba(255,255,255,0.12))',
+                                        borderRadius: 'var(--theme-radius-card, 16px)',
+                                        boxShadow: 'var(--theme-shadow-card, none)',
+                                    }}
+                                    onMouseEnter={e => {
+                                        (e.currentTarget as HTMLElement).style.boxShadow = `0 16px 40px var(--color-primary-glow, rgba(99,102,241,0.2))`;
+                                        (e.currentTarget as HTMLElement).style.borderColor = 'var(--theme-primary, rgba(99,102,241,0.45))';
+                                    }}
+                                    onMouseLeave={e => {
+                                        (e.currentTarget as HTMLElement).style.boxShadow = 'var(--theme-shadow-card, none)';
+                                        (e.currentTarget as HTMLElement).style.borderColor = 'var(--theme-border, rgba(255,255,255,0.12))';
+                                    }}>
                                     {/* Glow orb */}
-                                    <div className="absolute top-0 right-0 w-20 h-20 bg-indigo-500/20 rounded-full blur-2xl -mr-4 -mt-4 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                                    <div className="absolute top-0 right-0 w-20 h-20 rounded-full blur-2xl -mr-4 -mt-4 opacity-0 group-hover:opacity-60 transition-opacity pointer-events-none"
+                                        style={{ background: 'var(--theme-primary, #6366f1)' }} />
                                     {/* Icon */}
-                                    <div className="w-11 h-11 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-indigo-500/20 transition-all relative z-10">
-                                        <BookOpen className="w-5 h-5 text-indigo-400" />
+                                    <div className="w-11 h-11 flex items-center justify-center group-hover:scale-110 transition-all relative z-10"
+                                        style={{
+                                            borderRadius: 'var(--theme-radius-btn, 12px)',
+                                            background: 'rgba(255,255,255,0.06)',
+                                            border: '1px solid var(--theme-border, rgba(255,255,255,0.15))',
+                                        }}>
+                                        <BookOpen className="w-5 h-5" style={{ color: 'var(--theme-primary, #6366f1)' }} />
                                     </div>
                                     {/* Title */}
                                     <div className="flex-1 relative z-10">
-                                        <h3 className="font-black text-white text-sm leading-snug line-clamp-2 group-hover:text-indigo-100 transition-colors">{unit.title}</h3>
+                                        <h3 className="font-black text-white text-sm leading-snug line-clamp-2 group-hover:text-white/90 transition-colors">{unit.title}</h3>
                                         <p className="text-[9px] uppercase tracking-widest text-white/20 mt-1.5">
                                             {new Date(unit.createdAt).toLocaleDateString('uz-UZ')}
                                         </p>
@@ -481,20 +529,27 @@ export default function TeacherDashboard() {
                                         >
                                             <Trash2 className="w-3 h-3" /> O'chirish
                                         </button>
-                                        <ChevronRight className="w-3.5 h-3.5 text-white/20 group-hover:text-indigo-400 group-hover:translate-x-0.5 transition-all" />
+                                        <ChevronRight className="w-3.5 h-3.5 text-white/20 group-hover:translate-x-0.5 transition-all" style={{ color: 'var(--theme-primary, #6366f1)' }} />
                                     </div>
                                 </div>
                             ))}
                             {/* Add unit card */}
                             <Link href={`/teacher/units/new?category=${selectedCategory}`}
-                                className="group relative overflow-hidden rounded-2xl p-5 flex flex-col items-center justify-center gap-3 min-h-[180px] transition-all duration-300 hover:-translate-y-1.5"
-                                style={{ background: 'rgba(255,255,255,0.015)', border: '1px dashed rgba(255,255,255,0.1)', boxShadow: 'none', transition: 'all 0.3s' }}
-                                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(99,102,241,0.4)'; }}
-                                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.1)'; }}>
-                                <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center group-hover:scale-110 group-hover:bg-indigo-500/20 group-hover:border-indigo-500/30 transition-all">
-                                    <Plus className="w-5 h-5 text-white/30 group-hover:text-indigo-300 transition-colors" />
+                                className="group relative overflow-hidden p-5 flex flex-col items-center justify-center gap-3 min-h-[180px] transition-all duration-300 hover:-translate-y-1.5"
+                                style={{
+                                    background: 'rgba(255,255,255,0.02)',
+                                    border: '1px dashed var(--theme-border, rgba(255,255,255,0.15))',
+                                    borderRadius: 'var(--theme-radius-card, 16px)',
+                                }}>
+                                <div className="w-12 h-12 flex items-center justify-center group-hover:scale-110 transition-all"
+                                    style={{
+                                        borderRadius: 'var(--theme-radius-btn, 12px)',
+                                        background: 'rgba(255,255,255,0.06)',
+                                        border: '1px solid var(--theme-border, rgba(255,255,255,0.15))',
+                                    }}>
+                                    <Plus className="w-5 h-5 text-white/40 group-hover:text-white transition-colors" />
                                 </div>
-                                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20 group-hover:text-indigo-300/70 transition-colors text-center">Yangi Unit</span>
+                                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 group-hover:text-white/80 transition-colors text-center">Yangi Unit</span>
                             </Link>
                         </div>
                     )}

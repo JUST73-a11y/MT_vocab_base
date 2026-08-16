@@ -152,21 +152,39 @@ export default function TeacherSharedPage() {
             <div className="max-w-4xl w-full animate-fade-in flex flex-col gap-10">
 
                 {/* ── Header ── */}
-                <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 p-6 md:p-8"
+                    style={{
+                        background: 'var(--theme-card-bg, rgba(15,20,35,0.45))',
+                        backdropFilter: 'var(--theme-card-blur, blur(16px))',
+                        WebkitBackdropFilter: 'var(--theme-card-blur, blur(16px))',
+                        border: '1px solid var(--theme-border, rgba(255,255,255,0.12))',
+                        borderRadius: 'var(--theme-radius-card, 20px)',
+                        boxShadow: 'var(--theme-shadow-card, none)',
+                    }}>
                     <div>
                         <h1 className="text-3xl md:text-4xl font-black text-white tracking-tighter">Unit Ulashish</h1>
-                        <p className="text-white/40 font-bold mt-1 uppercase tracking-widest text-[10px]">Hamkasblar bilan materiallar almashish</p>
+                        <p className="text-white/60 font-bold mt-1 uppercase tracking-widest text-[10px]">Hamkasblar bilan materiallar almashish</p>
                     </div>
-                    <button onClick={() => setShowShareModal(true)} className="btn-premium px-8 py-4 h-auto text-sm">
-                        <Share2 className="w-5 h-5" /> Unit Ulashish
+                    <button onClick={() => setShowShareModal(true)} className="btn-base btn-primary px-8 py-4 h-auto text-sm">
+                        <Share2 className="w-5 h-5 shrink-0" /> Unit Ulashish
                     </button>
                 </header>
 
                 {/* ── Tabs ── */}
-                <div className="flex items-center gap-2 p-1.5 bg-white/5 rounded-2xl">
+                <div className="flex items-center gap-2 p-1.5 rounded-2xl"
+                    style={{
+                        background: 'rgba(255,255,255,0.04)',
+                        border: '1px solid var(--theme-border, rgba(255,255,255,0.1))',
+                        borderRadius: 'var(--theme-radius-card, 16px)'
+                    }}>
                     <button
                         onClick={() => setActiveTab('incoming')}
-                        className={`flex-1 py-3 text-sm font-black uppercase tracking-widest rounded-xl transition-all ${activeTab === 'incoming' ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20' : 'text-white/40 hover:text-white/60'}`}
+                        className="flex-1 py-3 text-sm font-black uppercase tracking-widest transition-all"
+                        style={{
+                            borderRadius: 'var(--theme-radius-btn, 12px)',
+                            background: activeTab === 'incoming' ? 'var(--theme-primary, #6366f1)' : 'transparent',
+                            color: activeTab === 'incoming' ? '#ffffff' : 'rgba(255,255,255,0.4)',
+                        }}
                     >
                         Kiruvchi
                         {pendingIncoming.length > 0 && (
@@ -175,13 +193,23 @@ export default function TeacherSharedPage() {
                     </button>
                     <button
                         onClick={() => setActiveTab('outgoing')}
-                        className={`flex-1 py-3 text-sm font-black uppercase tracking-widest rounded-xl transition-all ${activeTab === 'outgoing' ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20' : 'text-white/40 hover:text-white/60'}`}
+                        className="flex-1 py-3 text-sm font-black uppercase tracking-widest transition-all"
+                        style={{
+                            borderRadius: 'var(--theme-radius-btn, 12px)',
+                            background: activeTab === 'outgoing' ? 'var(--theme-primary, #6366f1)' : 'transparent',
+                            color: activeTab === 'outgoing' ? '#ffffff' : 'rgba(255,255,255,0.4)',
+                        }}
                     >
                         Chiquvchi
                     </button>
                     <button
                         onClick={() => setActiveTab('accepted')}
-                        className={`flex-1 py-3 text-sm font-black uppercase tracking-widest rounded-xl transition-all ${activeTab === 'accepted' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'text-white/40 hover:text-white/60'}`}
+                        className="flex-1 py-3 text-sm font-black uppercase tracking-widest transition-all"
+                        style={{
+                            borderRadius: 'var(--theme-radius-btn, 12px)',
+                            background: activeTab === 'accepted' ? '#10b981' : 'transparent',
+                            color: activeTab === 'accepted' ? '#ffffff' : 'rgba(255,255,255,0.4)',
+                        }}
                     >
                         Qabul Qilingan
                     </button>

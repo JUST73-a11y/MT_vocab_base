@@ -16,7 +16,7 @@ const QuizAttemptSchema = new Schema({
     usedWordIds: [{ type: Schema.Types.ObjectId, ref: 'Word' }],
     // Server-side correctOptionId memo: { wordId: correctOptionId }
     _qMemo: { type: Object, default: {} },
-    startedAt: { type: Date, default: Date.now, expires: 60 * 60 * 24 * 60 },
+    startedAt: { type: Date, default: Date.now, expires: 60 * 60 * 24 * 90 }, // Auto-delete after 90 days (3 months)
     endedAt: { type: Date },
 });
 

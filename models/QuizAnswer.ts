@@ -14,7 +14,7 @@ const QuizAnswerSchema = new Schema({
     isTimeout: { type: Boolean, default: false },
     modeAtAnswerTime: { type: String, enum: ['EN', 'UZ'], default: 'EN' },
     servedAt: { type: Date },
-    answeredAt: { type: Date, default: Date.now, expires: 60 * 60 * 24 * 30 },
+    answeredAt: { type: Date, default: Date.now, expires: 60 * 60 * 24 * 90 }, // Auto-delete after 90 days (3 months)
 });
 
 QuizAnswerSchema.index({ attemptId: 1 });

@@ -73,7 +73,7 @@ export default function StudentDashboard() {
     return (
         <div className="flex flex-col items-center w-full min-h-full bg-transparent p-4 md:p-8 xl:p-12 overflow-y-auto overflow-x-hidden">
             <main className="max-w-6xl w-full flex flex-col gap-8 md:gap-12 min-w-0">
-                <div className="text-center md:text-left break-words">
+                <div className="text-center md:text-left break-words" style={{ margin: '15px 0' }}>
                     <h2 className="text-3xl md:text-5xl lg:text-6xl font-black text-white mb-2 tracking-tighter leading-tight">
                         Xush kelibsiz, <span className="text-indigo-400">{user.name.split(' ')[0]}</span>!
                     </h2>

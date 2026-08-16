@@ -981,12 +981,14 @@ export default function VocabGamePage() {
                         <button
                             onClick={handleStartSession}
                             disabled={starting || !selectedGroup || selectedUnitIds.length === 0}
-                            className="w-full rounded-xl font-black text-white text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed shadow-lg"
+                            className="w-full font-black text-white text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed shadow-lg"
                             style={{
-                                height: '38px',
-                                margin: '4px 0px 0px 0px',
-                                background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
-                                boxShadow: '0 4px 20px rgba(99,102,241,0.4)',
+                                height: '42px',
+                                margin: '6px 0px 0px 0px',
+                                borderRadius: 'var(--theme-radius-btn, 12px)',
+                                background: 'var(--theme-primary, linear-gradient(135deg, #6366f1, #4f46e5))',
+                                boxShadow: 'var(--theme-shadow-btn, 0 4px 20px rgba(99,102,241,0.4))',
+                                fontFamily: 'var(--theme-font-family, inherit)',
                             }}
                         >
                             {starting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 fill-current" />}

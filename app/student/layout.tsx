@@ -5,8 +5,9 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { BookOpen, Play, LogOut, LayoutDashboard, Menu, X, Brain, BarChart2, Users, Gamepad2, Award, Settings } from 'lucide-react';
+import { BookOpen, Play, LogOut, LayoutDashboard, Menu, X, Brain, BarChart2, Users, Gamepad2, Award, Settings, Palette } from 'lucide-react';
 import StudentOnboarding from './onboarding/page';
+import { StudentThemeProvider } from '@/lib/theme/StudentThemeContext';
 
 export default function StudentLayout({ children }: { children: React.ReactNode }) {
     const { user, signOut, loading } = useAuth();
@@ -38,6 +39,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
         { name: 'Yodlash', href: '/student/mistakes', icon: BookOpen },
         { name: 'Statistika', href: '/student/stats', icon: BarChart2 },
         { name: 'Mening guruhim', href: '/student/group', icon: Users },
+        { name: 'Dizayn', href: '/student/theme', icon: Palette },
     ];
 
     if (loading || !user || user.role !== 'student') {
@@ -49,29 +51,58 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
     }
 
     if (!user.teacherId) {
-        return <StudentOnboarding />;
+        return <StudentThemeProvider><StudentOnboarding /></StudentThemeProvider>;
     }
 
     return (
+        <StudentThemeProvider>
         <div className="min-h-[100svh] flex flex-col items-center font-sans text-white overflow-x-hidden" style={{ position: 'relative' }}>
-            {/* Adult theme background */}
-            <div style={{
-                position: 'fixed', inset: 0, zIndex: 0,
-                backgroundImage: 'url(/themes/adult-bg.jpg)',
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat',
-            }} />
-            {/* Dark overlay so text stays readable */}
-            <div style={{ position: 'fixed', inset: 0, zIndex: 1, background: 'rgba(10,20,40,0.60)' }} />
+            {/* Theme dynamic background */}
+            <div
+                id="student-theme-bg"
+                style={{
+                    position: 'fixed',
+                    top: '-30px',
+                    left: '-30px',
+                    right: '-30px',
+                    bottom: '-30px',
+                    zIndex: 0,
+                    backgroundImage: 'var(--theme-bg-image, url(/themes/adult-bg.jpg))',
+                    backgroundColor: 'var(--theme-bg-color, #09090f)',
+                    backgroundPosition: 'var(--theme-bg-pos, center)',
+                    backgroundSize: 'var(--theme-bg-size, cover)',
+                    backgroundRepeat: 'no-repeat',
+                    filter: 'var(--theme-bg-blur, none)',
+                    transform: 'translate3d(0, 0, 0)',
+                    willChange: 'filter',
+                }}
+            />
+            {/* Theme overlay so text stays readable and gradients show */}
+            <div
+                id="student-theme-overlay"
+                style={{
+                    position: 'fixed',
+                    inset: 0,
+                    zIndex: 1,
+                    backgroundColor: 'var(--theme-bg-overlay-color, rgba(10,20,40,0.50))',
+                    backgroundImage: 'var(--theme-bg-overlay, none)',
+                    pointerEvents: 'none',
+                }}
+            />
 
             {/* ── TOP NAV ── */}
-            <div className="w-full sticky top-6 z-40 flex justify-center px-4">
+            <div className="w-full sticky top-4 md:top-6 z-40 flex justify-center px-4">
                 <nav
                     id="student-nav"
-                    className="w-[95%] lg:w-[85%] max-w-[1200px] flex items-center transition-all duration-400"
+                    className="w-[95%] lg:w-[85%] max-w-[1200px] flex items-center transition-all duration-300"
                     style={{
                         height: '72px',
+                        borderRadius: 'var(--theme-radius-card, 16px)',
+                        background: 'var(--theme-nav-bg, rgba(10, 18, 35, 0.65))',
+                        backdropFilter: 'var(--theme-nav-blur, blur(20px))',
+                        WebkitBackdropFilter: 'var(--theme-nav-blur, blur(20px))',
+                        border: 'var(--theme-nav-border, 1px solid rgba(255,255,255,0.10))',
+                        marginBottom: '30px',
                     }}
                 >
                     <div className="w-full h-full px-6 flex items-center justify-between">
@@ -82,24 +113,26 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
                             <button
                                 onClick={() => setIsMobileMenuOpen(true)}
                                 className="md:hidden p-2 transition-colors"
-                                style={{ color: 'rgba(255,255,255,0.6)' }}
+                                style={{ color: 'var(--theme-text-muted, rgba(255,255,255,0.6))' }}
                             >
                                 <Menu className="w-6 h-6" />
                             </button>
 
                             <Link href="/student/dashboard" className="flex items-center gap-2 group">
                                 <div
-                                    className="w-8 h-8 md:w-10 md:h-10 rounded-xl md:rounded-2xl flex items-center justify-center transition-all"
+                                    className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center transition-all"
                                     style={{
-                                        background: '#3B82F625',
-                                        border: '1.5px solid #3B82F655',
+                                        borderRadius: 'var(--theme-radius-btn, 12px)',
+                                        background: 'rgba(255,255,255,0.06)',
+                                        border: '1.5px solid var(--theme-border, rgba(255,255,255,0.15))',
+                                        color: 'var(--theme-primary, #3B82F6)'
                                     }}
                                 >
-                                    <BookOpen className="w-5 h-5 md:w-6 md:h-6" style={{ color: '#3B82F6' }} />
+                                    <BookOpen className="w-5 h-5 md:w-6 md:h-6" />
                                 </div>
                                 <span
                                     className="font-black text-lg md:text-xl tracking-tighter"
-                                    style={{ color: 'white' }}
+                                    style={{ color: 'var(--theme-text, #ffffff)' }}
                                 >
                                     VocabApp
                                 </span>
@@ -107,7 +140,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
                         </div>
 
                         {/* Center: Desktop Links */}
-                        <div className="hidden md:flex flex-1 justify-center items-center gap-3">
+                        <div className="hidden md:flex flex-1 justify-center items-center gap-2">
                             {navItems.map((item) => {
                                 const isActive = pathname === item.href || (item.href !== '/student/dashboard' && pathname.startsWith(item.href));
                                 return (
@@ -116,16 +149,16 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
                                         href={item.href}
                                         className={`flex flex-col md:flex-row items-center gap-1.5 md:gap-2 px-3 md:px-4 py-2 md:py-2.5 transition-all group relative overflow-hidden`}
                                         style={{
-                                            borderRadius: '999px',
-                                            background: isActive ? 'rgba(77,124,254,0.15)' : 'rgba(255,255,255,0.03)',
-                                            color: isActive ? '#5B8CFF' : 'rgba(255,255,255,0.7)',
-                                            border: isActive ? '1px solid rgba(91,140,255,0.3)' : '1px solid rgba(255,255,255,0.1)',
-                                            boxShadow: isActive ? '0 0 10px rgba(91,140,255,0.2)' : 'none',
+                                            borderRadius: 'var(--theme-radius-btn, 999px)',
+                                            background: isActive ? 'var(--theme-btn-bg, #6366f1)' : 'transparent',
+                                            color: isActive ? 'var(--theme-btn-text, #ffffff)' : 'var(--theme-text-muted, rgba(255,255,255,0.7))',
+                                            border: isActive ? '1px solid var(--theme-primary, rgba(99,102,241,0.4))' : '1px solid transparent',
+                                            boxShadow: isActive ? 'var(--theme-shadow-btn, 0 0 10px rgba(99,102,241,0.3))' : 'none',
                                         }}
                                     >
                                         <item.icon
                                             className={`w-4 h-4 transition-all duration-300 ${isActive ? 'scale-110 drop-shadow-md' : 'group-hover:scale-110 group-hover:-rotate-3'}`}
-                                            style={{ color: isActive ? '#60A5FA' : 'inherit' }}
+                                            style={{ color: isActive ? 'inherit' : 'var(--theme-primary, #60A5FA)' }}
                                         />
                                         <span className="text-[10px] md:text-[13px] font-bold tracking-wide whitespace-nowrap">
                                             {item.name}
@@ -174,20 +207,44 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
 
             {/* ── Mobile Left Drawer ── */}
             {mounted && isMobileMenuOpen && createPortal(
-                <div className="fixed inset-0 z-[9999] md:hidden">
+                <div className="fixed inset-0 z-[9999] md:hidden animate-fade-in">
                     <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)} />
-                    <div className="absolute top-0 left-0 bottom-0 w-[80vw] max-w-[320px] bg-[#0f0d1e] border-r border-white/5 shadow-2xl flex flex-col pt-6 font-sans">
+                    <div
+                        className="absolute top-0 left-0 bottom-0 w-[80vw] max-w-[320px] shadow-2xl flex flex-col pt-6 font-sans"
+                        style={{
+                            background: 'var(--theme-nav-bg, rgba(10, 18, 35, 0.95))',
+                            backdropFilter: 'var(--theme-nav-blur, blur(24px))',
+                            WebkitBackdropFilter: 'var(--theme-nav-blur, blur(24px))',
+                            borderRight: '1px solid var(--theme-border, rgba(255,255,255,0.12))',
+                        }}
+                    >
                         <div className="px-6 mb-8 flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 flex items-center justify-center border border-indigo-500/30">
-                                    <BookOpen className="w-6 h-6 text-indigo-400" />
+                                <div
+                                    className="w-10 h-10 flex items-center justify-center"
+                                    style={{
+                                        borderRadius: 'var(--theme-radius-btn, 12px)',
+                                        background: 'rgba(255,255,255,0.06)',
+                                        border: '1px solid var(--theme-border, rgba(255,255,255,0.15))',
+                                        color: 'var(--theme-primary, #3B82F6)',
+                                    }}
+                                >
+                                    <BookOpen className="w-6 h-6" />
                                 </div>
                                 <div>
                                     <span className="font-black text-lg tracking-tighter text-white block leading-tight">VocabApp</span>
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Student</span>
+                                    <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: 'var(--theme-primary, #60A5FA)' }}>Student</span>
                                 </div>
                             </div>
-                            <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 bg-white/5 rounded-xl text-white/60">
+                            <button
+                                onClick={() => setIsMobileMenuOpen(false)}
+                                className="p-2 transition-colors hover:text-white"
+                                style={{
+                                    borderRadius: 'var(--theme-radius-btn, 10px)',
+                                    background: 'rgba(255,255,255,0.06)',
+                                    color: 'rgba(255,255,255,0.6)',
+                                }}
+                            >
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
@@ -196,41 +253,83 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
                             {navItems.map(item => {
                                 const active = pathname === item.href || (item.href !== '/student/dashboard' && pathname.startsWith(item.href));
                                 return (
-                                    <Link key={item.href} href={item.href}
+                                    <Link
+                                        key={item.href}
+                                        href={item.href}
                                         onClick={() => setIsMobileMenuOpen(false)}
-                                        className={`flex items-center gap-4 p-4 rounded-xl transition-all duration-300 group relative overflow-hidden ${active ? 'border border-purple-500/30' : 'border border-transparent hover:bg-white/5'}`}
-                                        style={{ background: active ? 'rgba(168,85,247,0.1)' : 'transparent' }}>
-                                        {/* Active background glow */}
-                                        {active && <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 blur-md z-0" />}
-
-                                        <div className={`z-10 p-3 rounded-lg transition-all duration-300 ${active ? 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-[0_0_15px_rgba(168,85,247,0.6)] scale-110' : 'bg-white/5 text-white/40 group-hover:bg-white/10 group-hover:text-white/90 group-hover:scale-110 group-hover:-rotate-3'}`}>
+                                        className="flex items-center gap-4 p-4 transition-all duration-300 group relative overflow-hidden"
+                                        style={{
+                                            borderRadius: 'var(--theme-radius-btn, 12px)',
+                                            background: active ? 'rgba(255,255,255,0.08)' : 'transparent',
+                                            border: active ? '1px solid var(--theme-border, rgba(255,255,255,0.20))' : '1px solid transparent',
+                                        }}
+                                    >
+                                        <div
+                                            className="z-10 p-3 transition-all duration-300"
+                                            style={{
+                                                borderRadius: 'var(--theme-radius-btn, 10px)',
+                                                background: active ? 'var(--theme-primary, #4F46E5)' : 'rgba(255,255,255,0.05)',
+                                                color: active ? '#ffffff' : 'rgba(255,255,255,0.5)',
+                                                boxShadow: active ? '0 0 15px var(--theme-primary, rgba(99,102,241,0.5))' : 'none',
+                                            }}
+                                        >
                                             <item.icon className="w-5 h-5" />
                                         </div>
                                         <div className="flex flex-col z-10">
-                                            <span className={`font-black text-[15px] transition-all duration-300 ${active ? 'text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]' : 'text-white/60 group-hover:text-white group-hover:translate-x-1'}`}>
+                                            <span
+                                                className="font-black text-[15px] transition-all duration-300"
+                                                style={{
+                                                    color: active ? '#ffffff' : 'rgba(255,255,255,0.7)',
+                                                }}
+                                            >
                                                 {item.name}
                                             </span>
-                                            {active && <span className="text-[9px] font-black tracking-[0.2em] uppercase text-purple-400 mt-0.5">Faol sahifa</span>}
+                                            {active && (
+                                                <span
+                                                    className="text-[9px] font-black tracking-[0.2em] uppercase mt-0.5"
+                                                    style={{ color: 'var(--theme-primary, #a5b4fc)' }}
+                                                >
+                                                    Faol sahifa
+                                                </span>
+                                            )}
                                         </div>
                                     </Link>
                                 );
                             })}
                         </div>
 
-                        <div className="p-4 mt-auto border-t border-white/5 space-y-3">
+                        <div className="p-4 mt-auto border-t space-y-3" style={{ borderColor: 'var(--theme-border, rgba(255,255,255,0.10))' }}>
                             <Link 
                                 href="/student/settings" 
                                 onClick={() => setIsMobileMenuOpen(false)}
-                                className={`w-full flex items-center gap-4 p-4 rounded-xl transition-all hover:bg-white/5 group border ${pathname === '/student/settings' ? 'border-indigo-500/30 bg-indigo-500/10' : 'border-transparent'}`}
+                                className="w-full flex items-center gap-4 p-4 transition-all hover:bg-white/5 group border"
+                                style={{
+                                    borderRadius: 'var(--theme-radius-btn, 12px)',
+                                    background: pathname === '/student/settings' ? 'rgba(255,255,255,0.08)' : 'transparent',
+                                    borderColor: pathname === '/student/settings' ? 'var(--theme-border, rgba(255,255,255,0.2))' : 'transparent',
+                                }}
                             >
-                                <div className={`p-3 rounded-lg transition-colors ${pathname === '/student/settings' ? 'bg-indigo-500/20 text-indigo-400' : 'bg-white/5 text-white/40 group-hover:bg-white/10 group-hover:text-white/90'}`}>
+                                <div
+                                    className="p-3 transition-colors"
+                                    style={{
+                                        borderRadius: 'var(--theme-radius-btn, 10px)',
+                                        background: pathname === '/student/settings' ? 'var(--theme-primary, #4F46E5)' : 'rgba(255,255,255,0.05)',
+                                        color: pathname === '/student/settings' ? '#ffffff' : 'rgba(255,255,255,0.5)',
+                                    }}
+                                >
                                     <Settings className="w-5 h-5" />
                                 </div>
-                                <span className={`font-black text-[15px] ${pathname === '/student/settings' ? 'text-white' : 'text-white/60 group-hover:text-white'}`}>Sozlamalar</span>
+                                <span className="font-black text-[15px] text-white">Sozlamalar</span>
                             </Link>
                             
-                            <button onClick={() => { setIsMobileMenuOpen(false); setShowLogoutModal(true); }} className="w-full flex items-center gap-4 p-4 rounded-xl border border-red-500/10 bg-red-500/5 text-red-400 transition-all hover:bg-red-500/10 group">
-                                <div className="p-3 rounded-lg bg-red-500/10 group-hover:bg-red-500/20 transition-colors"><LogOut className="w-5 h-5" /></div>
+                            <button
+                                onClick={() => { setIsMobileMenuOpen(false); setShowLogoutModal(true); }}
+                                className="w-full flex items-center gap-4 p-4 border border-red-500/20 bg-red-500/10 text-red-400 transition-all hover:bg-red-500/20 group"
+                                style={{ borderRadius: 'var(--theme-radius-btn, 12px)' }}
+                            >
+                                <div className="p-3 rounded-lg bg-red-500/10 group-hover:bg-red-500/20 transition-colors">
+                                    <LogOut className="w-5 h-5" />
+                                </div>
                                 <span className="font-black text-[15px]">Tizimdan chiqish</span>
                             </button>
                         </div>
@@ -263,7 +362,8 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
                 document.body
             )}
 
-            <main className="flex-1 flex flex-col items-center w-[95%] lg:w-[80%] max-w-[1600px] mx-auto overflow-y-auto min-w-0 relative z-10">{children}</main>
+            <main className="flex-1 flex flex-col items-center w-[95%] lg:w-[80%] max-w-[1600px] mx-auto overflow-y-auto min-w-0 relative z-10 pt-6 md:pt-8 pb-16">{children}</main>
         </div>
+        </StudentThemeProvider>
     );
 }

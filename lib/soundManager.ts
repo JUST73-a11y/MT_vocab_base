@@ -172,18 +172,35 @@ class SoundManager {
   public playWrong() {
     this.initContext();
     if (!this.ctx || !this.masterGain || !this.sfxEnabled) return;
-    const now = this.ctx.currentTime;
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
 
-    // Dissonant wrong buzzer cluster
-    this.playPianoNote(123.47, now, 0.7, 0.4); // B2
-    this.playPianoNote(130.81, now, 0.7, 0.4); // C3
-    this.playPianoNote(155.56, now, 0.5, 0.3); // Eb3
+    // Dual sawtooth low buzzer (130Hz & 138Hz dissonance)
+    const osc1 = ctx.createOscillator();
+    const osc2 = ctx.createOscillator();
+    osc1.type = 'sawtooth';
+    osc2.type = 'sawtooth';
+    osc1.frequency.setValueAtTime(130, now);
+    osc2.frequency.setValueAtTime(138.5, now);
 
-    // Descending sad melody
-    const sadNotes = [220.00, 174.61, 146.83, 123.47]; // A3 -> F3 -> D3 -> B2
-    sadNotes.forEach((freq, idx) => {
-      this.playPianoNote(freq, now + 0.2 + idx * 0.2, 0.4, 0.25);
-    });
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(900, now);
+    filter.frequency.exponentialRampToValueAtTime(150, now + 0.35);
+
+    const env = ctx.createGain();
+    env.gain.setValueAtTime(0.5, now);
+    env.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+    osc1.connect(filter);
+    osc2.connect(filter);
+    filter.connect(env);
+    env.connect(this.masterGain);
+
+    osc1.start(now);
+    osc2.start(now);
+    osc1.stop(now + 0.36);
+    osc2.stop(now + 0.36);
   }
 
   public playTick() {
@@ -213,6 +230,164 @@ class SoundManager {
     const multiplier = 1 + (comboCount * 0.1);
     this.playPianoNote(baseFreq * multiplier, now, 0.5, 0.4);
     this.playPianoNote(baseFreq * multiplier * 1.5, now + 0.05, 0.5, 0.3);
+  }
+
+  // ── ⚔️ DUEL BATTLE SPECIALIZED SFX ──────────────────────────────────────────
+
+  public playSwordClash() {
+    this.initContext();
+    if (!this.ctx || !this.masterGain || !this.sfxEnabled) return;
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+
+    // 1. Metal strike (High noise burst through bandpass)
+    const bufferSize = Math.floor(ctx.sampleRate * 0.25);
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.04));
+    }
+    const noiseSource = ctx.createBufferSource();
+    noiseSource.buffer = buffer;
+
+    const metalFilter = ctx.createBiquadFilter();
+    metalFilter.type = 'bandpass';
+    metalFilter.frequency.setValueAtTime(3200, now);
+    metalFilter.Q.setValueAtTime(8, now);
+
+    const metalGain = ctx.createGain();
+    metalGain.gain.setValueAtTime(0.7, now);
+    metalGain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+
+    noiseSource.connect(metalFilter);
+    metalFilter.connect(metalGain);
+    metalGain.connect(this.masterGain);
+    noiseSource.start(now);
+    noiseSource.stop(now + 0.26);
+
+    // 2. High metallic ring (sine harmonic chime)
+    [2400, 3600, 4800].forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.2 / (idx + 1), now);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + 0.8 + idx * 0.2);
+      osc.connect(g);
+      g.connect(this.masterGain!);
+      osc.start(now);
+      osc.stop(now + 1.1);
+    });
+
+    // 3. Low energy impact punch
+    const punch = ctx.createOscillator();
+    punch.type = 'sine';
+    punch.frequency.setValueAtTime(140, now);
+    punch.frequency.exponentialRampToValueAtTime(30, now + 0.35);
+    const punchGain = ctx.createGain();
+    punchGain.gain.setValueAtTime(0.6, now);
+    punchGain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+    punch.connect(punchGain);
+    punchGain.connect(this.masterGain);
+    punch.start(now);
+    punch.stop(now + 0.36);
+  }
+
+  public playBattleCountdown(count: number) {
+    this.initContext();
+    if (!this.ctx || !this.masterGain || !this.sfxEnabled) return;
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+
+    if (count > 0) {
+      // Beep tick
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, now);
+      const env = ctx.createGain();
+      env.gain.setValueAtTime(0.35, now);
+      env.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+      osc.connect(env);
+      env.connect(this.masterGain);
+      osc.start(now);
+      osc.stop(now + 0.16);
+    } else {
+      // FIGHT! / GO sound: Explosive chord + high lead
+      this.playSwordClash();
+      const osc = ctx.createOscillator();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(587.33, now); // D5
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(2000, now);
+      const env = ctx.createGain();
+      env.gain.setValueAtTime(0.4, now);
+      env.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+      osc.connect(filter);
+      filter.connect(env);
+      env.connect(this.masterGain);
+      osc.start(now);
+      osc.stop(now + 0.65);
+    }
+  }
+
+  public playStreakFire() {
+    this.initContext();
+    if (!this.ctx || !this.masterGain || !this.sfxEnabled) return;
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+
+    const osc = ctx.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(220, now);
+    osc.frequency.exponentialRampToValueAtTime(880, now + 0.25);
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(1200, now);
+    const env = ctx.createGain();
+    env.gain.setValueAtTime(0.3, now);
+    env.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+
+    osc.connect(filter);
+    filter.connect(env);
+    env.connect(this.masterGain);
+    osc.start(now);
+    osc.stop(now + 0.32);
+  }
+
+  public playVictoryFanfare() {
+    this.initContext();
+    if (!this.ctx || !this.masterGain || !this.sfxEnabled) return;
+    const now = this.ctx.currentTime;
+
+    // Fanfare arpeggio: C4, E4, G4, C5, E5, G5
+    const notes = [
+      { f: 523.25, t: 0.0, d: 0.18 },  // C5
+      { f: 659.25, t: 0.15, d: 0.18 }, // E5
+      { f: 783.99, t: 0.30, d: 0.18 }, // G5
+      { f: 1046.50, t: 0.45, d: 0.6 }, // C6 (Long hold)
+    ];
+
+    notes.forEach(n => {
+      this.playPianoNote(n.f, now + n.t, n.d, 0.55);
+    });
+  }
+
+  public playDefeatTone() {
+    this.initContext();
+    if (!this.ctx || !this.masterGain || !this.sfxEnabled) return;
+    const now = this.ctx.currentTime;
+
+    const notes = [
+      { f: 392.00, t: 0.0, d: 0.4 },  // G4
+      { f: 349.23, t: 0.3, d: 0.4 },  // F4
+      { f: 311.13, t: 0.6, d: 0.4 },  // Eb4
+      { f: 261.63, t: 0.9, d: 0.8 },  // C4
+    ];
+
+    notes.forEach(n => {
+      this.playPianoNote(n.f, now + n.t, n.d, 0.35);
+    });
   }
 
   public startMusic() {

@@ -10,7 +10,7 @@ const SessionScoreSchema = new Schema({
     correctCount: { type: Number, default: 0 },
     answeredCount: { type: Number, default: 0 },
     accuracy: { type: Number, default: 0 },
-    lastAnsweredAt: { type: Date, default: Date.now }
+    lastAnsweredAt: { type: Date, default: Date.now, expires: 60 * 60 * 24 * 90 } // Auto-delete after 90 days (3 months)
 });
 
 // Index for fast leaderboard sorting
