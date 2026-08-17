@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { BookOpen, Settings, LogOut, LayoutDashboard, Menu, X, Share2, Play, Users, UsersRound, Gamepad2, Bell, Mail, Send, Palette } from 'lucide-react';
+import { BookOpen, Settings, LogOut, LayoutDashboard, Menu, X, Share2, Play, Users, UsersRound, Gamepad2, Bell, Mail, Send, Palette, ShoppingBag } from 'lucide-react';
 import { TeacherThemeProvider, useTeacherTheme } from '@/lib/teacherTheme';
 import { TeacherThemeProvider as NewTeacherThemeProvider } from '@/lib/theme/TeacherThemeContext';
 import MessagesModal from '@/components/teacher/MessagesModal';
@@ -114,6 +114,7 @@ function TeacherLayoutInner({ children }: { children: React.ReactNode }) {
         { name: 'Mashq', href: '/teacher/random', icon: Play },
         { name: 'Lug\'at O\'yini', href: '/teacher/vocab-game', icon: Gamepad2 },
         { name: 'Dizayn', href: '/teacher/theme', icon: Palette },
+        { name: 'Do\'kon', href: '/teacher/shop', icon: ShoppingBag },
     ];
 
     if (loading || !user || (user.role !== 'teacher' && user.role !== 'admin')) {

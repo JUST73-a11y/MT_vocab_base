@@ -4,6 +4,7 @@ import dbConnect from '@/lib/db';
 import StudentTheme from '@/models/StudentTheme';
 import { sanitizeThemeConfig } from '@/lib/theme/themeEngine';
 import { createApiError } from '@/lib/apiError';
+import { checkEntitlement } from '@/lib/entitlements';
 
 export async function GET() {
   const session = await getServerSession();
@@ -16,6 +17,16 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const session = await getServerSession();
   if (!session || session.role !== 'student') return createApiError('UNAUTHORIZED', 'Login required', 401);
+
+  // Backend entitlement check — never trust the client
+  const access = await checkEntitlement(session.id, 'THEME_CREATOR');
+  if (!access.active) {
+    return NextResponse.json(
+      { code: 'THEME_CREATOR_ACCESS_REQUIRED', message: 'Theme Creator access required. Purchase it from the Shop.' },
+      { status: 403 }
+    );
+  }
+
   await dbConnect();
   const count = await StudentTheme.countDocuments({ studentId: session.id });
   if (count >= 10) return createApiError('FORBIDDEN', 'Maximum 10 themes allowed', 403);
@@ -27,3 +38,4 @@ export async function POST(req: NextRequest) {
   const theme = await StudentTheme.create({ studentId: session.id, name, config, isEquipped: false, source: 'STUDENT' });
   return NextResponse.json(theme, { status: 201 });
 }
+

@@ -5,7 +5,7 @@ const CoinTransactionSchema = new Schema({
     teacherId: { type: Schema.Types.ObjectId, ref: 'User', default: null }, // null for system/quiz earn
     type: {
         type: String,
-        enum: ['EARN_QUIZ', 'REDEEM_TEACHER', 'ADJUST_ADMIN'],
+        enum: ['EARN_QUIZ', 'REDEEM_TEACHER', 'ADJUST_ADMIN', 'SHOP_PURCHASE', 'SHOP_REFUND'],
         required: true,
     },
     amount: { type: Number, required: true }, // positive = earn, negative = deduct
