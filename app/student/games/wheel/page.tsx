@@ -1,21 +1,30 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { soundEngine } from '@/lib/sound/soundEngine';
 import { fireVictoryConfetti } from '@/components/ui/ConfettiEffect';
-import { ArrowLeft, Sparkles, Coins, Zap, Shield, Gift, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Sparkles, Clock, Lock } from 'lucide-react';
 
 const SECTORS = [
     { index: 0, label: '50 MT', icon: '🪙', color: '#6366f1' },
     { index: 1, label: '+2 Energiya', icon: '⚡', color: '#10b981' },
     { index: 2, label: '100 MT', icon: '🪙', color: '#3b82f6' },
-    { index: 3, label: 'Smart Karta', icon: '💳', color: '#f59e0b' },
+    { index: 3, label: '+3 Energiya', icon: '⚡', color: '#f59e0b' },
     { index: 4, label: '250 MT', icon: '🪙', color: '#8b5cf6' },
     { index: 5, label: '+5 Energiya', icon: '⚡', color: '#06b6d4' },
     { index: 6, label: '24h Mavzu', icon: '🎨', color: '#ec4899' },
     { index: 7, label: '500 MT!', icon: '🌟', color: '#eab308' },
 ];
+
+function formatTime(ms: number) {
+    if (ms <= 0) return '00:00:00';
+    const totalSec = Math.floor(ms / 1000);
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
 
 export default function WheelPage() {
     const router = useRouter();
@@ -25,15 +34,47 @@ export default function WheelPage() {
     const [error, setError] = useState('');
     const [balance, setBalance] = useState<number | null>(null);
     const [isFree, setIsFree] = useState(true);
+    const [remainingMs, setRemainingMs] = useState(0);
+
+    const loadStatus = async () => {
+        try {
+            const [wRes, sRes] = await Promise.all([
+                fetch('/api/student/wallet'),
+                fetch('/api/student/wheel/spin'),
+            ]);
+            const wData = await wRes.json();
+            const sData = await sRes.json();
+
+            setBalance(wData.balance ?? 0);
+            setIsFree(sData.isFree ?? true);
+            if (sData.remainingMs) setRemainingMs(sData.remainingMs);
+        } catch {
+            /* ignore */
+        }
+    };
 
     useEffect(() => {
-        fetch('/api/student/wallet')
-            .then(r => r.json())
-            .then(d => setBalance(d.balance ?? 0));
+        loadStatus();
     }, []);
 
+    // Live cooldown timer countdown
+    useEffect(() => {
+        if (remainingMs <= 0) return;
+        const interval = setInterval(() => {
+            setRemainingMs(r => {
+                if (r <= 1000) {
+                    clearInterval(interval);
+                    setIsFree(true);
+                    return 0;
+                }
+                return r - 1000;
+            });
+        }, 1000);
+        return () => clearInterval(interval);
+    }, [remainingMs]);
+
     const handleSpin = async () => {
-        if (spinning) return;
+        if (spinning || !isFree) return;
         setError('');
         setPrize(null);
         setSpinning(true);
@@ -44,6 +85,8 @@ export default function WheelPage() {
 
             if (!res.ok) {
                 setError(data.message || 'Spin amalga oshmadi');
+                if (data.remainingMs) setRemainingMs(data.remainingMs);
+                setIsFree(false);
                 setSpinning(false);
                 return;
             }
@@ -53,11 +96,10 @@ export default function WheelPage() {
             const sectorAngle = 360 / numSectors;
 
             // Target rotation so top indicator points to target sector
-            const extraSpins = 5 * 360; // 5 full rotations
+            const extraSpins = 5 * 360;
             const targetSectorAngle = 360 - (sectorIndex * sectorAngle + sectorAngle / 2);
             const finalRotation = rotation + extraSpins + (targetSectorAngle - (rotation % 360));
 
-            // Sound tick loop during spin
             const startRot = rotation;
             const duration = 4000;
             const startTime = performance.now();
@@ -66,13 +108,11 @@ export default function WheelPage() {
             const animateSpin = (now: number) => {
                 const elapsed = now - startTime;
                 const progress = Math.min(1, elapsed / duration);
-                // Ease-out cubic deceleration
                 const easeOut = 1 - Math.pow(1 - progress, 3);
                 const currentRot = startRot + (finalRotation - startRot) * easeOut;
 
                 setRotation(currentRot);
 
-                // Calculate current sector under indicator for tick sound
                 const currentSector = Math.floor(((360 - (currentRot % 360)) % 360) / sectorAngle);
                 if (currentSector !== lastSectorTick) {
                     lastSectorTick = currentSector;
@@ -86,6 +126,7 @@ export default function WheelPage() {
                     setPrize(data.prize);
                     if (data.newBalance !== undefined) setBalance(data.newBalance);
                     setIsFree(false);
+                    setRemainingMs(24 * 60 * 60 * 1000);
                     soundEngine.playLevelUp();
                     fireVictoryConfetti();
                 }
@@ -120,7 +161,7 @@ export default function WheelPage() {
                 <h1 className="text-3xl md:text-5xl font-black text-white tracking-tight flex items-center justify-center gap-3">
                     🎡 Omad G'ildiragi
                 </h1>
-                <p className="text-sm text-white/60 mt-1">Har kuni tekin spin bosing va sovrinlar yutib oling!</p>
+                <p className="text-sm text-white/60 mt-1">Har 24 soatda 1 marta bepul spin bosing va sovrinlar yutib oling!</p>
             </div>
 
             {/* 3D Wheel Container */}
@@ -178,7 +219,7 @@ export default function WheelPage() {
 
             {/* Error Message */}
             {error && (
-                <div className="mb-4 px-4 py-2 rounded-xl bg-red-500/15 border border-red-500/30 text-red-300 text-sm font-bold">
+                <div className="mb-4 px-4 py-2.5 rounded-2xl bg-red-500/15 border border-red-500/30 text-red-300 text-sm font-bold text-center max-w-md">
                     {error}
                 </div>
             )}
@@ -192,14 +233,31 @@ export default function WheelPage() {
                 </div>
             )}
 
+            {/* Cooldown Timer Banner if not free */}
+            {!isFree && remainingMs > 0 && (
+                <div className="mb-4 px-6 py-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center gap-3 text-amber-300 font-bold text-sm">
+                    <Clock className="w-5 h-5 animate-pulse" />
+                    <span>Keyingi bepul spin: <span className="font-mono text-base font-black text-white">{formatTime(remainingMs)}</span></span>
+                </div>
+            )}
+
             {/* Spin Button */}
             <button
                 onClick={handleSpin}
-                disabled={spinning}
-                className="w-full max-w-xs py-4 font-black text-lg rounded-2xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 text-amber-950 shadow-[0_0_30px_rgba(245,158,11,0.5)] hover:brightness-110 active:scale-95 transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-3"
+                disabled={spinning || !isFree}
+                className={`w-full max-w-xs py-4 font-black text-lg rounded-2xl shadow-xl transition-all flex items-center justify-center gap-3 ${
+                    isFree && !spinning
+                        ? 'bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 text-amber-950 shadow-[0_0_30px_rgba(245,158,11,0.5)] hover:brightness-110 active:scale-95 cursor-pointer'
+                        : 'bg-white/10 text-white/40 cursor-not-allowed border border-white/10'
+                }`}
             >
                 {spinning ? (
                     <div className="w-6 h-6 rounded-full border-3 border-amber-950 border-t-transparent animate-spin" />
+                ) : !isFree ? (
+                    <>
+                        <Lock className="w-5 h-5" />
+                        <span>Bugungi spin ishlatildi</span>
+                    </>
                 ) : (
                     <>
                         <Sparkles className="w-6 h-6" />

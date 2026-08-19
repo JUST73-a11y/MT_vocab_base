@@ -301,27 +301,26 @@ function TeacherLayoutInner({ children }: { children: React.ReactNode }) {
                                                 initial={{ opacity: 0, y: 10, scale: 0.95 }}
                                                 animate={{ opacity: 1, y: 0, scale: 1 }}
                                                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                                className="absolute right-0 mt-2 w-80 rounded-2xl shadow-2xl overflow-hidden"
+                                                className="absolute right-0 mt-2 w-80 md:w-96 rounded-2xl shadow-2xl overflow-hidden z-50 border border-slate-700/80"
                                                 style={{
-                                                    background: theme === 'kids' 
-                                                        ? 'rgba(255,252,240,0.95)' 
-                                                        : 'rgba(15,13,30,0.95)',
+                                                    background: 'rgba(15, 23, 42, 0.96)',
                                                     backdropFilter: 'blur(20px)',
-                                                    border: `1px solid ${config.accentColor}30`,
-                                                    color: theme === 'kids' ? '#1a1a2e' : 'white',
+                                                    color: 'white',
                                                 }}
                                             >
-                                                <div className="p-4 border-b flex justify-between items-center" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
-                                                    <h3 className="font-black text-sm uppercase tracking-widest">Xabarnomalar</h3>
+                                                <div className="p-4 border-b border-slate-700/60 flex justify-between items-center bg-slate-900/80">
+                                                    <h3 className="font-black text-xs uppercase tracking-widest text-amber-400 flex items-center gap-2">
+                                                        <Bell className="w-4 h-4 text-amber-400" /> Xabarnomalar
+                                                    </h3>
                                                     {unreadCount > 0 && (
-                                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: `${config.accentColor}20`, color: config.accentColor }}>
+                                                        <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">
                                                             {unreadCount} ta yangi
                                                         </span>
                                                     )}
                                                 </div>
-                                                <div className="max-h-[300px] overflow-y-auto custom-scrollbar p-2 space-y-1">
+                                                <div className="max-h-[340px] overflow-y-auto custom-scrollbar p-2.5 space-y-2">
                                                     {notifications.length === 0 ? (
-                                                        <p className="text-white/40 text-xs text-center py-4">Xabarnomalar yo'q</p>
+                                                        <p className="text-slate-400 text-xs text-center py-6 font-medium">Xabarnomalar mavjud emas</p>
                                                     ) : (
                                                         notifications.map(n => {
                                                             const isMessage = n.type === 'MESSAGE';
@@ -332,15 +331,15 @@ function TeacherLayoutInner({ children }: { children: React.ReactNode }) {
                                                                     setSelectedNotification(n);
                                                                     setShowNotifications(false);
                                                                 }}
-                                                                className={`w-full text-left p-3 rounded-xl flex flex-col gap-1 transition-colors cursor-pointer ${
+                                                                className={`w-full text-left p-3.5 rounded-xl flex flex-col gap-1.5 transition-all cursor-pointer border ${
                                                                     isMessage 
-                                                                        ? 'bg-red-500/10 border border-red-500/20 hover:bg-red-500/20' 
-                                                                        : 'bg-white/5 border border-white/5 hover:bg-white/10'
+                                                                        ? 'bg-red-500/15 border-red-500/30 hover:bg-red-500/25' 
+                                                                        : 'bg-slate-800/90 border-slate-700/70 hover:bg-indigo-900/40 hover:border-indigo-500/50 shadow-sm'
                                                                 }`}
                                                             >
-                                                                <p className={`text-xs font-black ${isMessage ? 'text-red-400' : 'text-white'}`}>{n.title}</p>
-                                                                <p className={`text-[11px] leading-relaxed line-clamp-2 ${isMessage ? 'text-red-400/80' : 'text-white/60'}`}>{n.message}</p>
-                                                                <p className={`text-[9px] uppercase font-bold mt-1 tracking-wider ${isMessage ? 'text-red-400/50' : 'text-white/30'}`}>{new Date(n.createdAt).toLocaleDateString()}</p>
+                                                                <p className={`text-xs font-black tracking-wide ${isMessage ? 'text-red-400' : 'text-amber-300'}`}>{n.title}</p>
+                                                                <p className={`text-[12px] leading-relaxed line-clamp-2 ${isMessage ? 'text-red-200' : 'text-slate-200'}`}>{n.message}</p>
+                                                                <p className={`text-[10px] uppercase font-bold mt-0.5 tracking-wider ${isMessage ? 'text-red-400/70' : 'text-slate-400'}`}>{new Date(n.createdAt).toLocaleDateString()}</p>
                                                             </button>
                                                             );
                                                         })
@@ -544,53 +543,39 @@ function TeacherLayoutInner({ children }: { children: React.ReactNode }) {
             {/* ── NOTIFICATION MODAL ── */}
             {mounted && selectedNotification && createPortal(
                 <div
-                    className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+                    className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
                     style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh' }}
                 >
                     <div
-                        className="w-[95%] max-w-md p-8 shadow-2xl flex flex-col gap-4 animate-fade-in"
-                        style={{
-                            borderRadius: config.btnRadius,
-                            background: theme === 'kids'
-                                ? 'rgba(255,252,240,0.97)'
-                                : 'linear-gradient(160deg,#13111f,#0f0d1e)',
-                            border: `1px solid ${config.accentColor}30`,
-                            color: theme === 'kids' ? '#1a1a2e' : 'white',
-                        }}
+                        className="w-[95%] max-w-md p-7 shadow-2xl flex flex-col gap-4 animate-fade-in rounded-3xl bg-slate-900 border border-slate-700 text-white"
                     >
-                        <div className="flex items-center justify-between border-b pb-4" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
+                        <div className="flex items-center justify-between border-b border-slate-800 pb-4">
                             <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: selectedNotification.type === 'MESSAGE' ? 'rgba(239,68,68,0.2)' : `${config.accentColor}20`, color: selectedNotification.type === 'MESSAGE' ? '#ef4444' : config.accentColor }}>
+                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${selectedNotification.type === 'MESSAGE' ? 'bg-red-500/20 text-red-400' : 'bg-amber-500/20 text-amber-400'}`}>
                                     {selectedNotification.type === 'MESSAGE' ? <Mail className="w-6 h-6" /> : <Bell className="w-6 h-6" />}
                                 </div>
                                 <div>
-                                    <h2 className="text-lg font-black">{selectedNotification.title}</h2>
-                                    <p className="text-xs uppercase tracking-wider font-bold" style={{ opacity: 0.5 }}>{new Date(selectedNotification.createdAt).toLocaleString()}</p>
+                                    <h2 className="text-lg font-black text-white">{selectedNotification.title}</h2>
+                                    <p className="text-xs uppercase tracking-wider font-bold text-slate-400">{new Date(selectedNotification.createdAt).toLocaleString()}</p>
                                 </div>
                             </div>
-                            <button onClick={() => setSelectedNotification(null)} className="p-2 transition-colors hover:text-red-400" style={{ opacity: 0.6 }}>
+                            <button onClick={() => setSelectedNotification(null)} className="p-2 transition-colors text-slate-400 hover:text-white cursor-pointer">
                                 <X className="w-6 h-6" />
                             </button>
                         </div>
                         <div className="py-2">
-                            <p className="text-sm leading-relaxed" style={{ opacity: 0.9 }}>{selectedNotification.message}</p>
+                            <p className="text-sm leading-relaxed text-slate-200 font-medium">{selectedNotification.message}</p>
                             {selectedNotification.unitTitle && (
-                                <div className="mt-4 p-4 rounded-xl" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                                    <p className="text-xs font-bold uppercase tracking-wider mb-1" style={{ opacity: 0.5 }}>Tafsilotlar</p>
-                                    <p className="text-sm font-bold">O'quvchi: <span style={{color: config.accentColor}}>{selectedNotification.studentName}</span></p>
-                                    <p className="text-sm font-bold mt-1">Bo'lim: <span style={{color: config.accentColor}}>{selectedNotification.unitTitle}</span></p>
+                                <div className="mt-4 p-4 rounded-2xl bg-slate-800/80 border border-slate-700">
+                                    <p className="text-xs font-bold uppercase tracking-wider mb-1 text-slate-400">Tafsilotlar</p>
+                                    <p className="text-sm font-bold text-white">O'quvchi: <span className="text-amber-400">{selectedNotification.studentName}</span></p>
+                                    <p className="text-sm font-bold mt-1 text-white">Bo'lim: <span className="text-amber-400">{selectedNotification.unitTitle}</span></p>
                                 </div>
                             )}
                         </div>
                         <button
                             onClick={() => setSelectedNotification(null)}
-                            className="mt-2 py-3 font-black text-sm transition-all w-full"
-                            style={{
-                                borderRadius: config.btnRadius,
-                                border: `1.5px solid ${config.accentColor}40`,
-                                background: `${config.accentColor}10`,
-                                color: config.accentColor,
-                            }}
+                            className="mt-2 py-3.5 font-black text-sm transition-all w-full rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white cursor-pointer"
                         >
                             Yopish
                         </button>

@@ -118,11 +118,45 @@ export async function POST(req: Request) {
         if (!isFinished) {
             const nextStudentId = session.studentOrder[nextIndex];
             nextStudent = await User.findById(nextStudentId).select('name email warningCard');
-            const targetUnitFilter = (session.unitIds && session.unitIds.length > 0)
-                ? { unitId: { $in: session.unitIds } }
-                : { unitId: session.unitId };
-            const allWords = await Word.find(targetUnitFilter).select('englishWord uzbekTranslation phonetic');
-            nextWords = shuffle(allWords).slice(0, session.questionsPerStudent);
+
+            const targetUnitIds = (session.unitIds && session.unitIds.length > 0)
+                ? session.unitIds
+                : [session.unitId];
+
+            const alreadyUsed = (session.usedWordIds || []).map((id: any) => id.toString());
+            const countNeeded = session.questionsPerStudent || 6;
+
+            // Fetch words from unit(s) that have NOT been used yet in this session
+            let unusedWords = await Word.find({
+                unitId: { $in: targetUnitIds },
+                _id: { $nin: alreadyUsed }
+            }).select('englishWord uzbekTranslation phonetic').lean();
+
+            let pickedWords: any[] = [];
+
+            if (unusedWords.length >= countNeeded) {
+                pickedWords = shuffle(unusedWords).slice(0, countNeeded);
+            } else {
+                // If unused words are fewer than needed, pick all remaining unused words...
+                pickedWords = shuffle(unusedWords);
+
+                // ...and reset usedWordIds pool to pick the remaining balance from all unit words
+                const allUnitWords = await Word.find({ unitId: { $in: targetUnitIds } }).select('englishWord uzbekTranslation phonetic').lean();
+                const pickedIds = new Set(pickedWords.map((w: any) => w._id.toString()));
+                const fillerCandidates = allUnitWords.filter((w: any) => !pickedIds.has(w._id.toString()));
+                const fillerWords = shuffle(fillerCandidates).slice(0, countNeeded - pickedWords.length);
+
+                pickedWords = [...pickedWords, ...fillerWords];
+                // Reset usedWordIds to current new batch
+                session.usedWordIds = [];
+            }
+
+            // Track newly picked word IDs in session
+            const newWordIds = pickedWords.map((w: any) => w._id);
+            session.usedWordIds = [...(session.usedWordIds || []), ...newWordIds];
+            await session.save();
+
+            nextWords = pickedWords;
         }
 
         return NextResponse.json({

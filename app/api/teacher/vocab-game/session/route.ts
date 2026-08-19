@@ -96,6 +96,13 @@ export async function POST(req: Request) {
 
         const shuffledStudents = shuffle(presentStudentIds);
 
+        const sessionObjIds = unitIds.map((id: string) => new mongoose.Types.ObjectId(id));
+        const allAvailableWords = await Word.find({ unitId: { $in: sessionObjIds } }).select('englishWord uzbekTranslation phonetic').lean();
+        const shuffledWordsPool = shuffle(allAvailableWords);
+        const countNeeded = questionsPerStudent || 6;
+        const sessionWords = shuffledWordsPool.slice(0, countNeeded);
+        const initialUsedIds = sessionWords.map((w: any) => w._id);
+
         const session = await VocabGameSession.create({
             teacherId: teacher.id,
             groupId,
@@ -107,6 +114,7 @@ export async function POST(req: Request) {
             status: 'ACTIVE',
             studentOrder: shuffledStudents,
             currentStudentIndex: 0,
+            usedWordIds: initialUsedIds,
         });
 
         // Keep only the latest 3 saved sessions for this group (run in background)
@@ -117,13 +125,6 @@ export async function POST(req: Request) {
         // Pre-fetch the first student's info
         const firstStudentId = shuffledStudents[0];
         const firstStudent = await User.findById(firstStudentId).select('name email warningCard');
-
-        // Pick random words for the first student from selected units efficiently
-        const sessionWords = await Word.aggregate([
-            { $match: { unitId: { $in: unitIds.map((id: string) => new mongoose.Types.ObjectId(id)) } } },
-            { $sample: { size: questionsPerStudent || 6 } },
-            { $project: { englishWord: 1, uzbekTranslation: 1, phonetic: 1 } }
-        ]);
 
         return NextResponse.json({
             session: {

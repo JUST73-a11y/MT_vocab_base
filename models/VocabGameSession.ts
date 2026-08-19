@@ -15,6 +15,7 @@ const VocabGameSessionSchema = new Schema({
     status:           { type: String, enum: ['ACTIVE', 'ENDED'], default: 'ACTIVE' },
     studentOrder:     [{ type: Schema.Types.ObjectId, ref: 'User' }], // randomized list
     currentStudentIndex: { type: Number, default: 0 },
+    usedWordIds:         [{ type: Schema.Types.ObjectId, ref: 'Word' }], // tracks word IDs already used in current session to prevent repetition
     notes:            { type: String, default: '' },
     createdAt:        { type: Date, default: Date.now, expires: 60 * 60 * 24 * 90 }, // Auto-delete after 90 days (3 months)
     endedAt:          { type: Date },

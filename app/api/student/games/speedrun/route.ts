@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 import { getServerSession } from '@/lib/serverAuth';
 import { addXpToStudent } from '@/lib/gameProfile';
@@ -20,35 +20,49 @@ export async function GET() {
 
     await dbConnect();
     const student = await User.findById(session.id).lean() as any;
-    if (!student?.teacherId) {
+
+    let allWords: any[] = [];
+
+    if (student?.teacherId) {
+        const units = await Unit.find({
+            $or: [{ teacherId: student.teacherId }, { createdBy: student.teacherId }]
+        }).select('_id').lean();
+        const unitIds = units.map((u: any) => u._id);
+        if (unitIds.length > 0) {
+            allWords = await Word.find({ unitId: { $in: unitIds } }).limit(120).lean() as any[];
+        }
+    }
+
+    if (allWords.length < 4) {
+        allWords = await Word.find().limit(150).lean() as any[];
+    }
+
+    if (allWords.length < 4) {
         return NextResponse.json({ questions: [] });
     }
 
-    // Fetch units belonging to teacher
-    const units = await Unit.find({ teacherId: student.teacherId, isActive: true }).select('_id').lean();
-    const unitIds = units.map((u: any) => u._id);
+    // Shuffle & construct 50 4-option questions
+    const shuffledWords = [...allWords].sort(() => Math.random() - 0.5);
+    const questions = shuffledWords.slice(0, 50).map((w: any) => {
+        const english = w.englishWord || w.english || 'Word';
+        const correctUzbek = w.uzbekTranslation || w.uzbek || 'Tarjima';
 
-    // Fetch 100 word items
-    const allVocab = await Word.find({ unitId: { $in: unitIds } }).limit(100).lean() as any[];
-
-    if (allVocab.length < 4) {
-        return NextResponse.json({ questions: [] });
-    }
-
-    // Shuffle & construct 30 4-option questions
-    const shuffledVocabs = [...allVocab].sort(() => Math.random() - 0.5);
-    const questions = shuffledVocabs.slice(0, 30).map((vocab: any) => {
-        const wrongOptions = allVocab
-            .filter((v: any) => v._id.toString() !== vocab._id.toString())
+        const wrongOptions = allWords
+            .filter((other: any) => (other.uzbekTranslation || other.uzbek) !== correctUzbek)
             .sort(() => Math.random() - 0.5)
             .slice(0, 3)
-            .map((v: any) => v.uzbek);
+            .map((other: any) => other.uzbekTranslation || other.uzbek);
 
-        const options = [vocab.uzbek, ...wrongOptions].sort(() => Math.random() - 0.5);
+        const optionsSet = new Set([correctUzbek, ...wrongOptions]);
+        while (optionsSet.size < 4) {
+            optionsSet.add(`Variant ${optionsSet.size + 1}`);
+        }
+        const options = Array.from(optionsSet).sort(() => Math.random() - 0.5);
+
         return {
-            id: vocab._id.toString(),
-            word: vocab.english,
-            correctUzbek: vocab.uzbek,
+            id: w._id.toString(),
+            word: english,
+            correctUzbek,
             options,
         };
     });
@@ -65,7 +79,7 @@ export async function POST(req: NextRequest) {
     let body: any = {};
     try { body = await req.json(); } catch { return NextResponse.json({ code: 'BAD_REQUEST' }, { status: 400 }); }
 
-    const { correctCount, maxStreak } = body;
+    const { correctCount, maxStreak, duration = 60 } = body;
     if (typeof correctCount !== 'number' || correctCount < 0) {
         return NextResponse.json({ code: 'BAD_REQUEST', message: 'Invalid score' }, { status: 400 });
     }
@@ -73,10 +87,10 @@ export async function POST(req: NextRequest) {
     await dbConnect();
     const studentObjId = new mongoose.Types.ObjectId(session.id);
 
-    // Coins: 5 MT per correct word
-    const coinsEarned = correctCount * 5;
-    // XP: 10 XP per correct word + streak bonus
-    const xpEarned = correctCount * 10 + (maxStreak || 0) * 5;
+    // Multipliers scaled by time mode (15s, 30s, 45s, 60s)
+    const coinMultiplier = duration <= 15 ? 8 : duration <= 30 ? 6 : 5;
+    const coinsEarned = correctCount * coinMultiplier;
+    const xpEarned = correctCount * 12 + (maxStreak || 0) * 5;
 
     let wallet = await Wallet.findOne({ studentId: studentObjId });
     if (!wallet) wallet = await Wallet.create({ studentId: studentObjId, balance: 0 });
@@ -89,14 +103,13 @@ export async function POST(req: NextRequest) {
             studentId: studentObjId,
             type: 'EARN_QUIZ',
             amount: coinsEarned,
-            meta: { reason: `Speed Run o'yini: ${correctCount} ta to'g'ri` },
+            meta: { reason: `Speed Run (${duration}s): ${correctCount} ta to'g'ri` },
         });
     }
 
     const xpResult = await addXpToStudent(session.id, xpEarned);
     await incrementQuestProgress(session.id, 'SPEED_RUN_SCORE', correctCount);
 
-    // Update Speed Run high score
     let profile = await StudentGameProfile.findOne({ studentId: studentObjId });
     if (!profile) profile = await StudentGameProfile.create({ studentId: studentObjId });
 

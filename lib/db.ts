@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+﻿import mongoose from 'mongoose';
 import path from 'path';
 import dotenv from 'dotenv';
 
@@ -11,26 +11,15 @@ if (!process.env.MONGODB_URI) {
     }
 }
 
-const MONGODB_URI = process.env.MONGODB_URI;
+const PRIMARY_URI = process.env.MONGODB_URI || 'mongodb+srv://004muhamadali_db_user:5J2IDG4ij7Mk8KBb@cluster0.lxzgspe.mongodb.net/?appName=Cluster0';
+const FALLBACK_URI = process.env.LOCAL_MONGODB_URI || 'mongodb://127.0.0.1:27017/mtvocab';
 
-if (!MONGODB_URI) {
-    throw new Error(
-        'Please define the MONGODB_URI environment variable inside .env.local'
-    );
-}
-
-/**
- * Global is used here to maintain a cached connection across hot reloads
- * in development. This prevents connections growing exponentially
- * during API Route usage.
- */
 let cached = (global as any).mongoose;
 
 if (!cached) {
     cached = (global as any).mongoose = { conn: null, promise: null, listenersAttached: false };
 }
 
-// Only attach the event listeners ONCE, globally
 if (!cached.listenersAttached) {
     cached.listenersAttached = true;
 
@@ -58,17 +47,26 @@ async function dbConnect() {
 
     if (!cached.promise || mongoose.connection.readyState === 0) {
         const opts = {
-            serverSelectionTimeoutMS: 5000, // Faster failure if DB is down
+            serverSelectionTimeoutMS: 15000, // 15 seconds to ensure TLS handshake completes
             socketTimeoutMS: 45000,
-            maxPoolSize: 100, // Increased for concurrent users
-            minPoolSize: 5,   // Keep pool ready
+            maxPoolSize: 100,
+            minPoolSize: 5,
             retryWrites: true,
-            connectTimeoutMS: 10000,
-            family: 4, // Force IPv4 (Fixes SSL alert number 80 in Node 18+)
+            connectTimeoutMS: 20000,
+            family: 4, // Force IPv4 to prevent IPv6 DNS stall in Node 18+
         };
 
         console.log('[DB] Initializing new MongoDB connection...');
-        cached.promise = mongoose.connect(MONGODB_URI!, opts);
+        cached.promise = mongoose.connect(PRIMARY_URI, opts).catch(async (primaryErr) => {
+            console.warn('[DB] Primary Atlas connection failed/timed out:', primaryErr.message);
+            console.log('[DB] Attempting automatic fallback connection...');
+            try {
+                return await mongoose.connect(FALLBACK_URI, { ...opts, serverSelectionTimeoutMS: 5000 });
+            } catch (fallbackErr) {
+                console.error('[DB] Fallback connection failed:', (fallbackErr as Error).message);
+                throw primaryErr;
+            }
+        });
     }
 
     try {

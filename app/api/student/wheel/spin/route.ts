@@ -8,20 +8,42 @@ import Wallet from '@/models/Wallet';
 import CoinTransaction from '@/models/CoinTransaction';
 import StudentEnergy from '@/models/StudentEnergy';
 import StudentGameProfile from '@/models/StudentGameProfile';
-import InventoryItem from '@/models/InventoryItem';
-import ShopItem from '@/models/ShopItem';
 import mongoose from 'mongoose';
 
+// 8 Sectors — Strictly NO Smart Cards or Dollar Cards!
 const SECTORS = [
     { index: 0, label: '50 MT', type: 'COINS', amount: 50, color: '#6366f1' },
     { index: 1, label: '+2 Energiya', type: 'ENERGY', amount: 2, color: '#10b981' },
     { index: 2, label: '100 MT', type: 'COINS', amount: 100, color: '#3b82f6' },
-    { index: 3, label: 'Smart Karta', type: 'CARD', amount: 1, color: '#f59e0b' },
+    { index: 3, label: '+3 Energiya', type: 'ENERGY', amount: 3, color: '#f59e0b' },
     { index: 4, label: '250 MT', type: 'COINS', amount: 250, color: '#8b5cf6' },
     { index: 5, label: '+5 Energiya', type: 'ENERGY', amount: 5, color: '#06b6d4' },
     { index: 6, label: '24h Mavzu', type: 'THEME', amount: 24, color: '#ec4899' },
     { index: 7, label: '500 MT!', type: 'JACKPOT', amount: 500, color: '#eab308' },
 ];
+
+export async function GET() {
+    const session = await getServerSession();
+    if (!session || session.role !== 'student') {
+        return NextResponse.json({ code: 'UNAUTHORIZED', message: 'Login required' }, { status: 401 });
+    }
+
+    await dbConnect();
+    const studentObjId = new mongoose.Types.ObjectId(session.id);
+    let profile = await StudentGameProfile.findOne({ studentId: studentObjId }).lean() as any;
+
+    const now = new Date().getTime();
+    const lastSpin = profile?.lastWheelSpinAt ? new Date(profile.lastWheelSpinAt).getTime() : 0;
+    const cooldownMs = 24 * 60 * 60 * 1000;
+    const isFree = now - lastSpin >= cooldownMs;
+    const remainingMs = Math.max(0, cooldownMs - (now - lastSpin));
+
+    return NextResponse.json({
+        isFree,
+        remainingMs,
+        sectors: SECTORS,
+    });
+}
 
 export async function POST() {
     const session = await getServerSession();
@@ -42,34 +64,23 @@ export async function POST() {
     const cooldownMs = 24 * 60 * 60 * 1000;
     const isFree = now.getTime() - lastSpin >= cooldownMs;
 
+    // Strict 24h limit — spin allowed ONLY 1 time per 24 hours!
+    if (!isFree) {
+        const remainingMs = cooldownMs - (now.getTime() - lastSpin);
+        const remainingHours = Math.floor(remainingMs / 3600000);
+        const remainingMins = Math.floor((remainingMs % 3600000) / 60000);
+        return NextResponse.json({
+            code: 'COOLDOWN',
+            message: `Omad g'ildiragini har 24 soatda faqat 1 marta aylantirish mumkin! Keyingi spin: ${remainingHours} soat ${remainingMins} daqiqadan so'ng.`,
+            remainingMs,
+        }, { status: 400 });
+    }
+
     let wallet = await Wallet.findOne({ studentId: studentObjId });
     if (!wallet) wallet = await Wallet.create({ studentId: studentObjId, balance: 0 });
 
-    const extraSpinCost = 150;
-
-    if (!isFree) {
-        if (wallet.balance < extraSpinCost) {
-            const remainingSec = Math.ceil((cooldownMs - (now.getTime() - lastSpin)) / 1000);
-            return NextResponse.json({
-                code: 'COOLDOWN',
-                message: 'Bugungi bepul spin ishlatib bo\'lindi',
-                remainingSec,
-                cost: extraSpinCost,
-            }, { status: 400 });
-        }
-        // Deduct extra spin cost
-        wallet.balance -= extraSpinCost;
-        await wallet.save();
-        await CoinTransaction.create({
-            studentId: studentObjId,
-            type: 'SHOP_PURCHASE',
-            amount: -extraSpinCost,
-            meta: { reason: 'Omad g\'ildiragi spini' },
-        });
-    }
-
-    // Weighted random selection for fairness & excitement
-    const weights = [30, 20, 20, 10, 10, 5, 4, 1]; // Jackpot has 1% weight
+    // Weighted random selection
+    const weights = [35, 20, 20, 12, 7, 3, 2, 1]; // 500 MT has 1% jackpot weight
     const totalWeight = weights.reduce((a, b) => a + b, 0);
     let randomNum = Math.random() * totalWeight;
     let selectedIndex = 0;
@@ -84,7 +95,7 @@ export async function POST() {
 
     const prize = SECTORS[selectedIndex];
 
-    // Grant Prize Effects
+    // Grant Prize Effects (Only MT Coins, Energy, or Theme Access — ZERO Cards!)
     if (prize.type === 'COINS' || prize.type === 'JACKPOT') {
         wallet.balance += prize.amount;
         await wallet.save();
