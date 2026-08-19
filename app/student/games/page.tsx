@@ -345,9 +345,9 @@ export default function StudentGamesPage() {
             <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-xl shadow-lg shadow-amber-500/30">
               🎮
             </div>
-            <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight">SmartLex O&apos;yini</h1>
+            <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight">O&apos;yinlar Maydoni 2.0</h1>
           </div>
-          <p className="text-white/40 text-sm ml-[52px]">Bo'lim so'zlarini interaktiv o'rganish platformasi</p>
+          <p className="text-white/40 text-sm ml-[52px]">Speed Run, Omad G'ildiragi, Kunlik Vazifalar va SmartLex O'yini</p>
         </div>
         <Link
           href="/student/certificates"
@@ -355,6 +355,60 @@ export default function StudentGamesPage() {
         >
           <Award className="w-4 h-4" />
           <span>Mening Sertifikatlarim</span>
+        </Link>
+      </div>
+
+      {/* ── MT-Vocab 2.0 Gamification Modes Banner ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* Speed Run */}
+        <Link href="/student/games/speedrun"
+          className="p-5 rounded-3xl bg-gradient-to-br from-amber-500/15 via-orange-500/10 to-transparent border border-amber-500/30 hover:border-amber-500/60 transition-all group flex items-center justify-between gap-4 cursor-pointer shadow-lg">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-3xl group-hover:scale-110 transition-transform">
+              ⚡
+            </div>
+            <div>
+              <h3 className="font-black text-lg text-white">Speed Run</h3>
+              <p className="text-xs text-white/50">60s vaqtga qarshi rejim</p>
+            </div>
+          </div>
+          <div className="w-8 h-8 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-400 font-bold">
+            →
+          </div>
+        </Link>
+
+        {/* Wheel of Fortune */}
+        <Link href="/student/games/wheel"
+          className="p-5 rounded-3xl bg-gradient-to-br from-indigo-500/15 via-purple-500/10 to-transparent border border-indigo-500/30 hover:border-indigo-500/60 transition-all group flex items-center justify-between gap-4 cursor-pointer shadow-lg">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-3xl group-hover:scale-110 transition-transform">
+              🎡
+            </div>
+            <div>
+              <h3 className="font-black text-lg text-white">Omad G'ildiragi</h3>
+              <p className="text-xs text-white/50">Har kuni tekin spin & sovrinlar</p>
+            </div>
+          </div>
+          <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold">
+            →
+          </div>
+        </Link>
+
+        {/* 1v1 Duel */}
+        <Link href="/student/duel"
+          className="p-5 rounded-3xl bg-gradient-to-br from-rose-500/15 via-pink-500/10 to-transparent border border-rose-500/30 hover:border-rose-500/60 transition-all group flex items-center justify-between gap-4 cursor-pointer shadow-lg">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-3xl group-hover:scale-110 transition-transform">
+              ⚔️
+            </div>
+            <div>
+              <h3 className="font-black text-lg text-white">1v1 Duel</h3>
+              <p className="text-xs text-white/50">Real-vaqtda bellashuv</p>
+            </div>
+          </div>
+          <div className="w-8 h-8 rounded-full bg-rose-500/20 flex items-center justify-center text-rose-400 font-bold">
+            →
+          </div>
         </Link>
       </div>
 
