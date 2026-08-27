@@ -97,7 +97,7 @@ export async function POST(req: Request) {
         const shuffledStudents = shuffle(presentStudentIds);
 
         const sessionObjIds = unitIds.map((id: string) => new mongoose.Types.ObjectId(id));
-        const allAvailableWords = await Word.find({ unitId: { $in: sessionObjIds } }).select('englishWord uzbekTranslation phonetic').lean();
+        const allAvailableWords = await Word.find({ unitId: { $in: sessionObjIds } }).select('englishWord uzbekTranslation phonetic emoji').lean();
         const shuffledWordsPool = shuffle(allAvailableWords);
         const countNeeded = questionsPerStudent || 6;
         const sessionWords = shuffledWordsPool.slice(0, countNeeded);

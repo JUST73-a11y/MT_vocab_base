@@ -13,7 +13,13 @@ import { ArrowLeft, SkipForward, Loader2, Play, Volume2, Timer, FolderOpen, Head
 function CircularTimer({ timeLeft, total, isPaused }: { timeLeft: number; total: number; isPaused: boolean }) {
     const R = 50, C = 2 * Math.PI * R;
     const progress = total > 0 ? timeLeft / total : 0;
-    const color = progress > 0.5 ? 'var(--primary)' : progress > 0.25 ? '#f59e0b' : '#f87171';
+    const color = isPaused
+        ? '#f59e0b'
+        : progress > 0.5
+        ? '#6366f1'
+        : progress > 0.25
+        ? '#f59e0b'
+        : '#ef4444';
     return (
         <div className="relative flex items-center justify-center mb-8 drop-shadow-[0_0_15px_rgba(99,102,241,0.3)]" style={{ width: 140, height: 140 }}>
             <svg className="absolute inset-0 -rotate-90" style={{ width: '100%', height: '100%' }} viewBox="0 0 120 120">

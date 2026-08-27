@@ -13,18 +13,24 @@ import { ArrowLeft, SkipForward, Loader2, Play, Volume2, Timer, FolderOpen, Head
 function CircularTimer({ timeLeft, total, isPaused }: { timeLeft: number; total: number; isPaused: boolean }) {
     const R = 50, C = 2 * Math.PI * R;
     const progress = total > 0 ? timeLeft / total : 0;
-    const color = progress > 0.5 ? 'var(--primary)' : progress > 0.25 ? '#f59e0b' : '#f87171';
+    const color = isPaused
+        ? '#f59e0b'
+        : progress > 0.5
+        ? '#6366f1'
+        : progress > 0.25
+        ? '#f59e0b'
+        : '#ef4444';
     return (
-        <div className="relative flex items-center justify-center mb-8 drop-shadow-[0_0_15px_rgba(99,102,241,0.3)]" style={{ width: 140, height: 140 }}>
-            <svg className="absolute inset-0 -rotate-90" style={{ width: '100%', height: '100%' }} viewBox="0 0 120 120">
+        <div className="relative flex items-center justify-center mb-6 sm:mb-8 drop-shadow-[0_0_20px_rgba(99,102,241,0.35)] w-[140px] h-[140px] sm:w-[170px] sm:h-[170px]">
+            <svg className="absolute inset-0 -rotate-90 w-full h-full" viewBox="0 0 120 120">
                 <circle cx="60" cy="60" r={R} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="6" />
                 <circle cx="60" cy="60" r={R} fill="none" stroke={color} strokeWidth="6"
                     strokeDasharray={`${C * progress} ${C}`} strokeLinecap="round"
                     style={{ transition: 'stroke-dasharray 1s linear, stroke 0.5s' }} />
             </svg>
             <div className="text-center z-10">
-                <div className="text-4xl font-black tabular-nums text-white">{timeLeft}</div>
-                <div className="text-[10px] uppercase font-black tracking-widest text-white/30">saniye</div>
+                <div className="text-4xl sm:text-6xl font-black tabular-nums text-white drop-shadow-md">{timeLeft}</div>
+                <div className="text-[10px] sm:text-xs uppercase font-black tracking-widest text-white/40 mt-1">saniye</div>
             </div>
         </div>
     );
@@ -549,18 +555,33 @@ export default function RandomPracticePage() {
                                 </div>
                             </div>
 
+                            {/* [0] EMOJI if available */}
+                            {currentWord.emoji && (
+                                <div className={`mb-3 transition-all duration-500 transform hover:scale-110 ${isBlurred ? 'blur-2xl opacity-20 scale-95' : ''}`}>
+                                    <span className="text-7xl sm:text-8xl md:text-9xl filter drop-shadow-[0_10px_35px_rgba(255,255,255,0.35)] select-none">
+                                        {currentWord.emoji}
+                                    </span>
+                                </div>
+                            )}
+
                             {/* [1] Large English Word */}
-                            <div className="relative mb-12 min-w-0 w-full px-2">
-                                <h1 className={`text-[clamp(32px,12vw,110px)] font-black text-white tracking-tighter capitalize leading-[1.1] select-none transition-all duration-500 break-words hyphens-auto w-full ${isBlurred ? 'blur-2xl opacity-20 scale-95' : ''}`}>
+                            <div className="relative mb-6 min-w-0 w-full px-2">
+                                <h1 className={`font-black text-white tracking-tighter capitalize leading-[1.1] select-none transition-all duration-500 break-words hyphens-auto w-full ${
+                                    (practiceMode === 'EN' ? currentWord.englishWord : currentWord.uzbekTranslation).length > 25
+                                        ? 'text-3xl sm:text-4xl md:text-5xl'
+                                        : (practiceMode === 'EN' ? currentWord.englishWord : currentWord.uzbekTranslation).length > 15
+                                        ? 'text-4xl sm:text-6xl md:text-7xl'
+                                        : 'text-5xl sm:text-7xl md:text-8xl lg:text-9xl'
+                                } ${isBlurred ? 'blur-2xl opacity-20 scale-95' : ''}`}>
                                     {practiceMode === 'EN' ? currentWord.englishWord : currentWord.uzbekTranslation}
                                 </h1>
 
                                 {/* [2] Phonetic transcription (Directly below English) */}
                                 {practiceMode === 'EN' && currentWord.phonetic && (
-                                    <div className={`mt-6 transition-all duration-500 w-full flex justify-center ${isBlurred ? 'blur-2xl opacity-20 scale-95' : ''}`}>
+                                    <div className={`mt-4 transition-all duration-500 w-full flex justify-center ${isBlurred ? 'blur-2xl opacity-20 scale-95' : ''}`}>
                                         <button
                                             onClick={() => handleSpeak(null, 'en-US')}
-                                            className="inline-flex items-center gap-2 px-4 py-2 md:py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 font-bold tracking-wider text-sm md:text-lg hover:bg-indigo-500/20 transition-all active:scale-95 max-w-full"
+                                            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 font-bold tracking-wider text-sm md:text-base hover:bg-indigo-500/20 transition-all active:scale-95 max-w-full"
                                         >
                                             <Volume2 className="w-4 h-4 shrink-0" />
                                             <span className="truncate">{currentWord.phonetic}</span>
@@ -571,20 +592,26 @@ export default function RandomPracticePage() {
 
                             {/* [3] Example Sentence (Different color/style) */}
                             {currentWord.exampleSentence && (
-                                <div className="max-w-3xl mx-auto mb-12 w-full px-2 sm:px-4">
-                                    <p className="text-emerald-400/60 text-[10px] sm:text-xs font-black uppercase tracking-[0.3em] mb-3">Context Usage</p>
-                                    <p className={`text-base sm:text-lg md:text-2xl text-emerald-100/30 italic leading-relaxed font-medium break-words transition-all duration-500 ${isBlurred ? 'blur-3xl opacity-0 scale-95 pointer-events-none select-none' : ''}`}>
+                                <div className="max-w-3xl mx-auto mb-6 w-full px-2 sm:px-4">
+                                    <p className="text-emerald-400/60 text-[10px] sm:text-xs font-black uppercase tracking-[0.3em] mb-2">Context Usage</p>
+                                    <p className={`text-sm sm:text-base md:text-xl text-emerald-100/40 italic leading-relaxed font-medium break-words transition-all duration-500 ${isBlurred ? 'blur-3xl opacity-0 scale-95 pointer-events-none select-none' : ''}`}>
                                         "{currentWord.exampleSentence}"
                                     </p>
                                 </div>
                             )}
 
                             {/* [4] Uzbek Translation (Shown after time up) */}
-                            <div className="mt-8 min-h-[120px] pt-8 border-t border-white/5 flex items-center justify-center w-full min-w-0 px-2 sm:px-4">
+                            <div className="mt-4 min-h-[90px] pt-4 border-t border-white/5 flex items-center justify-center w-full min-w-0 px-2 sm:px-4">
                                 {showTranslation ? (
                                     <div className="animate-fade-in group/uz w-full min-w-0">
-                                        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 mb-4">Ma'nosi</p>
-                                        <h2 className="text-3xl sm:text-4xl md:text-7xl font-black text-emerald-400 tracking-tight drop-shadow-[0_0_30px_rgba(16,185,129,0.4)] capitalize break-words hyphens-auto w-full leading-[1.1]">
+                                        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 mb-2">Ma'nosi</p>
+                                        <h2 className={`font-black text-emerald-400 tracking-tight drop-shadow-[0_0_30px_rgba(16,185,129,0.5)] capitalize break-words hyphens-auto w-full leading-[1.1] ${
+                                            (practiceMode === 'EN' ? currentWord.uzbekTranslation : currentWord.englishWord).length > 35
+                                                ? 'text-xl sm:text-2xl md:text-3xl'
+                                                : (practiceMode === 'EN' ? currentWord.uzbekTranslation : currentWord.englishWord).length > 18
+                                                ? 'text-2xl sm:text-4xl md:text-5xl'
+                                                : 'text-3xl sm:text-5xl md:text-6xl lg:text-7xl'
+                                        }`}>
                                             {practiceMode === 'EN' ? currentWord.uzbekTranslation : currentWord.englishWord}
                                         </h2>
                                     </div>

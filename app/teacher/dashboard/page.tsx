@@ -14,6 +14,7 @@ import {
     TrendingUp, Layers, ExternalLink, Trash2, AlertCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import WhatsNewModal from '@/components/teacher/WhatsNewModal';
 
 // ── Delete Confirmation Modal ──────────────────────────────────────────────
 function DeleteConfirmationModal({
@@ -566,6 +567,8 @@ export default function TeacherDashboard() {
                 onCancel={() => setDeleteModal({ ...deleteModal, isOpen: false })}
                 loading={deleting}
             />
+
+            <WhatsNewModal />
         </div>
     );
 }

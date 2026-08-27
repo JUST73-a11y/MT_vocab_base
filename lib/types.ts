@@ -30,6 +30,7 @@ export interface Word {
     phonetic?: string;
     exampleSentence?: string;
     audioUrl?: string;
+    emoji?: string;
 }
 
 export interface Settings {

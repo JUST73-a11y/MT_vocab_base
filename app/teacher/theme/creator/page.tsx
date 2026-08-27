@@ -3,10 +3,20 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTeacherTheme } from '@/lib/theme/TeacherThemeContext';
-import type { ThemeConfig, BlurLevel, NavbarStyle, NavbarBorder } from '@/lib/theme/themeTypes';
+import type { ThemeConfig, BlurLevel } from '@/lib/theme/themeTypes';
 import { DEFAULT_THEME_CONFIG, PRESET_THEMES } from '@/lib/theme/themeDefaults';
 import { sanitizeThemeConfig, applyThemeToDom } from '@/lib/theme/themeEngine';
-import { ArrowLeft, Save, Sparkles, RotateCcw, Loader2, Check, Upload, Trash2, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Save, Sparkles, RotateCcw, Loader2, Check, Upload, Trash2, Link as LinkIcon, Image as ImageIcon } from 'lucide-react';
+
+// Curated high quality wallpaper presets
+const WALLPAPER_PRESETS = [
+  { id: 'space', name: 'Koinot & Galaktika', url: 'https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?q=80&w=1200&auto=format&fit=crop' },
+  { id: 'cyberpunk', name: 'Cyberpunk Neon', url: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?q=80&w=1200&auto=format&fit=crop' },
+  { id: 'forest', name: 'Qorong\'i O\'rmon', url: 'https://images.unsplash.com/photo-1511497584788-876761c11969?q=80&w=1200&auto=format&fit=crop' },
+  { id: 'aurora', name: 'Shimol Yog\'dusi', url: 'https://images.unsplash.com/photo-1517411032315-54ef2cb783bb?q=80&w=1200&auto=format&fit=crop' },
+  { id: 'abstract_gold', name: 'Abstrakt Oltin', url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1200&auto=format&fit=crop' },
+  { id: 'city_night', name: 'Tungi Shahar', url: 'https://images.unsplash.com/photo-1519501025264-65ba15a82390?q=80&w=1200&auto=format&fit=crop' },
+];
 
 // ─── Section Wrapper ──────────────────────────────────────────────────────────
 function Section({ title, onReset, children }: { title: string; onReset: () => void; children: React.ReactNode }) {
@@ -27,7 +37,7 @@ function Chips<T extends string>({ options, value, onChange, labels }: { options
     <div className="flex flex-wrap gap-2">
       {options.map(o => (
         <button key={o} onClick={() => onChange(o)}
-          className="px-3 py-1.5 rounded-xl text-xs font-black transition-all"
+          className="px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer"
           style={{
             background: value === o ? 'rgba(99,102,241,0.25)' : 'rgba(255,255,255,0.05)',
             color: value === o ? '#a5b4fc' : 'rgba(255,255,255,0.5)',
@@ -50,10 +60,10 @@ function ColorRow({ label, desc, value, onChange }: { label: string; desc?: stri
       </div>
       <div className="flex items-center gap-2">
         <div className="w-6 h-6 rounded-lg border border-white/20 overflow-hidden cursor-pointer" style={{ background: value }}>
-          <input type="color" value={value.startsWith('#') ? value : '#6366f1'} onChange={e => onChange(e.target.value)}
+          <input type="color" value={value && value.startsWith('#') ? value : '#6366f1'} onChange={e => onChange(e.target.value)}
             className="w-8 h-8 opacity-0 cursor-pointer -ml-1 -mt-1" />
         </div>
-        <span className="text-[10px] font-mono text-white/30">{value.startsWith('#') ? value : 'auto'}</span>
+        <span className="text-[10px] font-mono text-white/30">{value && value.startsWith('#') ? value : 'auto'}</span>
       </div>
     </div>
   );
@@ -78,7 +88,7 @@ function LivePreview({ config }: { config: ThemeConfig }) {
     };
     bgStyle = gradients[config.background.gradient] || c.background;
   } else if (config.background.type === 'image' && config.background.imageUrl) {
-    bgImage = `url(${config.background.imageUrl})`;
+    bgImage = `url("${config.background.imageUrl}")`;
   }
 
   const bgBlur = {
@@ -136,13 +146,6 @@ function LivePreview({ config }: { config: ThemeConfig }) {
   const btnRadius = { rounded: '12px', pill: '9999px', square: '4px', soft: '8px', glass: '12px' }[config.buttons.style] || '12px';
   const btnBg = config.buttons?.primaryBg || c.primary;
   const btnTextColor = config.buttons?.textColor || '#ffffff';
-  const btnShadow = {
-    none: 'none',
-    soft: '0 2px 10px rgba(0,0,0,0.3)',
-    medium: '0 4px 20px rgba(0,0,0,0.5)',
-    strong: '0 8px 30px rgba(0,0,0,0.7)',
-    glow: `0 0 20px ${btnBg}80`,
-  }[config.buttons.shadow || 'none'] || 'none';
   const cardRadius = { small: '8px', medium: '12px', large: '16px', xl: '24px', pill: '9999px' }[config.cards.radius] || '16px';
   const font = { inter: "'Inter', sans-serif", poppins: "'Poppins', sans-serif", nunito: "'Nunito', sans-serif", system: 'system-ui, sans-serif' }[config.typography.fontFamily] || 'inherit';
 
@@ -228,7 +231,6 @@ function LivePreview({ config }: { config: ThemeConfig }) {
             color: btnTextColor,
             border: 'none',
             borderRadius: btnRadius,
-            boxShadow: btnShadow,
             padding: '10px',
             fontWeight: 900,
             fontSize: '11px',
@@ -264,7 +266,7 @@ export default function ThemeCreatorPage() {
   const searchParams = useSearchParams();
   const editId = searchParams.get('edit');
   const fromPreset = searchParams.get('fromPreset');
-  const { refresh, equippedTheme, equipTheme } = useTeacherTheme();
+  const { refresh } = useTeacherTheme();
 
   const [name, setName] = useState("O'qituvchi Dizayni");
   const [config, setConfig] = useState<ThemeConfig>(DEFAULT_THEME_CONFIG);
@@ -275,6 +277,7 @@ export default function ThemeCreatorPage() {
   const [saved, setSaved] = useState(false);
   const [activeSection, setActiveSection] = useState<string>('preset');
   const [unsaved, setUnsaved] = useState(false);
+  const [customUrlInput, setCustomUrlInput] = useState('');
   const nameRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -305,7 +308,6 @@ export default function ThemeCreatorPage() {
   // Live preview — apply to DOM as user changes settings
   useEffect(() => {
     applyThemeToDom(config);
-    return () => {};
   }, [config]);
 
   const update = useCallback(<K extends keyof ThemeConfig>(section: K, value: Partial<ThemeConfig[K]>) => {
@@ -361,9 +363,35 @@ export default function ThemeCreatorPage() {
     }
   };
 
+  const handleApplyCustomUrl = () => {
+    if (!customUrlInput.trim()) return;
+    setImageError(null);
+    update('background', {
+      type: 'image',
+      imageUrl: customUrlInput.trim(),
+      imagePosition: 'center',
+      imageSize: 'cover',
+      overlay: 'soft',
+      blur: 'none',
+    });
+    setCustomUrlInput('');
+  };
+
+  const handleSelectWallpaper = (url: string) => {
+    setImageError(null);
+    update('background', {
+      type: 'image',
+      imageUrl: url,
+      imagePosition: 'center',
+      imageSize: 'cover',
+      overlay: 'soft',
+      blur: 'none',
+    });
+  };
+
   const handleRemoveImage = () => {
     update('background', {
-      type: 'preset',
+      type: 'color',
       imageUrl: undefined,
     });
   };
@@ -438,7 +466,7 @@ export default function ThemeCreatorPage() {
             <RotateCcw className="w-4 h-4" /> Reset
           </button>
           <button onClick={() => handleSave(true)} disabled={saving}
-            className="flex items-center gap-2 px-5 py-2.5 text-sm font-black text-white rounded-xl transition-all disabled:opacity-60 shadow-lg shadow-indigo-500/25"
+            className="flex items-center gap-2 px-5 py-2.5 text-sm font-black text-white rounded-xl transition-all disabled:opacity-60 shadow-lg shadow-indigo-500/25 cursor-pointer"
             style={{ background: saved ? '#10b981' : '#6366f1' }}>
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : saved ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
             {saving ? 'Saqlanmoqda...' : saved ? 'Saqlandi va Qo\'llandi!' : 'Saqlash va Qo\'llash'}
@@ -447,7 +475,7 @@ export default function ThemeCreatorPage() {
       </div>
 
       {/* Main layout: Controls | Preview */}
-      <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-6">
 
         {/* ── Controls Panel ── */}
         <div className="rounded-3xl border border-white/8 overflow-hidden" style={{ background: 'rgba(255,255,255,0.02)' }}>
@@ -455,7 +483,7 @@ export default function ThemeCreatorPage() {
           <div className="flex overflow-x-auto p-3 gap-1 border-b border-white/8 scrollbar-hide">
             {sections.map(s => (
               <button key={s} onClick={() => setActiveSection(s)}
-                className="shrink-0 px-3 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all"
+                className="shrink-0 px-3 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer"
                 style={{
                   background: activeSection === s ? 'rgba(99,102,241,0.2)' : 'transparent',
                   color: activeSection === s ? '#a5b4fc' : 'rgba(255,255,255,0.35)',
@@ -466,7 +494,7 @@ export default function ThemeCreatorPage() {
             ))}
           </div>
 
-          <div className="p-5 overflow-y-auto max-h-[70vh]">
+          <div className="p-5 overflow-y-auto max-h-[72vh]">
 
             {/* PRESETS */}
             {activeSection === 'preset' && (
@@ -475,7 +503,7 @@ export default function ThemeCreatorPage() {
                 <div className="grid grid-cols-2 gap-3">
                   {PRESET_THEMES.map(p => (
                     <button key={p.id} onClick={() => applyPreset(p.id)}
-                      className="rounded-2xl border p-3 text-left transition-all hover:border-indigo-500/40"
+                      className="rounded-2xl border p-3 text-left transition-all hover:border-indigo-500/40 cursor-pointer"
                       style={{ background: p.config.colors.surface, borderColor: 'rgba(255,255,255,0.08)' }}>
                       <div className="text-lg mb-1">{p.emoji}</div>
                       <div className="text-xs font-black text-white">{p.name}</div>
@@ -511,13 +539,20 @@ export default function ThemeCreatorPage() {
 
             {/* BACKGROUND */}
             {activeSection === 'background' && (
-              <Section title="Fon" onReset={() => resetSection('background')}>
-                <div className="mb-4">
+              <Section title="Fon Sozlamalari" onReset={() => resetSection('background')}>
+                <div className="mb-5">
                   <p className="text-[11px] text-white/40 font-bold mb-2">Fon turi</p>
                   <Chips options={['color', 'gradient', 'preset', 'image'] as any}
                     value={config.background.type}
-                    labels={{ color: 'Rang', gradient: 'Gradient', preset: 'Preset', image: 'Rasm' } as any}
-                    onChange={v => update('background', { type: v as any })} />
+                    labels={{ color: 'Rang', gradient: 'Gradient', preset: 'Preset', image: 'Rasm / Wallpaper' } as any}
+                    onChange={v => {
+                      if (v === 'image' && !config.background.imageUrl) {
+                        // Default to first curated wallpaper if none set
+                        update('background', { type: 'image', imageUrl: WALLPAPER_PRESETS[0].url });
+                      } else {
+                        update('background', { type: v as any });
+                      }
+                    }} />
                 </div>
 
                 {config.background.type === 'color' && (
@@ -537,17 +572,20 @@ export default function ThemeCreatorPage() {
                 {config.background.type === 'preset' && (
                   <div>
                     <p className="text-[11px] text-white/40 font-bold mb-2">Preset fon</p>
-                    <Chips options={['default','ocean','space','forest','sunset','midnight','minimal','kids','teen','adult'] as any}
+                    <Chips options={['default','ocean','space','forest','sunset','midnight','minimal'] as any}
                       value={config.background.preset}
                       onChange={v => update('background', { preset: v as any })} />
                   </div>
                 )}
 
                 {config.background.type === 'image' && (
-                  <div className="space-y-4">
-                    {config.background.imageUrl ? (
-                      <div className="space-y-3">
-                        <div className="relative rounded-2xl overflow-hidden border border-white/15 h-36 w-full bg-black/40 group">
+                  <div className="space-y-5">
+                    
+                    {/* Active Image Preview Box */}
+                    {config.background.imageUrl && (
+                      <div className="space-y-2">
+                        <p className="text-[11px] text-white/40 font-bold">Joriy Fon Rasmi</p>
+                        <div className="relative rounded-2xl overflow-hidden border border-white/20 h-40 w-full bg-black/60 group shadow-xl">
                           <img
                             src={config.background.imageUrl}
                             alt="Background Preview"
@@ -558,97 +596,143 @@ export default function ThemeCreatorPage() {
                                 : 'none'
                             }}
                           />
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                             <button
                               onClick={() => fileInputRef.current?.click()}
                               disabled={uploadingImage}
-                              className="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-lg transition-all flex items-center gap-1.5"
+                              className="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-lg transition-all flex items-center gap-1.5 cursor-pointer"
                             >
                               <Upload className="w-3.5 h-3.5" /> Almashtirish
                             </button>
                             <button
                               onClick={handleRemoveImage}
-                              className="p-2 rounded-xl bg-red-500/80 hover:bg-red-500 text-white shadow-lg transition-all"
+                              className="p-2 rounded-xl bg-red-500/80 hover:bg-red-500 text-white shadow-lg transition-all cursor-pointer"
                               title="Rasmni o'chirish"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
                         </div>
-
-                        <input
-                          type="file"
-                          ref={fileInputRef}
-                          onChange={handleImageUpload}
-                          accept="image/png,image/jpeg,image/webp,image/gif"
-                          className="hidden"
-                        />
-
-                        {/* Background Image Blur */}
-                        <div>
-                          <p className="text-[11px] text-white/40 font-bold mb-2">Rasm xiraligi (Blur)</p>
-                          <Chips<BlurLevel>
-                            options={['none', 'subtle', 'medium', 'strong']}
-                            value={config.background.blur || 'none'}
-                            labels={{ none: 'Yo\'q', subtle: 'Yengil (6px)', medium: 'O\'rta (14px)', strong: 'Kuchli (26px)' }}
-                            onChange={v => update('background', { blur: v })} />
-                        </div>
-
-                        <div>
-                          <p className="text-[11px] text-white/40 font-bold mb-2">Rasm joylashuvi</p>
-                          <Chips options={['center', 'top', 'bottom'] as any}
-                            value={config.background.imagePosition || 'center'}
-                            labels={{ center: 'Markaz', top: 'Yuqori', bottom: 'Quyi' } as any}
-                            onChange={v => update('background', { imagePosition: v as any })} />
-                        </div>
-
-                        <div>
-                          <p className="text-[11px] text-white/40 font-bold mb-2">Rasm o'lchami</p>
-                          <Chips options={['cover', 'contain'] as any}
-                            value={config.background.imageSize || 'cover'}
-                            labels={{ cover: 'To\'liq (Cover)', contain: 'Moslashgan (Contain)' } as any}
-                            onChange={v => update('background', { imageSize: v as any })} />
-                        </div>
-
-                        <div>
-                          <p className="text-[11px] text-white/40 font-bold mb-2">Qoraytirish (Overlay)</p>
-                          <Chips options={['none', 'light', 'dark', 'soft'] as any}
-                            value={config.background.overlay || 'soft'}
-                            labels={{ none: 'Yo\'q', light: 'Yengil', dark: 'Qorong\'i', soft: 'Yumshoq' } as any}
-                            onChange={v => update('background', { overlay: v as any })} />
-                        </div>
-                      </div>
-                    ) : (
-                      <div>
-                        <input
-                          type="file"
-                          ref={fileInputRef}
-                          onChange={handleImageUpload}
-                          accept="image/png,image/jpeg,image/webp,image/gif"
-                          className="hidden"
-                        />
-                        <button
-                          onClick={() => fileInputRef.current?.click()}
-                          disabled={uploadingImage}
-                          className="w-full py-8 border-2 border-dashed border-white/20 hover:border-indigo-400/60 rounded-2xl flex flex-col items-center justify-center gap-2 hover:bg-indigo-500/5 transition-all text-white/50 hover:text-indigo-300 disabled:opacity-50"
-                        >
-                          {uploadingImage ? (
-                            <Loader2 className="w-8 h-8 animate-spin text-indigo-400" />
-                          ) : (
-                            <Upload className="w-8 h-8 text-indigo-400" />
-                          )}
-                          <span className="text-xs font-black uppercase tracking-wider">
-                            {uploadingImage ? 'Yuklanmoqda...' : 'Kompyuterdan rasm yuklash'}
-                          </span>
-                          <span className="text-[10px] text-white/30 font-bold">
-                            JPG, PNG, WEBP (maks. 3MB)
-                          </span>
-                        </button>
                       </div>
                     )}
 
+                    {/* File Upload Box */}
+                    <div>
+                      <p className="text-[11px] text-white/40 font-bold mb-2">1. Kompyuterdan Rasm Yuklash</p>
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleImageUpload}
+                        accept="image/png,image/jpeg,image/webp,image/gif"
+                        className="hidden"
+                      />
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploadingImage}
+                        className="w-full py-5 border-2 border-dashed border-white/20 hover:border-indigo-400/60 rounded-2xl flex flex-col items-center justify-center gap-2 hover:bg-indigo-500/5 transition-all text-white/60 hover:text-indigo-300 disabled:opacity-50 cursor-pointer"
+                      >
+                        {uploadingImage ? (
+                          <Loader2 className="w-6 h-6 animate-spin text-indigo-400" />
+                        ) : (
+                          <Upload className="w-6 h-6 text-indigo-400" />
+                        )}
+                        <span className="text-xs font-black uppercase tracking-wider">
+                          {uploadingImage ? 'Rasm yuklanmoqda...' : 'Fayl Tanlash (JPG, PNG, WEBP)'}
+                        </span>
+                        <span className="text-[10px] text-white/30 font-bold">
+                          Maksimal hajm: 10MB
+                        </span>
+                      </button>
+                    </div>
+
+                    {/* Direct Image URL Input Box */}
+                    <div>
+                      <p className="text-[11px] text-white/40 font-bold mb-2">2. Rasm URL Havolasini Kiritish</p>
+                      <div className="flex items-center gap-2">
+                        <div className="relative flex-1">
+                          <input
+                            type="text"
+                            placeholder="https://images.unsplash.com/..."
+                            value={customUrlInput}
+                            onChange={(e) => setCustomUrlInput(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') handleApplyCustomUrl(); }}
+                            className="w-full h-10 pl-9 pr-3 rounded-xl bg-black/40 border border-white/15 text-white text-xs font-medium focus:outline-none focus:border-indigo-400 placeholder:text-white/20"
+                          />
+                          <LinkIcon className="w-4 h-4 text-white/30 absolute left-3 top-3" />
+                        </div>
+                        <button
+                          onClick={handleApplyCustomUrl}
+                          className="h-10 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black transition-all cursor-pointer shadow-md"
+                        >
+                          Qo'llash
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Curated Wallpaper Presets Gallery */}
+                    <div>
+                      <p className="text-[11px] text-white/40 font-bold mb-2.5 flex items-center gap-1.5">
+                        <ImageIcon className="w-3.5 h-3.5 text-indigo-400" /> 3. Tayyor Wallpaper Galereyasi
+                      </p>
+                      <div className="grid grid-cols-2 gap-2.5">
+                        {WALLPAPER_PRESETS.map(wp => (
+                          <button
+                            key={wp.id}
+                            onClick={() => handleSelectWallpaper(wp.url)}
+                            className={`group relative rounded-xl overflow-hidden border text-left h-24 transition-all cursor-pointer ${
+                              config.background.imageUrl === wp.url ? 'border-indigo-400 ring-2 ring-indigo-500/50 scale-[1.02]' : 'border-white/10 hover:border-indigo-400/50'
+                            }`}
+                          >
+                            <img src={wp.url} alt={wp.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent p-2 flex items-end">
+                              <span className="text-[10px] font-black text-white truncate">{wp.name}</span>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Blur Level */}
+                    <div>
+                      <p className="text-[11px] text-white/40 font-bold mb-2">Rasm xiraligi (Blur)</p>
+                      <Chips<BlurLevel>
+                        options={['none', 'subtle', 'medium', 'strong']}
+                        value={config.background.blur || 'none'}
+                        labels={{ none: 'Yo\'q', subtle: 'Yengil (6px)', medium: 'O\'rta (14px)', strong: 'Kuchli (26px)' }}
+                        onChange={v => update('background', { blur: v })} />
+                    </div>
+
+                    {/* Position */}
+                    <div>
+                      <p className="text-[11px] text-white/40 font-bold mb-2">Rasm joylashuvi</p>
+                      <Chips options={['center', 'top', 'bottom'] as any}
+                        value={config.background.imagePosition || 'center'}
+                        labels={{ center: 'Markaz', top: 'Yuqori', bottom: 'Quyi' } as any}
+                        onChange={v => update('background', { imagePosition: v as any })} />
+                    </div>
+
+                    {/* Size */}
+                    <div>
+                      <p className="text-[11px] text-white/40 font-bold mb-2">Rasm o'lchami</p>
+                      <Chips options={['cover', 'contain'] as any}
+                        value={config.background.imageSize || 'cover'}
+                        labels={{ cover: 'To\'liq (Cover)', contain: 'Moslashgan (Contain)' } as any}
+                        onChange={v => update('background', { imageSize: v as any })} />
+                    </div>
+
+                    {/* Overlay */}
+                    <div>
+                      <p className="text-[11px] text-white/40 font-bold mb-2">Qoraytirish (Overlay)</p>
+                      <Chips options={['none', 'light', 'dark', 'soft'] as any}
+                        value={config.background.overlay || 'soft'}
+                        labels={{ none: 'Yo\'q', light: 'Yengil', dark: 'Qorong\'i', soft: 'Yumshoq' } as any}
+                        onChange={v => update('background', { overlay: v as any })} />
+                    </div>
+
                     {imageError && (
-                      <p className="text-xs text-red-400 font-bold">{imageError}</p>
+                      <p className="text-xs font-bold text-rose-400 bg-rose-500/10 border border-rose-500/20 p-3 rounded-xl">
+                        {imageError}
+                      </p>
                     )}
                   </div>
                 )}
@@ -657,197 +741,146 @@ export default function ThemeCreatorPage() {
 
             {/* NAVBAR */}
             {activeSection === 'navbar' && (
-              <Section title="Navigatsiya Paneli (Nav Bar)" onReset={() => update('navbar', { style: 'glass', blur: 'medium', border: 'thin' })}>
-                <div className="mb-4">
-                  <p className="text-[11px] text-white/40 font-bold mb-2">Nav Bar uslubi</p>
-                  <Chips<NavbarStyle>
-                    options={['glass', 'solid', 'translucent', 'floating', 'minimal']}
-                    value={config.navbar?.style || 'glass'}
-                    labels={{ glass: 'Shisha (Glass)', solid: 'To\'liq (Solid)', translucent: 'Shaffof', floating: 'Suzuvchi (Floating)', minimal: 'Minimal' }}
-                    onChange={v => update('navbar', { style: v })} />
-                </div>
-
-                <div className="mb-4">
-                  <p className="text-[11px] text-white/40 font-bold mb-2">Nav Bar xiraligi (Backdrop Blur)</p>
-                  <Chips<BlurLevel>
-                    options={['none', 'subtle', 'medium', 'strong']}
-                    value={config.navbar?.blur || 'medium'}
-                    labels={{ none: 'Yo\'q', subtle: 'Yengil (10px)', medium: 'O\'rta (20px)', strong: 'Kuchli (36px)' }}
-                    onChange={v => update('navbar', { blur: v })} />
-                </div>
-
-                <div>
-                  <p className="text-[11px] text-white/40 font-bold mb-2">Nav Bar chegarasi</p>
-                  <Chips<NavbarBorder>
-                    options={['none', 'thin', 'glow']}
-                    value={config.navbar?.border || 'thin'}
-                    labels={{ none: 'Yo\'q', thin: 'Yupqa', glow: 'Porlovchi (Glow)' }}
-                    onChange={v => update('navbar', { border: v })} />
+              <Section title="Nav Bar" onReset={() => resetSection('navbar')}>
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-[11px] text-white/40 font-bold mb-2">Uslub</p>
+                    <Chips options={['glass','solid','translucent','floating','minimal'] as any}
+                      value={config.navbar?.style || 'glass'}
+                      onChange={v => update('navbar', { style: v as any })} />
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-white/40 font-bold mb-2">Blur</p>
+                    <Chips options={['none','subtle','medium','strong'] as any}
+                      value={config.navbar?.blur || 'medium'}
+                      onChange={v => update('navbar', { blur: v as any })} />
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-white/40 font-bold mb-2">Chegara</p>
+                    <Chips options={['none','thin','glow'] as any}
+                      value={config.navbar?.border || 'thin'}
+                      onChange={v => update('navbar', { border: v as any })} />
+                  </div>
                 </div>
               </Section>
             )}
 
             {/* TYPOGRAPHY */}
             {activeSection === 'typography' && (
-              <Section title="Tipografiya" onReset={() => resetSection('typography')}>
-                <div className="mb-4">
-                  <p className="text-[11px] text-white/40 font-bold mb-2">Shrift</p>
-                  <Chips options={['inter','poppins','nunito','system'] as any}
-                    value={config.typography.fontFamily}
-                    labels={{ inter: 'Inter', poppins: 'Poppins', nunito: 'Nunito', system: 'System' } as any}
-                    onChange={v => update('typography', { fontFamily: v as any })} />
-                </div>
-                <div className="mb-4">
-                  <p className="text-[11px] text-white/40 font-bold mb-2">O'lcham</p>
-                  <Chips options={['small','normal','large'] as any}
-                    value={config.typography.sizeScale}
-                    labels={{ small: 'Kichik', normal: 'Normal', large: 'Katta' } as any}
-                    onChange={v => update('typography', { sizeScale: v as any })} />
-                </div>
-                <div>
-                  <p className="text-[11px] text-white/40 font-bold mb-2">Qalinlik</p>
-                  <Chips options={['normal','medium','bold'] as any}
-                    value={config.typography.weight}
-                    labels={{ normal: 'Normal', medium: 'O\'rta', bold: 'Qalin' } as any}
-                    onChange={v => update('typography', { weight: v as any })} />
+              <Section title="Shrift va Matn" onReset={() => resetSection('typography')}>
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-[11px] text-white/40 font-bold mb-2">Shrift (Font Family)</p>
+                    <Chips options={['inter','poppins','nunito','system'] as any}
+                      value={config.typography.fontFamily}
+                      onChange={v => update('typography', { fontFamily: v as any })} />
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-white/40 font-bold mb-2">O'lcham Shkalasi</p>
+                    <Chips options={['small','normal','large'] as any}
+                      value={config.typography.sizeScale}
+                      onChange={v => update('typography', { sizeScale: v as any })} />
+                  </div>
                 </div>
               </Section>
             )}
 
             {/* BUTTONS */}
             {activeSection === 'buttons' && (
-              <Section title="Tugmalar" onReset={() => resetSection('buttons')}>
-                <div className="mb-4">
-                  <p className="text-[11px] text-white/40 font-bold mb-2">Tugma Shakli</p>
-                  <Chips options={['rounded','pill','square','soft','glass'] as any}
-                    value={config.buttons.style}
-                    labels={{ rounded: 'Yumaloq (12px)', pill: 'Kapsula (Pill)', square: 'To\'rtburchak (4px)', soft: 'Yumshoq (8px)', glass: 'Shisha' } as any}
-                    onChange={v => update('buttons', { style: v as any })} />
-                </div>
-
-                <div className="mb-4">
-                  <p className="text-[11px] text-white/40 font-bold mb-2">Tugma Ranglari</p>
-                  <div className="space-y-1">
-                    <ColorRow
-                      label="Asosiy Tugma Rangi"
-                      desc="Barcha asosiy harakat tugmalari foni"
-                      value={config.buttons?.primaryBg || config.colors.primary}
-                      onChange={v => {
-                        update('buttons', { primaryBg: v });
-                        update('colors', { primary: v });
-                      }}
-                    />
-                    <ColorRow
-                      label="Tugma Matn Rangi"
-                      desc="Tugma ichidagi yozuv rangi"
-                      value={config.buttons?.textColor || '#ffffff'}
-                      onChange={v => update('buttons', { textColor: v })}
-                    />
+              <Section title="Tugma Uslubi" onReset={() => resetSection('buttons')}>
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-[11px] text-white/40 font-bold mb-2">Shakl (Border Radius)</p>
+                    <Chips options={['rounded','pill','square','soft','glass'] as any}
+                      value={config.buttons.style}
+                      onChange={v => update('buttons', { style: v as any })} />
                   </div>
-                </div>
-
-                <div className="mb-4">
-                  <p className="text-[11px] text-white/40 font-bold mb-2">Soya va Neon Porlash (Shadow)</p>
-                  <Chips options={['none','soft','medium','strong','glow'] as any}
-                    value={config.buttons.shadow}
-                    labels={{ none: 'Yo\'q', soft: 'Yengil', medium: 'O\'rta', strong: 'Kuchli', glow: 'Neon Porlash' } as any}
-                    onChange={v => update('buttons', { shadow: v as any })} />
-                </div>
-
-                <div>
-                  <p className="text-[11px] text-white/40 font-bold mb-2">Hover va Bosilish Kattalashuvi</p>
-                  <Chips options={['minimal','normal','playful'] as any}
-                    value={config.buttons?.hoverScale || 'normal'}
-                    labels={{ minimal: 'Yengil (1.01x)', normal: 'Normal (1.03x)', playful: 'Katta (1.06x)' } as any}
-                    onChange={v => update('buttons', { hoverScale: v as any })} />
+                  <div>
+                    <p className="text-[11px] text-white/40 font-bold mb-2">Soya (Shadow)</p>
+                    <Chips options={['none','soft','medium','strong','glow'] as any}
+                      value={config.buttons.shadow}
+                      onChange={v => update('buttons', { shadow: v as any })} />
+                  </div>
                 </div>
               </Section>
             )}
 
             {/* CARDS */}
             {activeSection === 'cards' && (
-              <Section title="Kartalar" onReset={() => resetSection('cards')}>
-                <div className="mb-4">
-                  <p className="text-[11px] text-white/40 font-bold mb-2">Stil</p>
-                  <Chips options={['solid','glass','soft','minimal','elevated'] as any}
-                    value={config.cards.style}
-                    labels={{ solid: 'Solid', glass: 'Shisha', soft: 'Yumshoq', minimal: 'Minimal', elevated: 'Ko\'tarilgan' } as any}
-                    onChange={v => update('cards', { style: v as any })} />
-                </div>
-
-                {/* Box / Card Blur */}
-                <div className="mb-4">
-                  <p className="text-[11px] text-white/40 font-bold mb-2">Karta / Box xiraligi (Backdrop Blur)</p>
-                  <Chips<BlurLevel>
-                    options={['none', 'subtle', 'medium', 'strong']}
-                    value={config.cards.blur || 'subtle'}
-                    labels={{ none: 'Yo\'q', subtle: 'Yengil (12px)', medium: 'O\'rta (24px)', strong: 'Kuchli (40px)' }}
-                    onChange={v => update('cards', { blur: v })} />
-                </div>
-
-                <div className="mb-4">
-                  <p className="text-[11px] text-white/40 font-bold mb-2">Burchaklar</p>
-                  <Chips options={['small','medium','large','xl','pill'] as any}
-                    value={config.cards.radius}
-                    labels={{ small: 'Kichik', medium: 'O\'rta', large: 'Katta', xl: 'XL', pill: 'Pill' } as any}
-                    onChange={v => update('cards', { radius: v as any })} />
-                </div>
-                <div>
-                  <p className="text-[11px] text-white/40 font-bold mb-2">Soya</p>
-                  <Chips options={['none','soft','medium','strong','glow'] as any}
-                    value={config.cards.shadow}
-                    labels={{ none: 'Yo\'q', soft: 'Yengil', medium: 'O\'rta', strong: 'Kuchli', glow: 'Porlash' } as any}
-                    onChange={v => update('cards', { shadow: v as any })} />
+              <Section title="Kartalar Uslubi" onReset={() => resetSection('cards')}>
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-[11px] text-white/40 font-bold mb-2">Foni (Style)</p>
+                    <Chips options={['solid','glass','soft','minimal','elevated'] as any}
+                      value={config.cards.style}
+                      onChange={v => update('cards', { style: v as any })} />
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-white/40 font-bold mb-2">Burchaklar (Radius)</p>
+                    <Chips options={['small','medium','large','xl','pill'] as any}
+                      value={config.cards.radius}
+                      onChange={v => update('cards', { radius: v as any })} />
+                  </div>
                 </div>
               </Section>
             )}
 
             {/* SPACING */}
             {activeSection === 'spacing' && (
-              <Section title="Bo'shliq zichligi" onReset={() => resetSection('spacing')}>
-                <p className="text-xs text-white/30 mb-3">Global bo'shliq miqdori. Bu barcha kartalar, bo'limlar va tugmalar uchun ishlaydi.</p>
-                <Chips options={['compact','normal','relaxed'] as any}
-                  value={config.spacing.density}
-                  labels={{ compact: 'Zich', normal: 'Normal', relaxed: 'Keng' } as any}
-                  onChange={v => update('spacing', { density: v as any })} />
+              <Section title="Zichlik va Masofalar" onReset={() => resetSection('spacing')}>
+                <div>
+                  <p className="text-[11px] text-white/40 font-bold mb-2">Bo'shliq Zichligi</p>
+                  <Chips options={['compact','normal','relaxed'] as any}
+                    value={config.spacing.density}
+                    onChange={v => update('spacing', { density: v as any })} />
+                </div>
               </Section>
             )}
 
             {/* EFFECTS */}
             {activeSection === 'effects' && (
-              <>
-                <Section title="Animatsiyalar" onReset={() => resetSection('effects')}>
-                  <Chips options={['off','subtle','normal','playful'] as any}
-                    value={config.effects.animations}
-                    labels={{ off: 'O\'chiq', subtle: 'Kamroq', normal: 'Normal', playful: 'O\'ynoqi' } as any}
-                    onChange={v => update('effects', { animations: v as any })} />
-                </Section>
-                <Section title="Shisha effekt (Glassmorphism)" onReset={() => update('effects', { glass: 'soft' })}>
-                  <Chips options={['off','soft','strong'] as any}
-                    value={config.effects.glass}
-                    labels={{ off: 'O\'chiq', soft: 'Yengil', strong: 'Kuchli' } as any}
-                    onChange={v => update('effects', { glass: v as any })} />
-                </Section>
-                <Section title="Hover effekti" onReset={() => update('effects', { hover: 'normal' })}>
-                  <Chips options={['minimal','normal','playful'] as any}
-                    value={config.effects.hover}
-                    labels={{ minimal: 'Minimal', normal: 'Normal', playful: 'O\'ynoqi' } as any}
-                    onChange={v => update('effects', { hover: v as any })} />
-                </Section>
-              </>
+              <Section title="Vizual Effektlar" onReset={() => resetSection('effects')}>
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-[11px] text-white/40 font-bold mb-2">Animatsiyalar</p>
+                    <Chips options={['off','subtle','normal','playful'] as any}
+                      value={config.effects.animations}
+                      onChange={v => update('effects', { animations: v as any })} />
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-white/40 font-bold mb-2">Glassmorphism Blur</p>
+                    <Chips options={['off','soft','strong'] as any}
+                      value={config.effects.glass}
+                      onChange={v => update('effects', { glass: v as any })} />
+                  </div>
+                </div>
+              </Section>
             )}
+
           </div>
         </div>
 
         {/* ── Live Preview Panel ── */}
-        <div className="sticky top-24 h-fit">
-          <div className="flex items-center gap-2 mb-3 px-1">
-            <Sparkles className="w-4 h-4 text-indigo-400" />
-            <p className="text-xs font-black uppercase tracking-widest text-white/40">Jonli Ko'rinish (O'qituvchi)</p>
+        <div className="rounded-3xl border border-white/8 p-5 flex flex-col justify-between overflow-hidden relative" style={{ background: 'rgba(10,15,25,0.7)', backdropFilter: 'blur(20px)' }}>
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-xs font-black uppercase tracking-widest text-white/40 flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-indigo-400" /> Real-vaqtli Jonli Preview
+            </span>
+            <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
+              ● Live Sync
+            </span>
           </div>
-          <LivePreview config={config} />
-          <p className="text-center text-[10px] text-white/20 font-bold mt-3">O'zgartirish kiritganingizda ko'rinish darhol yangilanadi</p>
+
+          <div className="flex-1 min-h-[420px] mb-4">
+            <LivePreview config={config} />
+          </div>
+
+          <div className="flex items-center justify-between text-[11px] text-white/40 pt-3 border-t border-white/8 flex-wrap gap-2">
+            <span>Dizayn nomi: <strong className="text-white">{name}</strong></span>
+            <span>Saqlash tugmasini bossangiz, bu dizayn darslik panelingizga birdan qo'llaniladi.</span>
+          </div>
         </div>
+
       </div>
     </div>
   );

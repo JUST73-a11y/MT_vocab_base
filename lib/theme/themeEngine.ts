@@ -256,7 +256,7 @@ export function buildThemeCSSVars(config: ThemeConfig): string {
     bgColor = c.colors.background;
     bgOverlayGradient = BG_PRESET_OVERLAY_MAP[c.background.preset] || BG_PRESET_OVERLAY_MAP.default;
   } else if (c.background.type === 'image' && c.background.imageUrl) {
-    bgImage = `url(${c.background.imageUrl})`;
+    bgImage = `url("${c.background.imageUrl.replace(/"/g, '\\"')}")`;
     bgPos = c.background.imagePosition || 'center';
     bgSize = c.background.imageSize || 'cover';
     const overlayMap: Record<string, string> = {

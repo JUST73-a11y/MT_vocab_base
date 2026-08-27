@@ -53,7 +53,7 @@ export async function GET(req: Request, { params }: { params: Params }) {
             const currentStudentId = session.studentOrder[session.currentStudentIndex];
             if (currentStudentId) {
                 currentStudent = await User.findById(currentStudentId).select('name email warningCard');
-                const allWords = await Word.find({ unitId: session.unitId }).select('englishWord uzbekTranslation phonetic');
+                const allWords = await Word.find({ unitId: session.unitId }).select('englishWord uzbekTranslation phonetic emoji');
                 words = shuffle(allWords).slice(0, session.questionsPerStudent);
             }
         }

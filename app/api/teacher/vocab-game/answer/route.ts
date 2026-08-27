@@ -130,7 +130,7 @@ export async function POST(req: Request) {
             let unusedWords = await Word.find({
                 unitId: { $in: targetUnitIds },
                 _id: { $nin: alreadyUsed }
-            }).select('englishWord uzbekTranslation phonetic').lean();
+            }).select('englishWord uzbekTranslation phonetic emoji').lean();
 
             let pickedWords: any[] = [];
 
@@ -141,7 +141,7 @@ export async function POST(req: Request) {
                 pickedWords = shuffle(unusedWords);
 
                 // ...and reset usedWordIds pool to pick the remaining balance from all unit words
-                const allUnitWords = await Word.find({ unitId: { $in: targetUnitIds } }).select('englishWord uzbekTranslation phonetic').lean();
+                const allUnitWords = await Word.find({ unitId: { $in: targetUnitIds } }).select('englishWord uzbekTranslation phonetic emoji').lean();
                 const pickedIds = new Set(pickedWords.map((w: any) => w._id.toString()));
                 const fillerCandidates = allUnitWords.filter((w: any) => !pickedIds.has(w._id.toString()));
                 const fillerWords = shuffle(fillerCandidates).slice(0, countNeeded - pickedWords.length);

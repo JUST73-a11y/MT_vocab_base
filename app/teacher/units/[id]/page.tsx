@@ -6,9 +6,11 @@ import Link from 'next/link';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { getUnit, getWordsByUnit, createWord, deleteWord, updateWord, createWords, updateUnit } from '@/lib/firestore';
 import { Unit, Word } from '@/lib/types';
-import { ArrowLeft, Plus, Trash2, Edit, Save, X, Loader2, FileText, CheckCircle, BookOpen, Clock } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Edit, Save, X, Loader2, FileText, CheckCircle, BookOpen, Clock, AlertTriangle, Sparkles } from 'lucide-react';
 import { useCategoryTree } from '@/lib/useCategoryTree';
 import CategorySelector from '@/components/teacher/CategorySelector';
+import SmartImportModal from '@/components/teacher/SmartImport/SmartImportModal';
+import { parseVocabText } from '@/lib/vocab/vocabParser';
 
 export default function UnitDetailPage() {
     const { user, loading } = useAuth();
@@ -21,6 +23,9 @@ export default function UnitDetailPage() {
     const [loadingData, setLoadingData] = useState(true);
     const [showAddForm, setShowAddForm] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
+
+    // Smart Import Modal State
+    const [isSmartImportOpen, setIsSmartImportOpen] = useState(false);
 
     // Unit Editing State
     const [isEditingUnit, setIsEditingUnit] = useState(false);
@@ -51,6 +56,8 @@ export default function UnitDetailPage() {
     const [isBulkMode, setIsBulkMode] = useState(false);
     const [bulkText, setBulkText] = useState('');
     const [importMode, setImportMode] = useState<'kids1' | 'kids2' | 'adult'>('kids1');
+    const [importWarnings, setImportWarnings] = useState<string[]>([]);
+
 
     useEffect(() => {
         if (!loading && (!user || (user.role !== 'teacher' && user.role !== 'admin'))) {
@@ -106,139 +113,38 @@ export default function UnitDetailPage() {
         if (!bulkText.trim()) return;
 
         setSaving(true);
+        setImportWarnings([]);
         try {
-            const rawLines = bulkText.split('\n')
-                .map(l => l.trim())
-                .filter(l => l && !/^(ENGLISH|TRANSCRIPT|UZBEK)$/i.test(l) && !/^\d+\-\s*(LESSON|UNIT)/i.test(l));
-            const newWords: Omit<Word, 'id'>[] = [];
+            const { words: parsed, warnings } = parseVocabText(bulkText);
 
-            let i = 0;
-            while (i < rawLines.length) {
-                const line = rawLines[i];
-                let english = '';
-                let phonetic = '';
-                let translation = '';
-                let example = '';
-
-                // Strip leading numbering
-                const cleanLine = line.replace(/^\d+[\.\-\)]\s*/, '').trim();
-
-                // 1. Column-based check (tabs, multi-spaces, pipes)
-                if (/\t|\s{2,}|[|]/.test(cleanLine)) {
-                     const parts = cleanLine.split(/\t|\s{2,}|[|]/).map(p => p.trim()).filter(Boolean);
-                     if (parts.length >= 3) {
-                         english = parts[0];
-                         phonetic = parts[1];
-                         translation = parts.slice(2).join(' ');
-                     } else if (parts.length === 2) {
-                         english = parts[0];
-                         translation = parts[1];
-                     } else {
-                         english = parts[0];
-                     }
-                } else {
-                     // 2. Bracket-based check
-                     const bracketMatch = cleanLine.match(/^(.*?)\s*(\[[^\]]+\]|\/[^\/]+\/)\s*(.*)$/);
-                     if (bracketMatch) {
-                         english = bracketMatch[1].trim();
-                         phonetic = bracketMatch[2].replace(/[\[\]\/]/g, '').trim();
-                         translation = bracketMatch[3].trim();
-                     } else {
-                         // 3. Fallback standard line
-                         english = cleanLine;
-                     }
-                }
-
-                // If translation is still missing, pull from next lines
-                if (!translation && i + 1 < rawLines.length) {
-                     if (!phonetic) {
-                          let isNumberedList = false;
-                          let nextNumIndex = -1;
-                          for(let j = i + 1; j < rawLines.length; j++) {
-                               if (/^\d+[\.\-\)]/.test(rawLines[j])) {
-                                   nextNumIndex = j;
-                                   isNumberedList = true;
-                                   break;
-                               }
-                          }
-                          
-                          if (isNumberedList) {
-                               const linesUntilNext = nextNumIndex - i;
-                               if (linesUntilNext === 3) {
-                                    if (rawLines[i+2].toLowerCase().startsWith('e.g.')) {
-                                        translation = rawLines[i+1];
-                                        example = rawLines[i+2].replace(/^e\.g\.\s*/i, '').trim();
-                                        i += 2;
-                                    } else {
-                                        phonetic = rawLines[i+1];
-                                        translation = rawLines[i+2];
-                                        i += 2;
-                                    }
-                               } else {
-                                    translation = rawLines[i+1];
-                                    i += 1;
-                               }
-                          } else {
-                               // No numbered list. Assume alternating 2-line (Word -> Translation)
-                               // Check if next line happens to be phonetic (in brackets)
-                               if (i + 2 < rawLines.length && (rawLines[i+1].startsWith('[') || rawLines[i+1].startsWith('/'))) {
-                                    phonetic = rawLines[i+1];
-                                    translation = rawLines[i+2];
-                                    i += 2;
-                               } else {
-                                    translation = rawLines[i+1];
-                                    i += 1;
-                               }
-                          }
-                     } else {
-                          // Phonetic is satisfied, next line is translation
-                          translation = rawLines[i+1];
-                          i += 1;
-                     }
-                }
-
-                if (translation.toLowerCase().includes('e.g.')) {
-                    const egMatch = translation.match(/^(.*?)\s*e\.g\.\s*(.*)$/i);
-                    if (egMatch) {
-                        translation = egMatch[1].trim();
-                        // Only set example if not already set by linesUntilNext block
-                        if (!example) example = egMatch[2].trim();
-                    }
-                }
-
-                if (!example && i + 1 < rawLines.length && rawLines[i+1].toLowerCase().startsWith('e.g.')) {
-                    example = rawLines[i+1].replace(/^e\.g\.\s*/i, '').trim();
-                    i++;
-                }
-
-                if (english && translation) {
-                    newWords.push({
-                        unitId,
-                        englishWord: english,
-                        uzbekTranslation: translation,
-                        exampleSentence: example || undefined,
-                        phonetic: phonetic || undefined,
-                    });
-                }
-                i++;
-            }
-
-            if (newWords.length === 0) {
+            if (parsed.length === 0) {
                 alert('Hech qanday so\'z topilmadi. Iltimos, formatni tekshiring.');
+                if (warnings.length > 0) setImportWarnings(warnings);
                 setSaving(false);
                 return;
             }
 
+            const newWords: Omit<Word, 'id'>[] = parsed.map(p => ({
+                unitId,
+                englishWord: p.englishWord,
+                uzbekTranslation: p.uzbekTranslation,
+                ...(p.phonetic ? { phonetic: p.phonetic } : {}),
+                ...(p.exampleSentence ? { exampleSentence: p.exampleSentence } : {}),
+            }));
+
             const newIds = await createWords(newWords);
-            const createdWords = newWords.map((w, i) => ({
+            const createdWords = newWords.map((w, idx) => ({
                 ...w,
-                id: newIds[i] || Math.random().toString(),
+                id: newIds[idx] || Math.random().toString(),
             }));
 
             setWords([...words, ...createdWords as Word[]]);
             setBulkText('');
             setShowAddForm(false);
-            alert(`${newWords.length} ta so'z muvaffaqiyatli qo'shildi!`);
+            if (warnings.length > 0) {
+                setImportWarnings(warnings);
+            }
+            alert(`${parsed.length} ta so'z muvaffaqiyatli qo'shildi!${warnings.length > 0 ? ` (${warnings.length} ta o'tkazib yuborildi — pastga qarang)` : ''}`);
         } catch (error) {
             console.error('Bulk save failed:', error);
             alert('Saqlashda xatolik yuz berdi');
@@ -246,6 +152,7 @@ export default function UnitDetailPage() {
             setSaving(false);
         }
     };
+
 
     const handleAddWord = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -428,7 +335,14 @@ export default function UnitDetailPage() {
                     </div>
 
                     {!showAddForm && !isEditingUnit && (
-                        <div className="flex gap-4">
+                        <div className="flex flex-wrap gap-4">
+                            <button
+                                onClick={() => setIsSmartImportOpen(true)}
+                                className="btn-action !bg-gradient-to-r !from-indigo-600 !to-purple-600 !text-white hover:!opacity-95 shadow-xl shadow-purple-500/20 px-6 h-12 rounded-xl flex items-center gap-2 font-bold"
+                            >
+                                <Sparkles className="w-5 h-5 text-purple-200 animate-pulse" /> ✨ Smart Import (AI / Fayl)
+                            </button>
+
                             <button onClick={() => setShowAddForm(true)} className="btn-action !bg-primary !text-white hover:!bg-primary/90 shadow-xl shadow-primary/20 px-6 h-12 rounded-xl">
                                 <Plus className="w-5 h-5" /> Yangi So'z Qo'shish
                             </button>
@@ -436,6 +350,17 @@ export default function UnitDetailPage() {
                     )}
                 </div>
             </div>
+
+            {/* Smart Import Modal */}
+            <SmartImportModal
+                isOpen={isSmartImportOpen}
+                onClose={() => setIsSmartImportOpen(false)}
+                unitId={unitId}
+                onSuccess={() => loadData()}
+            />
+
+
+
 
             <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
                 {showAddForm && (
@@ -459,16 +384,24 @@ export default function UnitDetailPage() {
                             <form onSubmit={handleBulkAdd} className="space-y-6">
                                 <textarea
                                     value={bulkText}
-                                    onChange={(e) => setBulkText(e.target.value)}
+                                    onChange={(e) => { setBulkText(e.target.value); setImportWarnings([]); }}
                                     className="w-full bg-gray-900 border border-gray-800 rounded-3xl p-6 text-white font-mono text-sm min-h-[300px]"
-                                    placeholder="1. Word  Translation\n2. Word  Translation"
+                                    placeholder={`Qo'llab-quvvatlanadigan formatlar:\n\nbrackets — qavs\nrailway – temir yo'l\nbrand - brend\n\n1. thunder\n[ˈθʌndə]\nmomaqaldiroq\ne.g. Thunder roared.\n\n| tailor | tikuvchi |\n| contact | aloqa |`}
                                     required
                                 />
+                                {importWarnings.length > 0 && (
+                                    <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 text-amber-500 text-sm">
+                                        <p className="font-bold mb-2">Diqqat:</p>
+                                        <ul className="list-disc pl-4 space-y-1">
+                                            {importWarnings.map((w, i) => <li key={i}>{w}</li>)}
+                                        </ul>
+                                    </div>
+                                )}
                                 <div className="flex gap-4">
                                     <button type="submit" disabled={saving} className="btn-premium flex-1 h-14">
                                         <Save className="w-5 h-5" /> {saving ? 'Saqlanmoqda...' : 'Barcha so\'zlarni import qilish'}
                                     </button>
-                                    <button type="button" onClick={() => setShowAddForm(false)} className="btn-glass px-8 h-14">Bekor qilish</button>
+                                    <button type="button" onClick={() => { setShowAddForm(false); setImportWarnings([]); }} className="btn-glass px-8 h-14">Bekor qilish</button>
                                 </div>
                             </form>
                         ) : (
@@ -499,9 +432,10 @@ export default function UnitDetailPage() {
                         <div key={word.id} className="card !p-6 group hover:border-primary/30 transition-all border border-transparent">
                             <div className="flex items-start justify-between">
                                 <div className="flex-1">
-                                    <div className="flex items-baseline gap-3 mb-2 flex-wrap">
+                                    <div className="flex items-center gap-3 mb-2 flex-wrap">
+                                        {word.emoji && <span className="text-3xl p-1 bg-white/5 border border-white/10 rounded-2xl shrink-0 leading-none">{word.emoji}</span>}
                                         <h3 className="text-xl font-bold text-white">{word.englishWord}</h3>
-                                        {word.phonetic && <span className="text-sm text-primary bg-primary/5 px-2 py-0.5 rounded">[{word.phonetic}]</span>}
+                                        {word.phonetic && <span className="text-sm text-primary bg-primary/5 px-2 py-0.5 rounded font-mono">[{word.phonetic}]</span>}
                                     </div>
                                     <p className="text-lg font-bold text-indigo-400">{word.uzbekTranslation}</p>
                                     {word.exampleSentence && <p className="mt-3 text-sm text-gray-400 italic bg-white/5 py-2 px-4 rounded-xl inline-block">&quot;{word.exampleSentence}&quot;</p>}

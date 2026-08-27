@@ -3,9 +3,9 @@
 import { useAuth } from '@/lib/auth/AuthContext';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { BookOpen, Settings, LogOut, LayoutDashboard, Menu, X, Share2, Play, Users, UsersRound, Gamepad2, Bell, Mail, Send, Palette, ShoppingBag } from 'lucide-react';
+import { BookOpen, Settings, LogOut, LayoutDashboard, Menu, X, Share2, Play, Users, UsersRound, Gamepad2, Bell, Mail, Send, Palette, ShoppingBag, Trophy, ChevronDown, MoreHorizontal } from 'lucide-react';
 import { TeacherThemeProvider, useTeacherTheme } from '@/lib/teacherTheme';
 import { TeacherThemeProvider as NewTeacherThemeProvider } from '@/lib/theme/TeacherThemeContext';
 import MessagesModal from '@/components/teacher/MessagesModal';
@@ -26,7 +26,23 @@ function TeacherLayoutInner({ children }: { children: React.ReactNode }) {
     const [showNotifications, setShowNotifications] = useState(false);
     const [selectedNotification, setSelectedNotification] = useState<any>(null);
     const [showMessagesModal, setShowMessagesModal] = useState(false);
+    const [isMoreOpen, setIsMoreOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
     const unreadCount = notifications.filter(n => !n.isRead).length;
+
+    useEffect(() => {
+        setIsMoreOpen(false);
+    }, [pathname]);
+
+    useEffect(() => {
+        function handleClickOutside(e: MouseEvent) {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+                setIsMoreOpen(false);
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     useEffect(() => {
         if (user && (user.role === 'teacher' || user.role === 'admin')) {
@@ -76,7 +92,7 @@ function TeacherLayoutInner({ children }: { children: React.ReactNode }) {
                 .theme-kids a, .theme-kids button { font-family:'Fredoka',sans-serif !important; }
                 .theme-kids .glass-card { border-radius:24px !important; background:rgba(10,20,40,0.72) !important; border:1px solid rgba(59,130,246,.2) !important; }
                 .theme-kids [class*="border-white"] { border-color:rgba(59,130,246,.15) !important; }
-                .theme-kids .bg-white\/\[0\.02\], .theme-kids .bg-white\/\[0\.03\] { background: rgba(10,20,40,0.65) !important; }
+                .theme-kids .bg-white\\/\\[0\\.02\\], .theme-kids .bg-white\\/\\[0\\.03\\] { background: rgba(10,20,40,0.65) !important; }
                 .theme-kids main { animation: tt-wiggle 0s; }
 
                 /* Teen theme overrides */
@@ -102,20 +118,33 @@ function TeacherLayoutInner({ children }: { children: React.ReactNode }) {
         router.push('/login');
     };
 
-    const navItems = user?.role === 'admin' ? [
+    // Primary items shown directly on desktop navbar
+    const primaryNavItems = user?.role === 'admin' ? [
         { name: 'Admin Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
         { name: 'All Units', href: '/teacher/units', icon: BookOpen },
     ] : [
         { name: 'Dashboard', href: '/teacher/dashboard', icon: LayoutDashboard },
+        { name: 'Live Scores', href: '/teacher/live-scores', icon: Trophy },
         { name: 'Units', href: '/teacher/units', icon: BookOpen },
         { name: 'Students', href: '/teacher/students', icon: Users },
         { name: 'Groups', href: '/teacher/groups', icon: UsersRound },
-        { name: 'Shared', href: '/teacher/shared', icon: Share2 },
         { name: 'Mashq', href: '/teacher/random', icon: Play },
-        { name: 'Lug\'at O\'yini', href: '/teacher/vocab-game', icon: Gamepad2 },
+        { name: 'O\'yinlar', href: '/teacher/vocab-game', icon: Gamepad2 },
+    ];
+
+    // Secondary items grouped in "Ko'proq" dropdown on desktop
+    const secondaryNavItems = user?.role === 'admin' ? [] : [
+        { name: 'Shared', href: '/teacher/shared', icon: Share2 },
         { name: 'Dizayn', href: '/teacher/theme', icon: Palette },
         { name: 'Do\'kon', href: '/teacher/shop', icon: ShoppingBag },
     ];
+
+    // All items for mobile drawer
+    const allNavItems = [...primaryNavItems, ...secondaryNavItems];
+
+    const isSecondaryActive = secondaryNavItems.some(
+        item => pathname === item.href || (item.href !== '/teacher/dashboard' && pathname.startsWith(item.href))
+    );
 
     if (loading || !user || (user.role !== 'teacher' && user.role !== 'admin')) {
         return (
@@ -140,13 +169,6 @@ function TeacherLayoutInner({ children }: { children: React.ReactNode }) {
             </div>
         );
     }
-
-    // Nav link active style (depends on theme)
-    const getLinkClass = (href: string) => {
-        const isActive = pathname === href || (href !== '/teacher/dashboard' && pathname.startsWith(href));
-        if (isActive) return 'active-nav-link';
-        return 'inactive-nav-link';
-    };
 
     const navTextColor = 'white';
     const navTextFaint = 'rgba(255,255,255,0.6)';
@@ -191,12 +213,12 @@ function TeacherLayoutInner({ children }: { children: React.ReactNode }) {
                 }}
             />
 
-            {/* ── TOP NAV ── */}
+            {/* ── TOP NAV (PADDED & PROPERLY CENTERED) ── */}
             <nav
                 id="teacher-nav"
-                className="sticky top-0 w-full z-40 mb-8 md:mb-12"
+                className="sticky top-0 w-full z-40 mb-6 md:mb-8"
                 style={{
-                    background: 'var(--theme-nav-bg, rgba(10, 18, 35, 0.65))',
+                    background: 'var(--theme-nav-bg, rgba(10, 18, 35, 0.75))',
                     backdropFilter: 'var(--theme-nav-blur, blur(20px))',
                     WebkitBackdropFilter: 'var(--theme-nav-blur, blur(20px))',
                     borderBottom: 'var(--theme-nav-border, 1px solid rgba(255,255,255,0.10))',
@@ -204,23 +226,23 @@ function TeacherLayoutInner({ children }: { children: React.ReactNode }) {
                     ...config.navStyle,
                 }}
             >
-                <div className="w-[95%] lg:w-[80%] max-w-[1600px] mx-auto px-4 md:px-6">
-                    <div className="flex items-center justify-between h-16 md:h-20">
+                <div className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="flex items-center justify-between h-16 md:h-20 py-2">
 
                         {/* Left: Logo */}
-                        <div className="flex items-center gap-3 w-auto lg:w-1/4 shrink-0">
+                        <div className="flex items-center gap-3 w-auto shrink-0">
                             {/* Mobile Hamburger */}
                             <button
                                 onClick={() => setIsMobileMenuOpen(true)}
-                                className="md:hidden p-2 transition-colors"
+                                className="md:hidden p-2 transition-colors cursor-pointer"
                                 style={{ color: navTextFaint }}
                             >
                                 <Menu className="w-6 h-6" />
                             </button>
 
-                            <Link href="/teacher/dashboard" className="flex items-center gap-2 group">
+                            <Link href="/teacher/dashboard" className="flex items-center gap-2.5 group">
                                 <div
-                                    className="w-8 h-8 md:w-10 md:h-10 rounded-xl md:rounded-2xl flex items-center justify-center transition-all"
+                                    className="w-9 h-9 md:w-10 md:h-10 rounded-xl md:rounded-2xl flex items-center justify-center transition-transform group-hover:scale-105"
                                     style={{
                                         background: `${config.accentColor}25`,
                                         border: `1.5px solid ${config.accentColor}55`,
@@ -237,15 +259,15 @@ function TeacherLayoutInner({ children }: { children: React.ReactNode }) {
                             </Link>
                         </div>
 
-                        {/* Center: Desktop Links */}
-                        <div className="hidden lg:flex flex-1 justify-center items-center gap-1 xl:gap-2 overflow-x-auto no-scrollbar px-4 whitespace-nowrap">
-                            {navItems.map((item) => {
+                        {/* Center: Desktop Links (WITH BALANCED PADDING & SPACING) */}
+                        <div className="hidden lg:flex items-center gap-2 xl:gap-3 px-6 py-1 whitespace-nowrap overflow-x-auto scrollbar-none my-auto">
+                            {primaryNavItems.map((item) => {
                                 const isActive = pathname === item.href || (item.href !== '/teacher/dashboard' && pathname.startsWith(item.href));
                                 return (
                                     <Link
                                         key={item.href}
                                         href={item.href}
-                                        className="flex items-center gap-2 px-3 xl:px-4 py-2 text-[13px] xl:text-sm font-black transition-all shrink-0"
+                                        className="flex items-center gap-2 px-3.5 xl:px-4.5 py-2 text-[13px] xl:text-sm font-black transition-all shrink-0 cursor-pointer"
                                         style={{
                                             borderRadius: config.btnRadius,
                                             background: isActive ? config.activeNavBg : 'transparent',
@@ -259,16 +281,79 @@ function TeacherLayoutInner({ children }: { children: React.ReactNode }) {
                                     </Link>
                                 );
                             })}
+
+                            {/* "Ko'proq" Dropdown */}
+                            {secondaryNavItems.length > 0 && (
+                                <div className="relative shrink-0" ref={dropdownRef}>
+                                    <button
+                                        onClick={() => setIsMoreOpen(!isMoreOpen)}
+                                        className="flex items-center gap-1.5 px-3.5 xl:px-4.5 py-2 text-[13px] xl:text-sm font-black transition-all cursor-pointer"
+                                        style={{
+                                            borderRadius: config.btnRadius,
+                                            background: isSecondaryActive ? config.activeNavBg : isMoreOpen ? 'rgba(255,255,255,0.08)' : 'transparent',
+                                            color: isSecondaryActive ? config.activeNavText : navTextFaint,
+                                            fontFamily: config.fontFamily,
+                                        }}
+                                    >
+                                        <span>Ko'proq</span>
+                                        <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isMoreOpen ? 'rotate-180' : ''}`} />
+                                    </button>
+
+                                    <AnimatePresence>
+                                        {isMoreOpen && (
+                                            <motion.div
+                                                initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                                                transition={{ duration: 0.15 }}
+                                                className="absolute right-0 top-full mt-2 w-48 p-2 rounded-2xl shadow-2xl border border-white/10 flex flex-col gap-1 z-50"
+                                                style={{
+                                                    background: 'var(--theme-card-bg, rgba(15, 23, 42, 0.95))',
+                                                    backdropFilter: 'blur(20px)',
+                                                }}
+                                            >
+                                                {secondaryNavItems.map((item) => {
+                                                    const isActive = pathname === item.href || (item.href !== '/teacher/dashboard' && pathname.startsWith(item.href));
+                                                    return (
+                                                        <Link
+                                                            key={item.href}
+                                                            href={item.href}
+                                                            onClick={() => setIsMoreOpen(false)}
+                                                            className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-black transition-all group cursor-pointer"
+                                                            style={{
+                                                                color: isActive ? config.accentColor : 'rgba(255,255,255,0.85)',
+                                                                background: isActive ? `${config.accentColor}20` : 'transparent',
+                                                                border: isActive ? `1px solid ${config.accentColor}40` : '1px solid transparent',
+                                                            }}
+                                                        >
+                                                            <div 
+                                                                className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-transform group-hover:scale-105"
+                                                                style={{
+                                                                    background: isActive ? config.accentColor : `${config.accentColor}18`,
+                                                                    color: isActive ? '#ffffff' : config.accentColor,
+                                                                }}
+                                                            >
+                                                                <item.icon className="w-4 h-4" />
+                                                            </div>
+                                                            <span className="truncate tracking-wide">{item.name}</span>
+                                                        </Link>
+                                                    );
+                                                })}
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </div>
+                            )}
                         </div>
 
-                        {/* Right: Theme Toggle + User */}
-                        <div className="flex items-center justify-end gap-3 md:gap-4 w-auto lg:w-1/4 shrink-0">
+                        {/* Right: User + Messages/Notifications */}
+                        <div className="flex items-center justify-end gap-3 md:gap-4 w-auto shrink-0">
                             {/* Stacked Messages and Notifications */}
                             <div className="flex flex-col items-center justify-center gap-0.5">
                                 {/* ✉️ Messages */}
                                 <button 
                                     onClick={() => setShowMessagesModal(true)}
-                                    className="p-1.5 transition-colors hover:text-white rounded-lg hover:bg-white/5"
+                                    className="p-1.5 transition-colors hover:text-white rounded-lg hover:bg-white/5 cursor-pointer"
                                     style={{ color: navTextFaint }}
                                     title="Xabarlar"
                                 >
@@ -282,43 +367,33 @@ function TeacherLayoutInner({ children }: { children: React.ReactNode }) {
                                             setShowNotifications(!showNotifications);
                                             if (!showNotifications) handleMarkAsRead();
                                         }}
-                                        className="p-1.5 transition-colors relative hover:text-white rounded-lg hover:bg-white/5"
+                                        className="p-1.5 transition-colors hover:text-white rounded-lg hover:bg-white/5 relative cursor-pointer"
                                         style={{ color: navTextFaint }}
+                                        title="Xabarnomalar"
                                     >
                                         <Bell className="w-4 h-4" />
                                         {unreadCount > 0 && (
-                                            <span 
-                                                className="absolute top-1 right-1 w-2 h-2 rounded-full border border-[#0a1226]"
-                                                style={{ background: config.accentColor }}
-                                            />
+                                            <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white font-black text-[9px] flex items-center justify-center animate-pulse">
+                                                {unreadCount}
+                                            </span>
                                         )}
                                     </button>
 
                                     {/* Notifications Dropdown */}
                                     <AnimatePresence>
                                         {showNotifications && (
-                                            <motion.div 
-                                                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                            <motion.div
+                                                initial={{ opacity: 0, y: 8, scale: 0.96 }}
                                                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                                                exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                                className="absolute right-0 mt-2 w-80 md:w-96 rounded-2xl shadow-2xl overflow-hidden z-50 border border-slate-700/80"
-                                                style={{
-                                                    background: 'rgba(15, 23, 42, 0.96)',
-                                                    backdropFilter: 'blur(20px)',
-                                                    color: 'white',
-                                                }}
+                                                exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                                                className="absolute right-0 top-full mt-2 w-80 max-h-96 overflow-y-auto p-4 rounded-2xl shadow-2xl border border-slate-700/80 flex flex-col gap-2 z-50 bg-slate-900/96 backdrop-blur-2xl"
                                             >
-                                                <div className="p-4 border-b border-slate-700/60 flex justify-between items-center bg-slate-900/80">
-                                                    <h3 className="font-black text-xs uppercase tracking-widest text-amber-400 flex items-center gap-2">
-                                                        <Bell className="w-4 h-4 text-amber-400" /> Xabarnomalar
-                                                    </h3>
-                                                    {unreadCount > 0 && (
-                                                        <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                                                            {unreadCount} ta yangi
-                                                        </span>
-                                                    )}
+                                                <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-1">
+                                                    <h3 className="text-xs font-black uppercase tracking-wider text-amber-300">Xabarnomalar</h3>
+                                                    <span className="text-[10px] text-slate-400 font-bold">{notifications.length} ta</span>
                                                 </div>
-                                                <div className="max-h-[340px] overflow-y-auto custom-scrollbar p-2.5 space-y-2">
+
+                                                <div className="space-y-2">
                                                     {notifications.length === 0 ? (
                                                         <p className="text-slate-400 text-xs text-center py-6 font-medium">Xabarnomalar mavjud emas</p>
                                                     ) : (
@@ -376,7 +451,7 @@ function TeacherLayoutInner({ children }: { children: React.ReactNode }) {
                                 </Link>
                                 <button
                                     onClick={() => setShowLogoutModal(true)}
-                                    className="hidden md:block p-2 transition-colors hover:text-red-400"
+                                    className="hidden md:block p-2 transition-colors hover:text-red-400 cursor-pointer"
                                     style={{ color: navTextFaint }}
                                 >
                                     <LogOut className="w-5 h-5" />
@@ -402,50 +477,39 @@ function TeacherLayoutInner({ children }: { children: React.ReactNode }) {
                             borderRight: `1px solid var(--theme-border, ${config.accentColor}40)`,
                         }}
                     >
-                        <div className="px-6 mb-8 flex items-center justify-between">
+                        <div className="flex items-center justify-between px-6 pb-6 border-b" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
                             <div className="flex items-center gap-3">
                                 <div
-                                    className="w-10 h-10 flex items-center justify-center"
+                                    className="w-10 h-10 rounded-2xl flex items-center justify-center font-black text-sm shadow-md"
                                     style={{
-                                        borderRadius: config.btnRadius,
-                                        background: `${config.accentColor}20`,
-                                        border: `1.5px solid ${config.accentColor}50`,
+                                        background: `linear-gradient(135deg, ${config.accentColor}, ${config.accentColor}99)`,
+                                        color: 'white',
                                     }}
                                 >
-                                    <BookOpen className="w-6 h-6" style={{ color: config.accentColor }} />
+                                    {(user?.name || 'T').charAt(0).toUpperCase()}
                                 </div>
                                 <div>
-                                    <span className="font-black text-lg tracking-tighter block leading-tight" style={{ color: navTextColor, fontFamily: config.fontFamily }}>
-                                        VocabTeacher
-                                    </span>
-                                    <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: config.accentColor }}>
-                                        {user?.role === 'admin' ? 'Admin' : "O'qituvchi"}
-                                    </span>
+                                    <h4 className="font-black text-sm" style={{ color: navTextColor }}>{user?.name || 'Teacher'}</h4>
+                                    <p className="text-[10px] font-black uppercase tracking-wider" style={{ color: config.accentColor }}>{user?.role}</p>
                                 </div>
                             </div>
-                            <button
-                                onClick={() => setIsMobileMenuOpen(false)}
-                                className="p-2"
-                                style={{ background: `${config.accentColor}15`, borderRadius: 10, color: navTextFaint }}
-                            >
+                            <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 cursor-pointer" style={{ color: navTextFaint }}>
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto px-4 space-y-2">
-                            {navItems.map(item => {
+                        <div className="flex-1 overflow-y-auto p-4 space-y-1">
+                            {allNavItems.map((item) => {
                                 const isActive = pathname === item.href || (item.href !== '/teacher/dashboard' && pathname.startsWith(item.href));
                                 return (
                                     <Link
                                         key={item.href}
                                         href={item.href}
                                         onClick={() => setIsMobileMenuOpen(false)}
-                                        className="flex items-center gap-3 p-4 transition-all"
+                                        className="flex items-center gap-3.5 p-3 rounded-2xl transition-all cursor-pointer"
                                         style={{
-                                            borderRadius: config.btnRadius,
                                             background: isActive ? config.activeNavBg : 'transparent',
-                                            border: isActive ? `1px solid ${config.accentColor}30` : '1px solid transparent',
-                                            boxShadow: isActive ? `0 2px 10px ${config.accentGlow}` : 'none',
+                                            border: isActive ? `1px solid ${config.accentColor}40` : '1px solid transparent',
                                         }}
                                     >
                                         <div
@@ -475,7 +539,7 @@ function TeacherLayoutInner({ children }: { children: React.ReactNode }) {
                         <div className="p-4 mt-auto" style={{ borderTop: `1px solid ${config.accentColor}20` }}>
                             <button
                                 onClick={() => { setIsMobileMenuOpen(false); setShowLogoutModal(true); }}
-                                className="w-full flex items-center gap-3 p-4"
+                                className="w-full flex items-center gap-3 p-4 cursor-pointer"
                                 style={{ borderRadius: config.btnRadius, border: '1px solid rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.08)', color: '#F87171' }}
                             >
                                 <div className="p-2" style={{ borderRadius: 10, background: 'rgba(239,68,68,0.12)' }}>
@@ -492,44 +556,37 @@ function TeacherLayoutInner({ children }: { children: React.ReactNode }) {
             {/* ── LOGOUT MODAL ── */}
             {mounted && showLogoutModal && createPortal(
                 <div
-                    className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+                    className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md"
                     style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh' }}
                 >
                     <div
-                        className="w-[95%] max-w-sm p-8 text-center shadow-2xl"
+                        className="w-[95%] max-w-sm p-6 shadow-2xl flex flex-col items-center text-center gap-4 animate-fade-in"
                         style={{
-                            borderRadius: config.btnRadius,
-                            background: theme === 'kids'
-                                ? 'rgba(255,252,240,0.97)'
-                                : 'linear-gradient(160deg,#13111f,#0f0d1e)',
-                            border: `1px solid ${config.accentColor}30`,
-                            color: theme === 'kids' ? '#1a1a2e' : 'white',
+                            background: 'var(--theme-card-bg, rgba(15, 23, 42, 0.95))',
+                            backdropFilter: 'blur(24px)',
+                            WebkitBackdropFilter: 'blur(24px)',
+                            border: `1px solid var(--theme-border, ${config.accentColor}30)`,
+                            borderRadius: 'var(--theme-radius-card, 24px)',
                         }}
                     >
-                        <div
-                            className="w-16 h-16 flex items-center justify-center mx-auto mb-6"
-                            style={{ borderRadius: '50%', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)' }}
-                        >
-                            <LogOut className="w-8 h-8 text-red-400" />
+                        <div className="w-14 h-14 rounded-2xl flex items-center justify-center bg-red-500/15 border border-red-500/30 text-red-400">
+                            <LogOut className="w-7 h-7" />
                         </div>
-                        <h2 className="text-2xl font-black mb-2" style={{ fontFamily: config.fontFamily }}>Chiqish</h2>
-                        <p className="mb-8 text-sm" style={{ opacity: 0.6 }}>Siz rostdan ham chiqmoqchimisiz?</p>
-                        <div className="grid grid-cols-2 gap-3">
+                        <div>
+                            <h3 className="font-black text-lg text-white">Tizimdan chiqish</h3>
+                            <p className="text-xs text-slate-300 mt-1 font-medium">Haqiqatan ham hisobingizdan chiqmoqchimisiz?</p>
+                        </div>
+                        <div className="flex items-center gap-3 w-full mt-2">
                             <button
                                 onClick={() => setShowLogoutModal(false)}
-                                className="py-3 font-black text-sm transition-all"
-                                style={{
-                                    borderRadius: config.btnRadius,
-                                    border: `1.5px solid ${config.accentColor}40`,
-                                    background: `${config.accentColor}10`,
-                                    color: config.accentColor,
-                                }}
+                                className="flex-1 py-3 text-xs font-black transition-colors cursor-pointer"
+                                style={{ borderRadius: config.btnRadius, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.1)' }}
                             >
-                                Bekor
+                                Bekor qilish
                             </button>
                             <button
                                 onClick={handleSignOut}
-                                className="py-3 font-black text-white text-sm transition-all hover:opacity-90"
+                                className="flex-1 py-3 text-xs font-black text-white transition-all cursor-pointer"
                                 style={{ borderRadius: config.btnRadius, background: 'linear-gradient(135deg,#ef4444,#dc2626)', boxShadow: '0 4px 15px rgba(239,68,68,0.3)' }}
                             >
                                 Ha, chiqish
@@ -584,8 +641,8 @@ function TeacherLayoutInner({ children }: { children: React.ReactNode }) {
                 document.body
             )}
 
-            {/* ── MAIN CONTENT ── */}
-            <main className="w-[95%] lg:w-[80%] max-w-[1600px] mx-auto relative z-10 w-full pt-6 md:pt-8 pb-16">
+            {/* ── MAIN CONTENT (FULL WIDTH RESPONSIVE CONTAINER) ── */}
+            <main className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10 pt-4 md:pt-6 pb-16">
                 {children}
             </main>
         </div>

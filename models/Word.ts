@@ -7,8 +7,14 @@ const WordSchema = new Schema({
     phonetic: { type: String },
     exampleSentence: { type: String },
     audioUrl: { type: String },
+    // Smart Import metadata — optional, does not affect existing functionality
+    emoji: { type: String },
+    emojiSource: { type: String, enum: ['automatic', 'teacher_selected'] },
+    sourceType: { type: String },   // "text" | "image" | "pdf" | "docx" | "ai_translation"
+    confidence: { type: Number },   // 0–1 float; 1.0 = teacher-entered directly
     createdAt: { type: Date, default: Date.now },
 });
+
 
 // Index for high-performance querying by unitId
 WordSchema.index({ unitId: 1 });

@@ -1,6 +1,11 @@
 @import "tailwindcss";
 
 
+/* Suppress CSS transitions during initial hydration to prevent theme flash */
+html.theme-loading *, html.theme-loading *::before, html.theme-loading *::after {
+  transition: none !important;
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
    MT-VOCAB DESIGN SYSTEM — v2.0
    8px grid · Consistent tokens · SaaS-grade quality

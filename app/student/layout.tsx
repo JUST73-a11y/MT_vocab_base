@@ -1,11 +1,11 @@
-﻿'use client';
+'use client';
 
 import { useAuth } from '@/lib/auth/AuthContext';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { BookOpen, Play, LogOut, LayoutDashboard, Menu, X, Brain, BarChart2, Users, Gamepad2, Award, Settings, Palette, ShoppingBag, Package, ChevronDown, MoreHorizontal } from 'lucide-react';
+import { BookOpen, Play, LogOut, LayoutDashboard, Menu, X, Brain, BarChart2, Users, Gamepad2, Award, Settings, Palette, ShoppingBag, Package, ChevronDown, MoreHorizontal, Trophy } from 'lucide-react';
 import StudentOnboarding from './onboarding/page';
 import { StudentThemeProvider } from '@/lib/theme/StudentThemeContext';
 
@@ -53,17 +53,18 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
         { name: 'Mashq', href: '/student/random', icon: Play },
         { name: 'Quiz', href: '/student/quiz', icon: Brain },
         { name: 'O\'yinlar', href: '/student/games', icon: Gamepad2 },
-        { name: 'Do\'kon', href: '/student/shop', icon: ShoppingBag },
-        { name: 'Inventar', href: '/student/inventory', icon: Package },
+        { name: 'Statistika', href: '/student/stats', icon: BarChart2 },
+        { name: 'Mening guruhim', href: '/student/group', icon: Users },
+        { name: 'Scores', href: '/student/scores', icon: Trophy },
     ];
 
     // Secondary items grouped in "Ko'proq" dropdown on desktop
     const secondaryNavItems = [
+        { name: 'Do\'kon', href: '/student/shop', icon: ShoppingBag },
+        { name: 'Inventar', href: '/student/inventory', icon: Package },
         { name: 'Dizayn', href: '/student/theme', icon: Palette },
         { name: 'Yodlash', href: '/student/mistakes', icon: BookOpen },
         { name: 'Sertifikatlar', href: '/student/certificates', icon: Award },
-        { name: 'Statistika', href: '/student/stats', icon: BarChart2 },
-        { name: 'Mening guruhim', href: '/student/group', icon: Users },
     ];
 
     // All items for mobile drawer
@@ -98,7 +99,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
                     right: '-30px',
                     bottom: '-30px',
                     zIndex: 0,
-                    backgroundImage: 'var(--theme-bg-image, url(/themes/adult-bg.jpg))',
+                    backgroundImage: 'var(--theme-bg-image, none)',
                     backgroundColor: 'var(--theme-bg-color, #09090f)',
                     backgroundPosition: 'var(--theme-bg-pos, center)',
                     backgroundSize: 'var(--theme-bg-size, cover)',
@@ -122,10 +123,10 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
             />
 
             {/* ── TOP NAV ── */}
-            <div className="w-full sticky top-4 md:top-6 z-40 flex justify-center px-4">
+            <div className="w-full max-w-[1600px] mx-auto sticky top-4 md:top-6 z-40 flex justify-center px-4 sm:px-6 lg:px-8">
                 <nav
                     id="student-nav"
-                    className="w-[98%] lg:w-[90%] max-w-[1280px] flex items-center transition-all duration-300"
+                    className="w-full flex items-center transition-all duration-300"
                     style={{
                         height: '72px',
                         borderRadius: 'var(--theme-radius-card, 16px)',
@@ -133,7 +134,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
                         backdropFilter: 'var(--theme-nav-blur, blur(20px))',
                         WebkitBackdropFilter: 'var(--theme-nav-blur, blur(20px))',
                         border: 'var(--theme-nav-border, 1px solid rgba(255,255,255,0.10))',
-                        marginBottom: '30px',
+                        marginBottom: '24px',
                     }}
                 >
                     <div className="w-full h-full px-4 md:px-6 flex items-center justify-between gap-2">
@@ -415,7 +416,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
                 document.body
             )}
 
-            <main className="flex-1 flex flex-col items-center w-[95%] lg:w-[80%] max-w-[1600px] mx-auto overflow-y-auto min-w-0 relative z-10 pt-6 md:pt-8 pb-16">{children}</main>
+            <main className="flex-1 flex flex-col items-center w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 overflow-y-auto min-w-0 relative z-10 pt-2 md:pt-4 pb-16">{children}</main>
         </div>
         </StudentThemeProvider>
     );
