@@ -390,7 +390,7 @@ export default function TeacherSharedPage() {
                                                 </div>
                                             </div>
                                             <button
-                                                onClick={() => router.push(`/practice/${share.unitId._id}`)}
+                                                onClick={() => router.push(`/teacher/units/${share.unitId._id}`)}
                                                 className="px-6 py-3 rounded-xl bg-indigo-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-lg shadow-indigo-500/20"
                                             >
                                                 Ochish
