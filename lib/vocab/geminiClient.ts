@@ -33,15 +33,27 @@ function getClient() {
 const PRIMARY_MODEL = 'gemini-3.6-flash';
 const FALLBACK_MODEL = 'gemini-flash-latest';
 
+const GENERATION_CONFIG = {
+  responseMimeType: 'application/json',
+  temperature: 0.1,
+  maxOutputTokens: 2048,
+};
+
 async function generateContentWithFallback(contents: any): Promise<string> {
   const client = getClient();
   try {
-    const model = client.getGenerativeModel({ model: PRIMARY_MODEL });
+    const model = client.getGenerativeModel({
+      model: PRIMARY_MODEL,
+      generationConfig: GENERATION_CONFIG,
+    });
     const result = await model.generateContent(contents);
     return result.response.text();
   } catch (err: any) {
     console.warn(`Primary model ${PRIMARY_MODEL} failed, attempting fallback to ${FALLBACK_MODEL}:`, err?.message);
-    const fallback = client.getGenerativeModel({ model: FALLBACK_MODEL });
+    const fallback = client.getGenerativeModel({
+      model: FALLBACK_MODEL,
+      generationConfig: GENERATION_CONFIG,
+    });
     const result = await fallback.generateContent(contents);
     return result.response.text();
   }
