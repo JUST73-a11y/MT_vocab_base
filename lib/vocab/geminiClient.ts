@@ -30,35 +30,21 @@ function getClient() {
   return new GoogleGenerativeAI(key);
 }
 
-const PREFERRED_MODELS = [
-  'gemini-3.6-flash',
-  'gemini-3.5-flash',
-  'gemini-flash-latest',
-  'gemini-3.5-flash-lite',
-  'gemini-2.5-flash',
-];
-
+const PRIMARY_MODEL = 'gemini-3.6-flash';
+const FALLBACK_MODEL = 'gemini-flash-latest';
 
 async function generateContentWithFallback(contents: any): Promise<string> {
   const client = getClient();
-  let lastError: any = null;
-
-  for (const modelName of PREFERRED_MODELS) {
-    try {
-      const model = client.getGenerativeModel({ model: modelName });
-      const result = await model.generateContent(contents);
-      return result.response.text();
-    } catch (err: any) {
-      console.warn(`Model ${modelName} notice:`, err?.message || err);
-      lastError = err;
-      if (err?.message?.includes('404') || err?.message?.includes('not found') || err?.status === 404) {
-        continue;
-      }
-      throw err;
-    }
+  try {
+    const model = client.getGenerativeModel({ model: PRIMARY_MODEL });
+    const result = await model.generateContent(contents);
+    return result.response.text();
+  } catch (err: any) {
+    console.warn(`Primary model ${PRIMARY_MODEL} failed, attempting fallback to ${FALLBACK_MODEL}:`, err?.message);
+    const fallback = client.getGenerativeModel({ model: FALLBACK_MODEL });
+    const result = await fallback.generateContent(contents);
+    return result.response.text();
   }
-
-  throw lastError || new Error('Mos keluvchi Gemini modeli topilmadi');
 }
 
 // ── Shared system instruction ──────────────────────────────────────────────
