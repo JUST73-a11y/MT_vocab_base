@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { BookOpen, Settings, LogOut, LayoutDashboard, Menu, X, Share2, Play, Users, UsersRound, Gamepad2, Bell, Mail, Send, Palette, ShoppingBag, Trophy, ChevronDown, MoreHorizontal } from 'lucide-react';
+import { BookOpen, Settings, LogOut, LayoutDashboard, Menu, X, Share2, Play, Users, UsersRound, Gamepad2, Bell, Mail, Send, Palette, ShoppingBag, Trophy, ChevronDown, MoreHorizontal, Sparkles } from 'lucide-react';
 import { TeacherThemeProvider, useTeacherTheme } from '@/lib/teacherTheme';
 import { TeacherThemeProvider as NewTeacherThemeProvider } from '@/lib/theme/TeacherThemeContext';
 import MessagesModal from '@/components/teacher/MessagesModal';
@@ -126,14 +126,15 @@ function TeacherLayoutInner({ children }: { children: React.ReactNode }) {
         { name: 'Dashboard', href: '/teacher/dashboard', icon: LayoutDashboard },
         { name: 'Live Scores', href: '/teacher/live-scores', icon: Trophy },
         { name: 'Units', href: '/teacher/units', icon: BookOpen },
+        { name: 'AI Reading', href: '/teacher/ai-reading', icon: Sparkles },
         { name: 'Students', href: '/teacher/students', icon: Users },
         { name: 'Groups', href: '/teacher/groups', icon: UsersRound },
         { name: 'Mashq', href: '/teacher/random', icon: Play },
-        { name: 'O\'yinlar', href: '/teacher/vocab-game', icon: Gamepad2 },
     ];
 
     // Secondary items grouped in "Ko'proq" dropdown on desktop
     const secondaryNavItems = user?.role === 'admin' ? [] : [
+        { name: 'O\'yinlar', href: '/teacher/vocab-game', icon: Gamepad2 },
         { name: 'Shared', href: '/teacher/shared', icon: Share2 },
         { name: 'Dizayn', href: '/teacher/theme', icon: Palette },
         { name: 'Do\'kon', href: '/teacher/shop', icon: ShoppingBag },
@@ -171,7 +172,7 @@ function TeacherLayoutInner({ children }: { children: React.ReactNode }) {
     }
 
     const navTextColor = 'white';
-    const navTextFaint = 'rgba(255,255,255,0.6)';
+    const navTextFaint = 'rgba(255,255,255,0.7)';
 
     return (
         <div
@@ -213,42 +214,45 @@ function TeacherLayoutInner({ children }: { children: React.ReactNode }) {
                 }}
             />
 
-            {/* ── TOP NAV (PADDED & PROPERLY CENTERED) ── */}
-            <nav
-                id="teacher-nav"
-                className="sticky top-0 w-full z-40 mb-6 md:mb-8"
-                style={{
-                    background: 'var(--theme-nav-bg, rgba(10, 18, 35, 0.75))',
-                    backdropFilter: 'var(--theme-nav-blur, blur(20px))',
-                    WebkitBackdropFilter: 'var(--theme-nav-blur, blur(20px))',
-                    borderBottom: 'var(--theme-nav-border, 1px solid rgba(255,255,255,0.10))',
-                    transition: 'all 0.4s ease',
-                    ...config.navStyle,
-                }}
-            >
-                <div className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex items-center justify-between h-16 md:h-20 py-2">
+            {/* ── TOP NAV (FLOATING PILL / CARD WRAPPER MATCHING STUDENT) ── */}
+            <div className="w-full max-w-[1600px] mx-auto sticky top-3 md:top-4 z-50 flex justify-center px-3 sm:px-6 lg:px-8 mb-4 md:mb-6">
+                <nav
+                    id="teacher-nav"
+                    className="w-full flex items-center transition-all duration-300 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)]"
+                    style={{
+                        minHeight: '68px',
+                        borderRadius: '18px',
+                        background: 'var(--theme-nav-bg, rgba(10, 18, 35, 0.85))',
+                        backdropFilter: 'var(--theme-nav-blur, blur(24px))',
+                        WebkitBackdropFilter: 'var(--theme-nav-blur, blur(24px))',
+                        border: 'var(--theme-nav-border, 1px solid rgba(255,255,255,0.12))',
+                        transition: 'all 0.4s ease',
+                        ...config.navStyle,
+                    }}
+                >
+                    <div className="w-full h-full px-3.5 sm:px-5 md:px-6 py-2 flex items-center justify-between gap-2 md:gap-4">
 
                         {/* Left: Logo */}
                         <div className="flex items-center gap-3 w-auto shrink-0">
                             {/* Mobile Hamburger */}
                             <button
                                 onClick={() => setIsMobileMenuOpen(true)}
-                                className="md:hidden p-2 transition-colors cursor-pointer"
+                                className="md:hidden p-2 transition-colors cursor-pointer rounded-xl hover:bg-white/5 active:scale-95"
                                 style={{ color: navTextFaint }}
+                                aria-label="Open menu"
                             >
                                 <Menu className="w-6 h-6" />
                             </button>
 
                             <Link href="/teacher/dashboard" className="flex items-center gap-2.5 group">
                                 <div
-                                    className="w-9 h-9 md:w-10 md:h-10 rounded-xl md:rounded-2xl flex items-center justify-center transition-transform group-hover:scale-105"
+                                    className="w-9 h-9 md:w-10 md:h-10 rounded-xl md:rounded-2xl flex items-center justify-center transition-transform group-hover:scale-105 shadow-md"
                                     style={{
                                         background: `${config.accentColor}25`,
                                         border: `1.5px solid ${config.accentColor}55`,
                                     }}
                                 >
-                                    <BookOpen className="w-5 h-5 md:w-6 md:h-6" style={{ color: config.accentColor }} />
+                                    <BookOpen className="w-5 h-5 md:w-5.5 md:h-5.5" style={{ color: config.accentColor }} />
                                 </div>
                                 <span
                                     className="font-black text-lg md:text-xl tracking-tighter"
@@ -260,24 +264,25 @@ function TeacherLayoutInner({ children }: { children: React.ReactNode }) {
                         </div>
 
                         {/* Center: Desktop Links (WITH BALANCED PADDING & SPACING) */}
-                        <div className="hidden lg:flex items-center gap-2 xl:gap-3 px-6 py-1 whitespace-nowrap overflow-x-auto scrollbar-none my-auto">
+                        <div className="hidden lg:flex items-center gap-1 xl:gap-1.5 px-2 py-1 my-auto">
                             {primaryNavItems.map((item) => {
                                 const isActive = pathname === item.href || (item.href !== '/teacher/dashboard' && pathname.startsWith(item.href));
                                 return (
                                     <Link
                                         key={item.href}
                                         href={item.href}
-                                        className="flex items-center gap-2 px-3.5 xl:px-4.5 py-2 text-[13px] xl:text-sm font-black transition-all shrink-0 cursor-pointer"
+                                        className="flex items-center gap-1.5 px-3 xl:px-3.5 py-2 text-[12px] xl:text-[13px] font-black transition-all shrink-0 cursor-pointer"
                                         style={{
-                                            borderRadius: config.btnRadius,
+                                            borderRadius: config.btnRadius || '999px',
                                             background: isActive ? config.activeNavBg : 'transparent',
                                             color: isActive ? config.activeNavText : navTextFaint,
                                             fontFamily: config.fontFamily,
                                             boxShadow: isActive ? `0 0 12px ${config.accentGlow}` : 'none',
+                                            border: isActive ? `1px solid ${config.accentColor}40` : '1px solid transparent',
                                         }}
                                     >
                                         <item.icon className="w-4 h-4" />
-                                        {item.name}
+                                        <span>{item.name}</span>
                                     </Link>
                                 );
                             })}
@@ -287,16 +292,19 @@ function TeacherLayoutInner({ children }: { children: React.ReactNode }) {
                                 <div className="relative shrink-0" ref={dropdownRef}>
                                     <button
                                         onClick={() => setIsMoreOpen(!isMoreOpen)}
-                                        className="flex items-center gap-1.5 px-3.5 xl:px-4.5 py-2 text-[13px] xl:text-sm font-black transition-all cursor-pointer"
+                                        className="flex items-center gap-1.5 px-3 xl:px-3.5 py-2 text-[12px] xl:text-[13px] font-black transition-all cursor-pointer"
                                         style={{
-                                            borderRadius: config.btnRadius,
-                                            background: isSecondaryActive ? config.activeNavBg : isMoreOpen ? 'rgba(255,255,255,0.08)' : 'transparent',
+                                            borderRadius: config.btnRadius || '999px',
+                                            background: isSecondaryActive ? config.activeNavBg : isMoreOpen ? 'rgba(255,255,255,0.12)' : 'transparent',
                                             color: isSecondaryActive ? config.activeNavText : navTextFaint,
                                             fontFamily: config.fontFamily,
+                                            boxShadow: isSecondaryActive ? `0 0 12px ${config.accentGlow}` : 'none',
+                                            border: isSecondaryActive ? `1px solid ${config.accentColor}40` : '1px solid transparent',
                                         }}
                                     >
+                                        <MoreHorizontal className="w-4 h-4" />
                                         <span>Ko'proq</span>
-                                        <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isMoreOpen ? 'rotate-180' : ''}`} />
+                                        <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isMoreOpen ? 'rotate-180' : ''}`} />
                                     </button>
 
                                     <AnimatePresence>
@@ -306,10 +314,11 @@ function TeacherLayoutInner({ children }: { children: React.ReactNode }) {
                                                 animate={{ opacity: 1, y: 0, scale: 1 }}
                                                 exit={{ opacity: 0, y: 8, scale: 0.96 }}
                                                 transition={{ duration: 0.15 }}
-                                                className="absolute right-0 top-full mt-2 w-48 p-2 rounded-2xl shadow-2xl border border-white/10 flex flex-col gap-1 z-50"
+                                                className="absolute right-0 top-full mt-2.5 w-52 p-2 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.85)] border border-white/15 flex flex-col gap-1 z-[60]"
                                                 style={{
-                                                    background: 'var(--theme-card-bg, rgba(15, 23, 42, 0.95))',
-                                                    backdropFilter: 'blur(20px)',
+                                                    background: 'rgba(13, 20, 38, 0.98)',
+                                                    backdropFilter: 'blur(24px)',
+                                                    WebkitBackdropFilter: 'blur(24px)',
                                                 }}
                                             >
                                                 {secondaryNavItems.map((item) => {
@@ -319,7 +328,7 @@ function TeacherLayoutInner({ children }: { children: React.ReactNode }) {
                                                             key={item.href}
                                                             href={item.href}
                                                             onClick={() => setIsMoreOpen(false)}
-                                                            className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-black transition-all group cursor-pointer"
+                                                            className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-black transition-all group cursor-pointer hover:bg-white/10 active:scale-[0.98]"
                                                             style={{
                                                                 color: isActive ? config.accentColor : 'rgba(255,255,255,0.85)',
                                                                 background: isActive ? `${config.accentColor}20` : 'transparent',
@@ -327,13 +336,13 @@ function TeacherLayoutInner({ children }: { children: React.ReactNode }) {
                                                             }}
                                                         >
                                                             <div 
-                                                                className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-transform group-hover:scale-105"
+                                                                className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-transform group-hover:scale-105"
                                                                 style={{
                                                                     background: isActive ? config.accentColor : `${config.accentColor}18`,
                                                                     color: isActive ? '#ffffff' : config.accentColor,
                                                                 }}
                                                             >
-                                                                <item.icon className="w-4 h-4" />
+                                                                <item.icon className="w-3.5 h-3.5" />
                                                             </div>
                                                             <span className="truncate tracking-wide">{item.name}</span>
                                                         </Link>
@@ -459,8 +468,8 @@ function TeacherLayoutInner({ children }: { children: React.ReactNode }) {
                             </div>
                         </div>
                     </div>
-                </div>
-            </nav>
+                </nav>
+            </div>
 
             <MessagesModal isOpen={showMessagesModal} onClose={() => setShowMessagesModal(false)} />
 
@@ -642,7 +651,7 @@ function TeacherLayoutInner({ children }: { children: React.ReactNode }) {
             )}
 
             {/* ── MAIN CONTENT (FULL WIDTH RESPONSIVE CONTAINER) ── */}
-            <main className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10 pt-4 md:pt-6 pb-16">
+            <main className="w-full max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8 min-w-0 relative z-10 pb-20">
                 {children}
             </main>
         </div>

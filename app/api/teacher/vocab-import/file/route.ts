@@ -1,12 +1,13 @@
 /**
  * /api/teacher/vocab-import/file/route.ts
- * File upload + extraction: image, PDF, DOCX.
+ * Unified File upload + extraction: Image, PDF, DOCX, TXT, XLSX, CSV.
  *
  * Pipeline:
  *   Image → Gemini Vision OCR
  *   PDF (text layer) → pdf-parse text → parseVocabText or Gemini smart extract
  *   PDF (scanned/no text) → Gemini native PDF understanding
- *   DOCX → mammoth text extraction → parseVocabText + Gemini for remainder
+ *   DOCX → mammoth text/table extraction → parseVocabText or Gemini smart extract
+ *   TXT / CSV / XLSX → text extractor → parseVocabText or Gemini smart extract
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -19,19 +20,12 @@ import {
   resolveSmartEmojis,
 } from '@/lib/vocab/geminiClient';
 import { parseVocabText, ParsedWord } from '@/lib/vocab/vocabParser';
-import { batchLookupEmoji } from '@/lib/vocab/emojiMap';
+import { validateFile, extractTextFromBuffer } from '@/lib/vocab/documentTextExtractor';
 import { ExtractedEntry, ExtractionResult, SourceType } from '@/lib/vocab/smartExtract';
 
 export const dynamic = 'force-dynamic';
 
-const MAX_IMAGE_SIZE = 10 * 1024 * 1024;  // 10 MB
-const MAX_PDF_SIZE   = 20 * 1024 * 1024;  // 20 MB
-const MAX_DOCX_SIZE  = 10 * 1024 * 1024;  // 10 MB
-
 const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
-const PDF_TYPE    = 'application/pdf';
-const DOCX_TYPE   = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-const DOC_TYPE    = 'application/msword';
 
 function newId() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -41,7 +35,7 @@ export async function POST(req: NextRequest) {
   try {
     const user = await getServerSession();
     if (!user || (user.role !== 'teacher' && user.role !== 'admin')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+      return NextResponse.json({ error: 'Ruxsat yo\'q' }, { status: 403 });
     }
 
     const formData = await req.formData();
@@ -53,18 +47,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Fayl tanlanmadi' }, { status: 400 });
     }
 
-    const mime = file.type;
+    const mime = file.type || 'application/octet-stream';
+    const fileName = file.name;
+    const ext = fileName.toLowerCase().split('.').pop() || '';
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // ── DOC (old binary format) — not supported ──────────────────────────
-    if (mime === DOC_TYPE || file.name.toLowerCase().endsWith('.doc')) {
-      return NextResponse.json({
-        error: 'Eski .doc format qo\'llab-quvvatlanmaydi. Faylni .docx formatida qayta saqlang va yuklang.'
-      }, { status: 400 });
+    // Validate size and file category
+    const validation = validateFile(mime, buffer.byteLength, fileName);
+    if (!validation.ok) {
+      return NextResponse.json({ error: validation.error }, { status: 400 });
     }
 
-    // ── Gemini required check ─────────────────────────────────────────────
+    // Gemini check
     if (!isGeminiConfigured()) {
       return NextResponse.json({
         error: 'Fayl tahlili uchun Gemini API kalit kerak. .env.local faylga GEMINI_API_KEY qo\'shing.'
@@ -72,30 +67,21 @@ export async function POST(req: NextRequest) {
     }
 
     let entries: ExtractedEntry[] = [];
-    let source = file.name;
+    let source = fileName;
     let pagesAnalyzed: number | undefined;
     const warnings: string[] = [];
 
     // ── IMAGE ─────────────────────────────────────────────────────────────
-    if (IMAGE_TYPES.includes(mime)) {
-      if (buffer.byteLength > MAX_IMAGE_SIZE) {
-        return NextResponse.json({ error: 'Rasm 10 MB dan kichik bo\'lishi kerak' }, { status: 400 });
-      }
+    if (IMAGE_TYPES.includes(mime) || ['jpg', 'jpeg', 'png', 'webp'].includes(ext)) {
       const base64 = buffer.toString('base64');
-      entries = await extractFromImage(base64, mime, file.name);
-      source = `🖼️ ${file.name}`;
+      entries = await extractFromImage(base64, mime.startsWith('image/') ? mime : `image/${ext === 'jpg' ? 'jpeg' : ext}`, fileName);
+      source = `🖼️ ${fileName}`;
     }
 
     // ── PDF ───────────────────────────────────────────────────────────────
-    else if (mime === PDF_TYPE || file.name.toLowerCase().endsWith('.pdf')) {
-      if (buffer.byteLength > MAX_PDF_SIZE) {
-        return NextResponse.json({ error: 'PDF 20 MB dan kichik bo\'lishi kerak' }, { status: 400 });
-      }
-
-      // Try text layer first (fast, deterministic)
+    else if (mime === 'application/pdf' || ext === 'pdf') {
       let textLayerText = '';
       try {
-        // Require pdf-parse (CJS package)
         const pdfParse = require('pdf-parse');
         const pdfData = await pdfParse(buffer);
         textLayerText = pdfData.text || '';
@@ -104,10 +90,9 @@ export async function POST(req: NextRequest) {
         textLayerText = '';
       }
 
-      const isTextPdf = textLayerText.trim().length > 50;
+      const isTextPdf = textLayerText.trim().length > 5;
 
       if (isTextPdf) {
-        // Text PDF: try deterministic first
         const { words: parsed, warnings: pw } = parseVocabText(textLayerText);
         warnings.push(...pw);
 
@@ -120,48 +105,38 @@ export async function POST(req: NextRequest) {
             exampleSentence: p.exampleSentence,
             sourceType: 'pdf' as SourceType,
             confidence: 1.0,
-            aiTranslation: false,
+            aiTranslation: !p.uzbekTranslation,
             ocrUncertain: false,
             status: 'valid',
             selected: true,
           } as ExtractedEntry));
         } else {
-          // Not a simple vocab list — use Gemini on the text
           entries = await extractFromSmartText(textLayerText, 'smart_extract');
           entries = entries.map(e => ({ ...e, sourceType: 'pdf' as SourceType }));
         }
       } else {
-        // Scanned PDF: send raw bytes to Gemini
         const base64 = buffer.toString('base64');
         entries = await extractFromPdf(base64, pagesAnalyzed);
       }
 
-      source = `📄 ${file.name}${pagesAnalyzed ? ` (${pagesAnalyzed} sahifa)` : ''}`;
+      source = `📄 ${fileName}${pagesAnalyzed ? ` (${pagesAnalyzed} sahifa)` : ''}`;
     }
 
     // ── DOCX ──────────────────────────────────────────────────────────────
-    else if (mime === DOCX_TYPE || file.name.toLowerCase().endsWith('.docx')) {
-      if (buffer.byteLength > MAX_DOCX_SIZE) {
-        return NextResponse.json({ error: 'DOCX 10 MB dan kichik bo\'lishi kerak' }, { status: 400 });
-      }
-
+    else if (
+      mime === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+      ext === 'docx' || ext === 'doc'
+    ) {
       const mammoth = (await import('mammoth')).default;
-
-      // Extract raw text
-      const rawResult = await mammoth.extractRawText({ buffer });
-      const rawText = rawResult.value || '';
-
-      // Also extract as HTML to find tables
       const htmlResult = await mammoth.convertToHtml({ buffer });
       const html = htmlResult.value || '';
-
-      // Extract table rows from HTML (word | translation pattern)
       const tableEntries = extractTableFromHtml(html);
 
       if (tableEntries.length >= 2) {
         entries = tableEntries;
       } else {
-        // Fall back to text parsing
+        const rawResult = await mammoth.extractRawText({ buffer });
+        const rawText = rawResult.value || '';
         const { words: parsed, warnings: pw } = parseVocabText(rawText);
         warnings.push(...pw);
 
@@ -174,29 +149,59 @@ export async function POST(req: NextRequest) {
             exampleSentence: p.exampleSentence,
             sourceType: 'docx' as SourceType,
             confidence: 1.0,
-            aiTranslation: false,
+            aiTranslation: !p.uzbekTranslation,
             ocrUncertain: false,
             status: 'valid',
             selected: true,
           } as ExtractedEntry));
         } else {
-          // Smart extract from raw text
           entries = await extractFromSmartText(rawText, 'smart_extract');
           entries = entries.map(e => ({ ...e, sourceType: 'docx' as SourceType }));
         }
       }
 
-      source = `📝 ${file.name}`;
+      source = `📝 ${fileName}`;
     }
 
+    // ── TXT / CSV / XLSX / Other Text Documents ────────────────────────────
     else {
-      return NextResponse.json({
-        error: `Qo'llab-quvvatlanmaydigan fayl turi: ${mime}. JPG, PNG, WEBP, PDF yoki DOCX yuklang.`
-      }, { status: 400 });
+      const extracted = await extractTextFromBuffer(buffer, mime, fileName);
+      warnings.push(...extracted.warnings);
+      const text = extracted.text;
+
+      if (!text.trim()) {
+        return NextResponse.json({
+          error: 'Fayldan matn topilmadi yoki fayl bo\'sh.'
+        }, { status: 422 });
+      }
+
+      const { words: parsed, warnings: pw } = parseVocabText(text);
+      warnings.push(...pw);
+
+      if (parsed.length >= 2) {
+        entries = parsed.map((p: ParsedWord) => ({
+          id: newId(),
+          englishWord: p.englishWord,
+          uzbekTranslation: p.uzbekTranslation,
+          phonetic: p.phonetic,
+          exampleSentence: p.exampleSentence,
+          sourceType: 'text' as SourceType,
+          confidence: 1.0,
+          aiTranslation: !p.uzbekTranslation,
+          ocrUncertain: false,
+          status: 'valid',
+          selected: true,
+        } as ExtractedEntry));
+      } else {
+        entries = await extractFromSmartText(text, 'smart_extract');
+        entries = entries.map(e => ({ ...e, sourceType: 'text' as SourceType }));
+      }
+
+      source = `📄 ${fileName}`;
     }
 
     // ── Emoji suggestions ─────────────────────────────────────────────────
-    if (suggestEmojis) {
+    if (suggestEmojis && entries.length > 0) {
       const emojiMap = await resolveSmartEmojis(entries);
       entries = entries.map(e => ({
         ...e,
@@ -222,12 +227,9 @@ export async function POST(req: NextRequest) {
 // ── DOCX HTML table extractor ─────────────────────────────────────────────
 function extractTableFromHtml(html: string): ExtractedEntry[] {
   const entries: ExtractedEntry[] = [];
-
-  // Find all <tr> rows
   const rowMatches = html.match(/<tr[^>]*>([\s\S]*?)<\/tr>/gi) ?? [];
 
   for (const row of rowMatches) {
-    // Extract cell content (td or th)
     const cellMatches = row.match(/<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/gi) ?? [];
     const cells = cellMatches
       .map(c => c.replace(/<[^>]+>/g, '').trim())
@@ -238,7 +240,6 @@ function extractTableFromHtml(html: string): ExtractedEntry[] {
     const english = cells[0];
     const uzbek = cells[1];
 
-    // Skip header rows
     if (/^(word|english|so'z|tarjima|translation|uzbek)$/i.test(english)) continue;
     if (english.length === 0) continue;
 

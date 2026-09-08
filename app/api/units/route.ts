@@ -142,9 +142,12 @@ export async function POST(req: Request) {
 
         const { title, createdBy, category, categoryId, customTimer } = await req.json();
 
-        if (!title || !createdBy || (!category && !categoryId)) {
-            return NextResponse.json({ message: 'Title, Category and User ID are required' }, { status: 400 });
+        if (!title || !String(title).trim()) {
+            return NextResponse.json({ message: 'Unit nomi (Title) kiritilishi shart' }, { status: 400 });
         }
+
+        const effectiveUserId = createdBy || user.id;
+        const effectiveCategory = category || 'AI Reading';
 
         const isValidObjectId = (id: any) => /^[0-9a-fA-F]{24}$/.test(id);
         const finalCategoryId = (categoryId && isValidObjectId(categoryId)) ? categoryId : undefined;
@@ -152,16 +155,16 @@ export async function POST(req: Request) {
         await dbConnect();
 
         const newUnit = await Unit.create({
-            title,
-            createdBy,
-            category: category || 'Uncategorized',
+            title: String(title).trim(),
+            createdBy: effectiveUserId,
+            category: effectiveCategory,
             categoryId: finalCategoryId,
             customTimer: customTimer ? parseInt(customTimer) : undefined,
         });
 
         // Invalidate cache for this teacher
-        cache.delByPrefix(`units:${createdBy}`);
-        cache.delByPrefix(`categoryTree:${createdBy}`);
+        cache.delByPrefix(`units:${effectiveUserId}`);
+        cache.delByPrefix(`categoryTree:${effectiveUserId}`);
 
         return NextResponse.json(newUnit, { status: 201 });
     } catch (error: any) {

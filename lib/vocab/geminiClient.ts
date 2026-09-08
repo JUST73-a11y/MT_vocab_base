@@ -30,8 +30,19 @@ function getClient() {
   return new GoogleGenerativeAI(key);
 }
 
-const PRIMARY_MODEL = 'gemini-3.6-flash';
-const FALLBACK_MODEL = 'gemini-flash-latest';
+export const GEMINI_MODELS = [
+  'gemini-flash-lite-latest',
+  'gemini-3.5-flash',
+  'gemini-3.7-flash',
+  'gemini-3.1-flash-lite',
+  'gemini-flash-latest',
+  'gemini-3.8-flash',
+  'gemini-3.6-flash',
+];
+
+export const PRIMARY_MODEL = GEMINI_MODELS[0];
+export const FALLBACK_MODEL = GEMINI_MODELS[1];
+export const SECONDARY_FALLBACK = GEMINI_MODELS[2];
 
 const GENERATION_CONFIG = {
   responseMimeType: 'application/json',
@@ -39,24 +50,37 @@ const GENERATION_CONFIG = {
   maxOutputTokens: 2048,
 };
 
-async function generateContentWithFallback(contents: any): Promise<string> {
+export async function generateContentWithFallback(contents: any, config: any = GENERATION_CONFIG): Promise<string> {
   const client = getClient();
-  try {
-    const model = client.getGenerativeModel({
-      model: PRIMARY_MODEL,
-      generationConfig: GENERATION_CONFIG,
-    });
-    const result = await model.generateContent(contents);
-    return result.response.text();
-  } catch (err: any) {
-    console.warn(`Primary model ${PRIMARY_MODEL} failed, attempting fallback to ${FALLBACK_MODEL}:`, err?.message);
-    const fallback = client.getGenerativeModel({
-      model: FALLBACK_MODEL,
-      generationConfig: GENERATION_CONFIG,
-    });
-    const result = await fallback.generateContent(contents);
-    return result.response.text();
+  let lastError: any = null;
+
+  for (const modelName of GEMINI_MODELS) {
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const model = client.getGenerativeModel({
+          model: modelName,
+          generationConfig: config,
+        });
+        const result = await model.generateContent(contents);
+        const text = result.response.text();
+        if (text && text.trim()) {
+          return text;
+        }
+      } catch (err: any) {
+        lastError = err;
+        const msg = err?.message || String(err);
+        const isTransient = msg.includes('503') || msg.includes('429') || msg.includes('high demand') || msg.includes('fetch failed');
+        console.warn(`[Gemini] Model ${modelName} (attempt ${attempt}) warning: ${msg.slice(0, 100)}`);
+        if (isTransient && attempt === 1) {
+          await new Promise(r => setTimeout(r, 600 + Math.random() * 400));
+          continue;
+        }
+        break; // Next model in chain
+      }
+    }
   }
+
+  throw lastError || new Error('All Gemini models failed to generate content');
 }
 
 // ── Shared system instruction ──────────────────────────────────────────────
@@ -74,8 +98,21 @@ ABSOLUTE RULES:
 
 // ── JSON parse helper ──────────────────────────────────────────────────────
 function parseJsonResponse(raw: string): any {
-  const cleaned = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-  return JSON.parse(cleaned);
+  if (!raw || typeof raw !== 'string') return null;
+  const cleaned = raw.replace(/```json\n?/gi, '').replace(/```\n?/g, '').trim();
+  try {
+    return JSON.parse(cleaned);
+  } catch (err1) {
+    const objMatch = cleaned.match(/(\{[\s\S]*\})/);
+    if (objMatch) {
+      try { return JSON.parse(objMatch[1]); } catch {}
+    }
+    const arrMatch = cleaned.match(/(\[[\s\S]*\])/);
+    if (arrMatch) {
+      try { return JSON.parse(arrMatch[1]); } catch {}
+    }
+    throw err1;
+  }
 }
 
 // ── Image extraction ──────────────────────────────────────────────────────
@@ -138,21 +175,18 @@ Return [] if no vocabulary is found.`;
   } as ExtractedEntry)).filter(e => e.englishWord.length > 0);
 }
 
-// ── Smart text extraction (prose or mixed) ────────────────────────────────
+// ── Smart text extraction (prose, vocab list or mixed) ─────────────────────
 export async function extractFromSmartText(
   text: string,
   mode: 'vocab_list' | 'smart_extract'
 ): Promise<ExtractedEntry[]> {
   const modeInstruction = mode === 'smart_extract'
-    ? `The text may be prose or a document. Identify candidate vocabulary words that appear to be:
-       - New/unfamiliar words being introduced
-       - Words appearing in a vocabulary list or glossary
-       - Bold or highlighted terms
-       - Words that have definitions or translations nearby
-       Do NOT extract every word from paragraphs. Be selective.
-       These are CANDIDATES — mark confidence appropriately.`
-    : `The text is a vocabulary list. Extract every English word/phrase and its translation.
-       Support formats: "word — translation", "word - translation", column-based, numbered lists.`;
+    ? `The text may be a reading passage, article, notes, or vocabulary document.
+       Identify the key vocabulary words, collocations, or phrases for learning.
+       Extract them and provide their direct, natural Uzbek translations.
+       If the text already has translations, preserve them.`
+    : `The text is a vocabulary list or word collection. Extract every English word/phrase and its translation.
+       If translations are missing for any words, generate accurate, natural Uzbek translations.`;
 
   const prompt = `${VOCAB_SYSTEM}
 
@@ -160,46 +194,52 @@ ${modeInstruction}
 
 Text to analyze:
 ---
-${text.slice(0, 8000)}
+${text.slice(0, 12000)}
 ---
 
-Return a JSON array:
-{
+Return a JSON array of extracted vocabulary items:
+[{
   "englishWord": "exact word/phrase",
-  "uzbekTranslation": "translation if present, else empty string",
-  "phonetic": "if present, else null",
-  "exampleSentence": "if present, else null",
-  "partOfSpeech": "if detectable, else null",
-  "confidence": 0.0-1.0,
-  "sourceReference": "line X or context hint"
-}
+  "uzbekTranslation": "accurate Uzbek translation (1-3 words)",
+  "phonetic": "phonetic/IPA if visible, else null",
+  "exampleSentence": "sentence from context or a natural example sentence",
+  "partOfSpeech": "verb|noun|adjective|adverb|phrase|other",
+  "confidence": 0.8-1.0,
+  "sourceReference": "context hint or line"
+}]
 
-Return [] if nothing found.`;
+Return [] ONLY if the text contains no meaningful words.`;
 
   const raw = await generateContentWithFallback(prompt);
 
-  let parsed: any[];
+  let parsed: any[] = [];
   try {
-    parsed = parseJsonResponse(raw);
-    if (!Array.isArray(parsed)) parsed = [];
+    const rawParsed: any = parseJsonResponse(raw);
+    if (Array.isArray(rawParsed)) {
+      parsed = rawParsed;
+    } else if (Array.isArray(rawParsed?.vocabulary)) {
+      parsed = rawParsed.vocabulary;
+    } else if (Array.isArray(rawParsed?.words)) {
+      parsed = rawParsed.words;
+    }
   } catch {
     return [];
   }
 
   return parsed.map((item: any) => ({
     id: newId(),
-    englishWord: String(item.englishWord ?? '').trim(),
-    uzbekTranslation: String(item.uzbekTranslation ?? '').trim(),
+    englishWord: String(item.englishWord ?? item.word ?? '').trim(),
+    uzbekTranslation: String(item.uzbekTranslation ?? item.translation ?? '').trim(),
     phonetic: item.phonetic ? String(item.phonetic).trim() : undefined,
     exampleSentence: item.exampleSentence ? String(item.exampleSentence).trim() : undefined,
     partOfSpeech: item.partOfSpeech ?? undefined,
     sourceType: 'smart' as SourceType,
     sourceReference: item.sourceReference ?? undefined,
-    confidence: Number(item.confidence ?? 0.75),
-    aiTranslation: false,
+    confidence: Number(item.confidence ?? 0.85),
+    aiTranslation: Boolean(!item.uzbekTranslation),
     ocrUncertain: false,
-    status: (Number(item.confidence ?? 0.75) < 0.7) ? 'needs_review' : 'valid',
-    selected: mode === 'vocab_list',
+    status: (Number(item.confidence ?? 0.85) < 0.7) ? 'needs_review' : 'valid',
+    selected: true,
   } as ExtractedEntry)).filter(e => e.englishWord.length > 0);
 }
 
@@ -210,30 +250,24 @@ export async function extractFromPdf(
 ): Promise<ExtractedEntry[]> {
   const prompt = `${VOCAB_SYSTEM}
 
-This is a PDF document. Extract ALL vocabulary pairs (English word/phrase + Uzbek translation).
+This is a PDF document (reading passage, article, textbook page, or vocabulary list).
+Extract ALL valuable vocabulary words/phrases for language learners.
 
-Look for:
-- Numbered vocabulary lists
-- Tables with word/translation columns
-- Glossary sections
-- Words followed by their translations
-- Dictionary-style entries with definitions
-
-For each entry include the page number or section if determinable.
-
-DO NOT extract every word from paragraphs of running text.
-ONLY extract entries that clearly function as vocabulary items.
+For every word/phrase:
+- If Uzbek translation is present in the document, use it.
+- If translation is not in the document, GENERATE the accurate, concise Uzbek translation (1-3 words).
+- Provide an example sentence and part of speech.
 
 Return JSON array:
-{
+[{
   "englishWord": "exact word/phrase",
-  "uzbekTranslation": "translation if present, else empty string",
-  "phonetic": "if present, else null",
-  "exampleSentence": "if present, else null",
-  "partOfSpeech": "if present, else null",
-  "confidence": 0.0-1.0,
+  "uzbekTranslation": "accurate Uzbek translation",
+  "phonetic": "IPA or null",
+  "exampleSentence": "example sentence",
+  "partOfSpeech": "verb|noun|adjective|adverb|phrase|other",
+  "confidence": 0.8-1.0,
   "pageNumber": number or null
-}`;
+}]`;
 
   const pdfPart: Part = {
     inlineData: { data: pdfBase64, mimeType: 'application/pdf' }
@@ -241,18 +275,24 @@ Return JSON array:
 
   const raw = await generateContentWithFallback([prompt, pdfPart]);
 
-  let parsed: any[];
+  let parsed: any[] = [];
   try {
-    parsed = parseJsonResponse(raw);
-    if (!Array.isArray(parsed)) parsed = [];
+    const rawParsed: any = parseJsonResponse(raw);
+    if (Array.isArray(rawParsed)) {
+      parsed = rawParsed;
+    } else if (Array.isArray(rawParsed?.vocabulary)) {
+      parsed = rawParsed.vocabulary;
+    } else if (Array.isArray(rawParsed?.words)) {
+      parsed = rawParsed.words;
+    }
   } catch {
     return [];
   }
 
   return parsed.map((item: any) => ({
     id: newId(),
-    englishWord: String(item.englishWord ?? '').trim(),
-    uzbekTranslation: String(item.uzbekTranslation ?? '').trim(),
+    englishWord: String(item.englishWord ?? item.word ?? '').trim(),
+    uzbekTranslation: String(item.uzbekTranslation ?? item.translation ?? '').trim(),
     phonetic: item.phonetic ? String(item.phonetic).trim() : undefined,
     exampleSentence: item.exampleSentence ? String(item.exampleSentence).trim() : undefined,
     partOfSpeech: item.partOfSpeech ?? undefined,
@@ -381,6 +421,147 @@ export async function resolveSmartEmojis(
   return staticMap;
 }
 
+// ── AI Reading Vocabulary Extractor ───────────────────────────────────────
+export interface ReadingExtractionSettings {
+  requestedCount: number;
+  cefr: 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2' | 'Mixed' | 'Any';
+  includePhrases: boolean;
+  includeIdeas: boolean;
+  mode?: string;
+}
+
+export interface ReadingVocabItem {
+  word: string;
+  uzbekTranslation: string;
+  cefr: string;
+  partOfSpeech: string;
+  definition: string;
+  contextSentence: string;
+  contextTranslation: string;
+  importanceScore: number;
+  confidence: 'high' | 'medium' | 'low';
+  phonetic?: string;
+  sourcePage?: number;
+  itemType: 'word' | 'phrase';
+}
+
+export interface ReadingIdeaItem {
+  title: string;
+  summary: string;
+  importance: 'high' | 'medium' | 'low';
+  sourceQuote: string;
+}
+
+export interface ReadingExtractionOutput {
+  vocabulary: ReadingVocabItem[];
+  phrases: ReadingVocabItem[];
+  ideas: ReadingIdeaItem[];
+  message?: string;
+}
+
+function buildCefrInstruction(cefr: string): string {
+  if (cefr === 'Any' || cefr === 'Mixed') {
+    return 'Ignore strict CEFR filtering. Select the most educationally useful vocabulary regardless of level. Strongly prefer B1–C2 range. Avoid A1 unless the word has special contextual importance.';
+  }
+  return `Target CEFR level: ${cefr}. Focus on words at or near this level. Include adjacent levels if they are contextually important.`;
+}
+
+export async function extractReadingVocabulary(
+  text: string,
+  settings: ReadingExtractionSettings,
+  chunkIndex?: number,
+  totalChunks?: number
+): Promise<ReadingExtractionOutput> {
+  const cefrInstruction = buildCefrInstruction(settings.cefr);
+  const countNote = (totalChunks && totalChunks > 1)
+    ? `This is chunk ${chunkIndex}/${totalChunks} of a larger document. Extract ALL high-value candidates — final ranking happens separately.`
+    : `Return approximately ${settings.requestedCount} items total. If the text lacks enough quality vocabulary, return fewer — NEVER pad with weak words.`;
+
+  const systemPrompt = `You are an expert IELTS/CEFR vocabulary analyst and EFL teacher.
+Analyze the reading passage and extract the most educationally valuable vocabulary for English learners.
+
+CORE OBJECTIVE: Find vocabulary genuinely useful for CEFR/IELTS-style reading — NOT just words that exist in the text.
+
+SELECTION CRITERIA:
+1. Academic/formal value
+2. CEFR relevance — ${cefrInstruction}
+3. IELTS reading usefulness
+4. Context importance (critical to understanding the passage)
+5. Reusability in other academic texts
+
+MANDATORY EXCLUSIONS:
+- Function words: the, a, an, is, are, was, were, of, in, on, to, and, or, for, with
+- Obvious A1 beginner words (unless teacher requested A1/A2)
+- Proper nouns: names, cities, countries, companies (unless critical)
+- Numbers, dates, percentages
+- Words NOT actually present in the source text (anti-hallucination rule)
+- Context sentences MUST be exact quotes from the passage — never invented
+
+WORD FORMS: Choose the most useful learning form. Do not extract all forms of the same word.
+
+TRANSLATION RULES (CRITICAL):
+- "uzbekTranslation" MUST BE CONCISE, DIRECT, AND CRISP (strictly 1–3 words max, e.g. "o'zgartirmoq", "xilma-xillik", "muhim").
+- NEVER write long descriptions, sentence-like definitions, or multi-clause explanations in "uzbekTranslation".
+- Detailed explanations belong ONLY in "definition" (English) and "contextTranslation" (full sentence translation).
+- "uzbekTranslation" must be the clean vocabulary equivalent for flashcards.
+
+${countNote}
+
+Return ONLY valid JSON (no markdown) in this exact structure:
+{
+  "vocabulary": [{
+    "word": "exact word from text",
+    "uzbekTranslation": "concise 1-3 word Uzbek meaning",
+    "cefr": "A1|A2|B1|B2|C1|C2",
+    "partOfSpeech": "verb|noun|adjective|adverb|other",
+    "definition": "clear English definition",
+    "contextSentence": "EXACT sentence from the passage",
+    "contextTranslation": "Uzbek translation of context sentence",
+    "importanceScore": 0.0-1.0,
+    "confidence": "high|medium|low",
+    "phonetic": "IPA or null",
+    "sourcePage": null,
+    "itemType": "word"
+  }],
+  "phrases": [],
+  "ideas": [],
+  "message": "Only N items found (optional — omit if count reached)"
+}
+
+QUALITY > QUANTITY. Fewer high-value items beats more weak items.`;
+
+  const userPrompt = [
+    `Reading passage:\n---\n${text.slice(0, 12000)}\n---`,
+    `Requested count: ${settings.requestedCount}`,
+    `CEFR filter: ${settings.cefr}`,
+    settings.includePhrases
+      ? 'Extract useful collocations/academic phrases/phrasal verbs in the phrases[] array. Only genuinely reusable phrases — not random sentence fragments.'
+      : 'Return phrases: []',
+    settings.includeIdeas
+      ? 'Extract key claims/findings/arguments in the ideas[] array as { title, summary, importance, sourceQuote }.'
+      : 'Return ideas: []',
+  ].join('\n');
+
+  const readingConfig = {
+    responseMimeType: 'application/json',
+    temperature: 0.15,
+    maxOutputTokens: 8192,
+  };
+
+  const raw = await generateContentWithFallback([systemPrompt, userPrompt], readingConfig);
+
+  try {
+    const parsed = parseJsonResponse(raw);
+    return {
+      vocabulary: Array.isArray(parsed?.vocabulary) ? parsed.vocabulary : [],
+      phrases:    Array.isArray(parsed?.phrases)    ? parsed.phrases    : [],
+      ideas:      Array.isArray(parsed?.ideas)      ? parsed.ideas      : [],
+      message:    parsed?.message,
+    };
+  } catch (parseErr) {
+    console.error('Failed to parse AI reading response:', raw?.slice(0, 300));
+    return { vocabulary: [], phrases: [], ideas: [], message: 'AI javobi noto\'g\'ri formatda' };
+  }
+}
+
 export const isGeminiConfigured = (): boolean => !!process.env.GEMINI_API_KEY;
-
-

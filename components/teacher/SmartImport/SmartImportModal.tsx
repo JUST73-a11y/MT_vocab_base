@@ -17,7 +17,7 @@ interface SmartImportModalProps {
   onSuccess: () => void;
 }
 
-type TabType = 'text' | 'image' | 'pdf' | 'docx' | 'smart';
+type TabType = 'text' | 'image' | 'pdf' | 'docx' | 'txt' | 'smart';
 
 export default function SmartImportModal({
   isOpen,
@@ -309,6 +309,18 @@ export default function SmartImportModal({
 
                 <button
                   type="button"
+                  onClick={() => { setActiveTab('txt'); setInputText(''); }}
+                  className={`flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-bold transition-all ${
+                    activeTab === 'txt'
+                      ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
+                      : 'text-gray-400 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  <FileText className="w-4 h-4" /> 📄 TXT / Matn fayl
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => { setActiveTab('smart'); setSelectedFile(null); }}
                   className={`flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-bold transition-all ${
                     activeTab === 'smart'
@@ -348,10 +360,12 @@ export default function SmartImportModal({
                     className="hidden"
                     accept={
                       activeTab === 'image'
-                        ? 'image/jpeg,image/png,image/webp'
+                        ? 'image/jpeg,image/png,image/webp,image/jpg'
                         : activeTab === 'pdf'
-                        ? 'application/pdf'
-                        : '.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                        ? '.pdf,application/pdf'
+                        : activeTab === 'docx'
+                        ? '.docx,.doc,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword'
+                        : '.txt,.text,.md,text/plain'
                     }
                     onChange={(e) => {
                       if (e.target.files && e.target.files[0]) {
@@ -374,7 +388,8 @@ export default function SmartImportModal({
                       <p className="text-xs text-gray-500 mt-1">
                         {activeTab === 'image' && 'JPG, PNG, WEBP (maks. 10MB)'}
                         {activeTab === 'pdf' && 'PDF hujjat (maks. 20MB)'}
-                        {activeTab === 'docx' && 'DOCX Word hujjat (maks. 10MB)'}
+                        {activeTab === 'docx' && 'DOCX / DOC Word hujjat (maks. 10MB)'}
+                        {activeTab === 'txt' && 'TXT / Markdown matnli fayl (maks. 5MB)'}
                       </p>
                     </div>
                   </label>

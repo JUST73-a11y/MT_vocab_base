@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { BookOpen, Play, LogOut, LayoutDashboard, Menu, X, Brain, BarChart2, Users, Gamepad2, Award, Settings, Palette, ShoppingBag, Package, ChevronDown, MoreHorizontal, Trophy } from 'lucide-react';
+import { BookOpen, Play, LogOut, LayoutDashboard, Menu, X, Brain, BarChart2, Users, Gamepad2, Award, Settings, Palette, ShoppingBag, Package, ChevronDown, MoreHorizontal, Trophy, Library } from 'lucide-react';
 import StudentOnboarding from './onboarding/page';
 import { StudentThemeProvider } from '@/lib/theme/StudentThemeContext';
 
@@ -60,6 +60,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
 
     // Secondary items grouped in "Ko'proq" dropdown on desktop
     const secondaryNavItems = [
+        { name: 'Mening so\'zlarim', href: '/student/my-vocabulary', icon: Library },
         { name: 'Do\'kon', href: '/student/shop', icon: ShoppingBag },
         { name: 'Inventar', href: '/student/inventory', icon: Package },
         { name: 'Dizayn', href: '/student/theme', icon: Palette },
@@ -123,44 +124,44 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
             />
 
             {/* ── TOP NAV ── */}
-            <div className="w-full max-w-[1600px] mx-auto sticky top-4 md:top-6 z-40 flex justify-center px-4 sm:px-6 lg:px-8">
+            <div className="w-full max-w-[1600px] mx-auto sticky top-3 md:top-4 z-50 flex justify-center px-3 sm:px-6 lg:px-8 mb-4 md:mb-6">
                 <nav
                     id="student-nav"
-                    className="w-full flex items-center transition-all duration-300"
+                    className="w-full flex items-center transition-all duration-300 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)]"
                     style={{
-                        height: '72px',
-                        borderRadius: 'var(--theme-radius-card, 16px)',
-                        background: 'var(--theme-nav-bg, rgba(10, 18, 35, 0.75))',
-                        backdropFilter: 'var(--theme-nav-blur, blur(20px))',
-                        WebkitBackdropFilter: 'var(--theme-nav-blur, blur(20px))',
-                        border: 'var(--theme-nav-border, 1px solid rgba(255,255,255,0.10))',
-                        marginBottom: '24px',
+                        minHeight: '68px',
+                        borderRadius: 'var(--theme-radius-card, 18px)',
+                        background: 'var(--theme-nav-bg, rgba(10, 18, 35, 0.85))',
+                        backdropFilter: 'var(--theme-nav-blur, blur(24px))',
+                        WebkitBackdropFilter: 'var(--theme-nav-blur, blur(24px))',
+                        border: 'var(--theme-nav-border, 1px solid rgba(255,255,255,0.12))',
                     }}
                 >
-                    <div className="w-full h-full px-4 md:px-6 flex items-center justify-between gap-2">
+                    <div className="w-full h-full px-3.5 sm:px-5 md:px-6 py-2 flex items-center justify-between gap-2 md:gap-4">
 
                         {/* Left: Logo */}
                         <div className="flex items-center gap-3 shrink-0">
                             {/* Mobile Hamburger */}
                             <button
                                 onClick={() => setIsMobileMenuOpen(true)}
-                                className="md:hidden p-2 transition-colors cursor-pointer"
-                                style={{ color: 'var(--theme-text-muted, rgba(255,255,255,0.6))' }}
+                                className="md:hidden p-2 transition-colors cursor-pointer rounded-xl hover:bg-white/5 active:scale-95"
+                                style={{ color: 'var(--theme-text-muted, rgba(255,255,255,0.7))' }}
+                                aria-label="Open menu"
                             >
                                 <Menu className="w-6 h-6" />
                             </button>
 
-                            <Link href="/student/dashboard" className="flex items-center gap-2 group">
+                            <Link href="/student/dashboard" className="flex items-center gap-2.5 group">
                                 <div
-                                    className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center transition-all"
+                                    className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center transition-all shadow-md group-hover:scale-105"
                                     style={{
                                         borderRadius: 'var(--theme-radius-btn, 12px)',
-                                        background: 'rgba(255,255,255,0.06)',
+                                        background: 'rgba(255,255,255,0.08)',
                                         border: '1.5px solid var(--theme-border, rgba(255,255,255,0.15))',
                                         color: 'var(--theme-primary, #3B82F6)'
                                     }}
                                 >
-                                    <BookOpen className="w-5 h-5 md:w-6 md:h-6" />
+                                    <BookOpen className="w-5 h-5 md:w-5.5 md:h-5.5" />
                                 </div>
                                 <span
                                     className="font-black text-lg md:text-xl tracking-tighter"
@@ -172,20 +173,20 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
                         </div>
 
                         {/* Center: Desktop Links */}
-                        <div className="hidden md:flex items-center gap-1 xl:gap-2">
+                        <div className="hidden md:flex items-center gap-1 lg:gap-1.5 xl:gap-2">
                             {primaryNavItems.map((item) => {
                                 const isActive = pathname === item.href || (item.href !== '/student/dashboard' && pathname.startsWith(item.href));
                                 return (
                                     <Link
                                         key={item.href}
                                         href={item.href}
-                                        className="flex items-center gap-1.5 px-3 py-2 transition-all group relative overflow-hidden"
+                                        className="flex items-center gap-1.5 px-3 py-2 transition-all group relative overflow-hidden cursor-pointer"
                                         style={{
                                             borderRadius: 'var(--theme-radius-btn, 999px)',
                                             background: isActive ? 'var(--theme-btn-bg, #6366f1)' : 'transparent',
                                             color: isActive ? 'var(--theme-btn-text, #ffffff)' : 'var(--theme-text-muted, rgba(255,255,255,0.75))',
                                             border: isActive ? '1px solid var(--theme-primary, rgba(99,102,241,0.4))' : '1px solid transparent',
-                                            boxShadow: isActive ? 'var(--theme-shadow-btn, 0 0 10px rgba(99,102,241,0.3))' : 'none',
+                                            boxShadow: isActive ? 'var(--theme-shadow-btn, 0 0 12px rgba(99,102,241,0.35))' : 'none',
                                         }}
                                     >
                                         <item.icon
@@ -206,27 +207,28 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
                                     className="flex items-center gap-1.5 px-3 py-2 transition-all group relative cursor-pointer"
                                     style={{
                                         borderRadius: 'var(--theme-radius-btn, 999px)',
-                                        background: isSecondaryActive ? 'var(--theme-btn-bg, #6366f1)' : isMoreOpen ? 'rgba(255,255,255,0.08)' : 'transparent',
-                                        color: isSecondaryActive ? 'var(--theme-btn-text, #ffffff)' : 'var(--theme-text-muted, rgba(255,255,255,0.75))',
+                                        background: isSecondaryActive ? 'var(--theme-btn-bg, #6366f1)' : isMoreOpen ? 'rgba(255,255,255,0.12)' : 'transparent',
+                                        color: isSecondaryActive ? 'var(--theme-btn-text, #ffffff)' : 'var(--theme-text-muted, rgba(255,255,255,0.85))',
                                         border: isSecondaryActive ? '1px solid var(--theme-primary, rgba(99,102,241,0.4))' : '1px solid transparent',
+                                        boxShadow: isSecondaryActive ? 'var(--theme-shadow-btn, 0 0 12px rgba(99,102,241,0.35))' : 'none',
                                     }}
                                 >
                                     <MoreHorizontal className="w-4 h-4" />
                                     <span className="text-[12px] xl:text-[13px] font-bold tracking-wide whitespace-nowrap">
                                         Ko'proq
                                     </span>
-                                    <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isMoreOpen ? 'rotate-180' : ''}`} />
+                                    <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isMoreOpen ? 'rotate-180 text-white' : ''}`} />
                                 </button>
 
                                 {/* Dropdown Menu */}
                                 {isMoreOpen && (
                                     <div
-                                        className="absolute right-0 mt-2 w-48 rounded-2xl p-2 shadow-2xl flex flex-col gap-1 border animate-in fade-in slide-in-from-top-2 duration-200"
+                                        className="absolute right-0 top-full mt-2.5 w-52 rounded-2xl p-2 shadow-[0_20px_60px_rgba(0,0,0,0.85)] flex flex-col gap-1 border animate-in fade-in slide-in-from-top-2 duration-200 z-[60]"
                                         style={{
-                                            background: 'var(--theme-nav-bg, rgba(15, 22, 42, 0.96))',
-                                            backdropFilter: 'blur(20px)',
-                                            borderColor: 'var(--theme-border, rgba(255,255,255,0.15))',
-                                            zIndex: 50,
+                                            background: 'rgba(13, 20, 38, 0.98)',
+                                            backdropFilter: 'blur(24px)',
+                                            WebkitBackdropFilter: 'blur(24px)',
+                                            borderColor: 'rgba(255, 255, 255, 0.16)',
                                         }}
                                     >
                                         {secondaryNavItems.map((item) => {
@@ -236,10 +238,10 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
                                                     key={item.href}
                                                     href={item.href}
                                                     onClick={() => setIsMoreOpen(false)}
-                                                    className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-all font-bold text-xs"
+                                                    className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl transition-all font-bold text-xs hover:bg-white/10 active:scale-[0.98]"
                                                     style={{
                                                         background: isActive ? 'var(--theme-btn-bg, #6366f1)' : 'transparent',
-                                                        color: isActive ? '#ffffff' : 'rgba(255,255,255,0.8)',
+                                                        color: isActive ? '#ffffff' : 'rgba(255,255,255,0.85)',
                                                     }}
                                                 >
                                                     <item.icon className="w-4 h-4 shrink-0" style={{ color: isActive ? '#fff' : 'var(--theme-primary, #60A5FA)' }} />
@@ -416,7 +418,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
                 document.body
             )}
 
-            <main className="flex-1 flex flex-col items-center w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 overflow-y-auto min-w-0 relative z-10 pt-2 md:pt-4 pb-16">{children}</main>
+            <main className="flex-1 flex flex-col items-center w-full max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8 min-w-0 relative z-10 pb-20">{children}</main>
         </div>
         </StudentThemeProvider>
     );
