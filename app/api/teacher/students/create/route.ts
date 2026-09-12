@@ -4,13 +4,14 @@ import dbConnect from '@/lib/db';
 import User from '@/models/User';
 import GroupMember from '@/models/GroupMember';
 import Group from '@/models/Group';
+import { getNextStudentId } from '@/models/Counter';
 import { getServerSession } from '@/lib/serverAuth';
 import bcrypt from 'bcryptjs';
 
 /**
  * POST /api/teacher/students/create
- * Teacher creates a new student account with email + name + groupId.
- * The student will have needsPasswordSetup=true and must set their password on first login.
+ * Creates a loginless classroom student with permanent server-generated Student ID (M00001+).
+ * Accepts: { firstName, lastName, groupId } or backward-compatible { name, email, groupId }
  */
 export async function POST(req: Request) {
     try {
@@ -19,65 +20,98 @@ export async function POST(req: Request) {
             return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
         }
 
-        const { name, email, groupId } = await req.json();
-        if (!name || !email) {
-            return NextResponse.json({ message: 'Name and email are required' }, { status: 400 });
+        const body = await req.json();
+        const { firstName, lastName, groupId, email, name } = body;
+
+        let finalFirstName = (firstName || '').trim();
+        let finalLastName = (lastName || '').trim();
+        let fullName = '';
+
+        if (finalFirstName || finalLastName) {
+            fullName = [finalFirstName, finalLastName].filter(Boolean).join(' ').trim();
+        } else if (name && typeof name === 'string') {
+            fullName = name.trim();
+            const parts = fullName.split(' ');
+            finalFirstName = parts[0] || '';
+            finalLastName = parts.slice(1).join(' ') || '';
+        }
+
+        if (!fullName) {
+            return NextResponse.json({ message: 'Talaba ismi va familiyasi kiritilishi shart' }, { status: 400 });
+        }
+
+        if (!groupId) {
+            return NextResponse.json({ message: 'Guruh tanlanishi shart' }, { status: 400 });
         }
 
         await dbConnect();
 
-        // Verify the group belongs to this teacher
-        if (groupId) {
-            const group = await Group.findById(groupId);
-            if (!group) return NextResponse.json({ message: 'Group not found' }, { status: 404 });
-            if (teacher.role !== 'admin' && group.teacherId.toString() !== teacher.id) {
-                return NextResponse.json({ message: 'Forbidden — group does not belong to you' }, { status: 403 });
+        // Verify the group exists and belongs to this teacher
+        const group = await Group.findById(groupId);
+        if (!group) {
+            return NextResponse.json({ message: 'Guruh topilmadi' }, { status: 404 });
+        }
+        if (teacher.role !== 'admin' && group.teacherId.toString() !== teacher.id) {
+            return NextResponse.json({ message: 'Ruxsat berilmagan guruh' }, { status: 403 });
+        }
+
+        // Generate permanent unique server-side Student ID (M00001, M00002, etc.)
+        const permanentStudentId = await getNextStudentId();
+
+        // Use supplied email or generate an internal synthetic email
+        let studentEmail = email ? email.toLowerCase().trim() : `${permanentStudentId.toLowerCase()}@classroom.local`;
+
+        // Check if custom email exists
+        if (email) {
+            const existingUser = await User.findOne({ email: studentEmail });
+            if (existingUser) {
+                return NextResponse.json({ message: 'Bu email allaqachon mavjud' }, { status: 409 });
             }
         }
 
-        // Check if email already exists
-        const existing = await User.findOne({ email: email.toLowerCase().trim() });
-        if (existing) {
-            return NextResponse.json({ message: 'Bu email allaqachon ro\'yxatdan o\'tgan' }, { status: 409 });
-        }
+        const dummyPassword = Math.random().toString(36).slice(2, 12);
+        const hashedPassword = await bcrypt.hash(dummyPassword, 8);
 
-        // Create a temporary password (will be changed on first login)
-        const tempPassword = Math.random().toString(36).slice(2, 10);
-        const hashed = await bcrypt.hash(tempPassword, 10);
+        const isLoginless = body.isClassroomStudent !== undefined ? Boolean(body.isClassroomStudent) : !email;
 
         const newStudent = await User.create({
-            name: name.trim(),
-            email: email.toLowerCase().trim(),
-            password: hashed,
-            visiblePassword: tempPassword,
+            name: fullName,
+            firstName: finalFirstName,
+            lastName: finalLastName,
+            studentId: permanentStudentId,
+            email: studentEmail,
+            password: hashedPassword,
+            visiblePassword: dummyPassword,
             role: 'student',
             isVerified: true,
+            isClassroomStudent: isLoginless,
             teacherId: teacher.id,
-            needsPasswordSetup: true, // force password setup on first login
+            needsPasswordSetup: !isLoginless,
             warningCard: false,
         });
 
-        // Add to group if provided
-        if (groupId) {
-            await GroupMember.findOneAndUpdate(
-                { groupId, studentId: newStudent._id },
-                { groupId, studentId: newStudent._id, joinedAt: new Date() },
-                { upsert: true, new: true }
-            );
-        }
+        // Add to group immediately
+        await GroupMember.findOneAndUpdate(
+            { groupId, studentId: newStudent._id },
+            { groupId, studentId: newStudent._id, joinedAt: new Date() },
+            { upsert: true, new: true }
+        );
 
         return NextResponse.json({
             success: true,
             student: {
                 _id: newStudent._id,
+                studentId: newStudent.studentId,
                 name: newStudent.name,
+                firstName: newStudent.firstName,
+                lastName: newStudent.lastName,
                 email: newStudent.email,
-                needsPasswordSetup: true,
+                isClassroomStudent: true,
             }
         }, { status: 201 });
 
     } catch (error: any) {
         console.error('Create student error:', error);
-        return NextResponse.json({ message: 'Error creating student' }, { status: 500 });
+        return NextResponse.json({ message: error.message || 'Error creating student' }, { status: 500 });
     }
 }

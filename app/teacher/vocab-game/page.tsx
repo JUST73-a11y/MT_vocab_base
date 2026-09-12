@@ -1,16 +1,22 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/apiFetch';
 import toast from 'react-hot-toast';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
     Play, Pause, CheckCircle2, XCircle, Loader2, Trophy, Users,
     BookOpen, ChevronRight, BarChart3, Send, Copy, Check,
     AlertTriangle, Star, RefreshCw, ArrowLeft, Zap, Target,
-    Medal, TrendingUp, PieChart as PieIcon, Download, Volume2, Eye, EyeOff, Square
+    Medal, TrendingUp, PieChart as PieIcon, Download, Volume2, VolumeX,
+    Eye, EyeOff, Square, UserPlus, Flame, Sparkles, FolderOpen, ChevronDown, CheckCheck, Search, X,
+    Camera, Edit2, Save
 } from 'lucide-react';
+import html2canvas from 'html2canvas';
+import { announcer } from '@/lib/announcerSound';
+import VocabularyUnitSelector from '@/components/teacher/VocabularyUnitSelector';
 
 // ─── Sound Effects (Web Audio API) ────────────────────────────────────────────
 const playSuccessSound = () => {
@@ -50,7 +56,7 @@ const playWrongSound = () => {
     } catch {}
 };
 
-// ─── Compact Circular Timer (Top-Center) ───────────────────────────────────
+// ─── Compact Circular Timer ──────────────────────────────────────────────────
 function CircularTimer({
     timeLeft,
     total,
@@ -74,7 +80,7 @@ function CircularTimer({
 
     return (
         <div className="flex flex-col items-center gap-1.5">
-            <div className="relative flex items-center justify-center mx-auto drop-shadow-[0_0_20px_rgba(99,102,241,0.35)] w-[100px] h-[100px] sm:w-[140px] sm:h-[140px]">
+            <div className="relative flex items-center justify-center mx-auto drop-shadow-[0_0_20px_rgba(99,102,241,0.35)] w-[90px] h-[90px] sm:w-[120px] sm:h-[120px]">
                 <svg className="absolute inset-0 -rotate-90 w-full h-full" viewBox="0 0 100 100">
                     <circle cx="50" cy="50" r={R} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="6" />
                     <circle cx="50" cy="50" r={R} fill="none" stroke={color} strokeWidth="6"
@@ -82,10 +88,10 @@ function CircularTimer({
                         style={{ transition: 'stroke-dasharray 1s linear, stroke 0.5s' }} />
                 </svg>
                 <div className="text-center z-10 flex flex-col items-center justify-center">
-                    <div className="text-3xl sm:text-5xl font-black tabular-nums text-white tracking-tight leading-none drop-shadow-md">
+                    <div className="text-2xl sm:text-4xl font-black tabular-nums text-white tracking-tight leading-none drop-shadow-md">
                         {timeLeft}
                     </div>
-                    <div className="text-[9px] sm:text-[11px] uppercase font-black tracking-[0.15em] text-white/50 mt-0.5 sm:mt-1">
+                    <div className="text-[8px] sm:text-[10px] uppercase font-black tracking-[0.15em] text-white/50 mt-0.5">
                         {isPaused ? 'PAUZADA' : 'SEC'}
                     </div>
                 </div>
@@ -109,350 +115,251 @@ function CircularTimer({
 }
 
 // ─── Types ───────────────────────────────────────────────────────────────────
-interface Group { _id: string; id?: string; name: string; vocabularyMode?: boolean; memberCount?: number; }
-interface Unit { id: string; title: string; category?: string; }
+interface Group { _id: string; id?: string; name: string; vocabularyMode?: boolean; memberCount?: number; telegramChatId?: string; }
+interface Unit { id: string; title: string; category?: string; categoryId?: string | null; wordCount?: number; }
 interface Word { _id: string; englishWord: string; uzbekTranslation: string; phonetic?: string; emoji?: string; }
-interface Student { _id: string; name: string; email: string; warningCard?: boolean; }
-interface GameResult {
-    studentId: { _id: string; name: string; warningCard?: boolean };
-    correctCount: number; wrongCount: number; accuracy: number; rank: number; warningCard: boolean; questionsAsked: number;
-    totalTimeMs?: number; performanceScore?: number;
+interface Student { _id: string; id?: string; name: string; studentId?: string; email?: string; warningCard?: boolean; }
+interface Participant {
+    studentId: string;
+    customStudentId?: string;
+    studentNameSnapshot: string;
+    isLate?: boolean;
+    status: string;
+    questionsAsked: number;
+    correctAnswers: number;
+    wrongAnswers: number;
+    accuracy: number;
 }
-interface SummaryStats {
-    totalStudents: number; avgScore: number; avgAccuracy: number;
-    highestScore: number; lowestScore: number; passCount: number; failCount: number; warningCardCount: number;
+interface DifficultWord {
+    englishWord: string;
+    uzbekTranslation: string;
+    totalAsked: number;
+    correctCount: number;
+    wrongCount: number;
+    accuracy: number;
+}
+interface GameResult {
+    _id?: string;
+    studentId: { _id: string; name: string; studentId?: string; warningCard?: boolean };
+    correctCount: number;
+    wrongCount: number;
+    accuracy: number;
+    rank: number;
+    warningCard: boolean;
+    questionsAsked: number;
+    correctWords?: { englishWord: string; uzbekTranslation: string; phonetic?: string }[];
+    wrongWords?: { englishWord: string; uzbekTranslation: string; phonetic?: string }[];
 }
 
-// ─── Phases ──────────────────────────────────────────────────────────────────
 type Phase = 'setup' | 'game' | 'ceremony' | 'summary' | 'history';
 
 // ─── Confetti Effect ─────────────────────────────────────────────────────────
 function Confetti({ trigger }: { trigger: boolean }) {
     if (!trigger) return null;
-    const emojis = ['🎉', '✨', '🎊', '⭐', '🔥', '❤️', '👏', '🥳', '🌟', '💫'];
+    const emojis = ['🎉', '✨', '🎊', '⭐', '🔥', '👏', '🥳', '🌟'];
     return (
         <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
-            {Array.from({ length: 18 }).map((_, i) => (
-                <div
+            {Array.from({ length: 16 }).map((_, i) => (
+                <motion.div
                     key={i}
-                    className="absolute text-2xl animate-bounce"
+                    initial={{ opacity: 0, y: 0, scale: 0.5 }}
+                    animate={{ opacity: [0, 1, 1, 0], y: [0, -45, 25], scale: [0.5, 1.2, 1, 0.8] }}
+                    transition={{ duration: 1.2, delay: i * 0.04, ease: 'easeOut' }}
+                    className="absolute text-2xl select-none"
                     style={{
-                        left: `${Math.random() * 90 + 5}%`,
-                        top: `${Math.random() * 60 + 10}%`,
-                        animationDelay: `${Math.random() * 0.5}s`,
-                        animationDuration: `${0.5 + Math.random() * 0.5}s`,
-                        opacity: 0,
-                        animation: `confetti-float ${0.8 + Math.random() * 0.6}s ease-out ${Math.random() * 0.3}s forwards`,
+                        left: `${(i * 6.2) % 90 + 5}%`,
+                        top: `${(i * 7.1) % 60 + 15}%`,
                     }}
                 >
-                    {emojis[Math.floor(Math.random() * emojis.length)]}
-                </div>
+                    {emojis[i % emojis.length]}
+                </motion.div>
             ))}
-            <style>{`
-                @keyframes confetti-float {
-                    0% { opacity: 0; transform: translateY(0) scale(0.5); }
-                    30% { opacity: 1; transform: translateY(-30px) scale(1.2); }
-                    100% { opacity: 0; transform: translateY(-80px) scale(0.8); }
-                }
-            `}</style>
         </div>
     );
 }
 
-// ─── Wrong Animation ─────────────────────────────────────────────────────────
 function WrongAnim({ trigger }: { trigger: boolean }) {
     if (!trigger) return null;
-    const emojis = ['😔', '😢', '🙁', '💔', '😞', '😟', '❌'];
     return (
-        <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden flex items-center justify-center">
-            <div className="text-6xl animate-bounce" style={{ animation: 'wrong-shake 0.6s ease-out forwards' }}>
-                {emojis[Math.floor(Math.random() * emojis.length)]}
-            </div>
-            <style>{`
-                @keyframes wrong-shake {
-                    0% { opacity: 0; transform: scale(0.5) rotate(-10deg); }
-                    30% { opacity: 1; transform: scale(1.3) rotate(5deg); }
-                    60% { transform: scale(1) rotate(-3deg); }
-                    100% { opacity: 0; transform: scale(0.8) rotate(0deg); }
-                }
-            `}</style>
-        </div>
-    );
-}
-
-// ─── Simple Bar Chart ─────────────────────────────────────────────────────────
-function SimpleBarChart({ data }: { data: { name: string; correct: number; wrong: number }[] }) {
-    const max = Math.max(...data.map(d => d.correct + d.wrong), 1);
-    return (
-        <div className="space-y-3">
-            {data.map((d, i) => {
-                const correctPct = (d.correct / max) * 100;
-                const wrongPct = (d.wrong / max) * 100;
-                const medals = ['🥇', '🥈', '🥉'];
-                return (
-                    <div key={i} className="space-y-1">
-                        <div className="flex items-center justify-between text-xs font-bold">
-                            <span className="text-white/80 truncate max-w-[140px]">{medals[i] || `${i + 1}.`} {d.name}</span>
-                            <span className="text-white/50">{d.correct} ✅ / {d.wrong} ❌</span>
-                        </div>
-                        <div className="flex h-5 rounded-lg overflow-hidden gap-0.5">
-                            {d.correct > 0 && (
-                                <div
-                                    className="bg-emerald-500/80 rounded-l-lg transition-all duration-700"
-                                    style={{ width: `${correctPct}%` }}
-                                />
-                            )}
-                            {d.wrong > 0 && (
-                                <div
-                                    className="bg-red-500/60 rounded-r-lg transition-all duration-700"
-                                    style={{ width: `${wrongPct}%` }}
-                                />
-                            )}
-                        </div>
-                    </div>
-                );
-            })}
-        </div>
-    );
-}
-
-// ─── Simple Pie Chart ─────────────────────────────────────────────────────────
-function SimplePieChart({ pass, fail }: { pass: number; fail: number }) {
-    const total = pass + fail;
-    if (total === 0) return null;
-    const passPct = Math.round((pass / total) * 100);
-    const radius = 45;
-    const circ = 2 * Math.PI * radius;
-    const passStroke = (pass / total) * circ;
-    return (
-        <div className="flex flex-col items-center gap-4">
-            <svg viewBox="0 0 100 100" className="w-32 h-32 -rotate-90">
-                <circle cx="50" cy="50" r={radius} fill="none" stroke="rgba(239,68,68,0.3)" strokeWidth="10" />
-                <circle
-                    cx="50" cy="50" r={radius} fill="none"
-                    stroke="#10b981" strokeWidth="10"
-                    strokeDasharray={`${passStroke} ${circ}`}
-                    strokeLinecap="round"
-                    style={{ transition: 'stroke-dasharray 1s ease' }}
-                />
-            </svg>
-            <div className="flex items-center gap-6 text-sm font-bold">
-                <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-emerald-500" /><span className="text-white/70">O'tdi: {pass} ({passPct}%)</span></div>
-                <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-red-500/60" /><span className="text-white/70">O'tmadi: {fail}</span></div>
+        <div className="fixed inset-0 pointer-events-none z-50 flex items-center justify-center animate-ping">
+            <div className="text-7xl font-black text-rose-500 drop-shadow-[0_0_35px_rgba(244,63,94,0.8)]">
+                ✕
             </div>
         </div>
     );
 }
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
 export default function VocabGamePage() {
     const { user, loading } = useAuth();
     const router = useRouter();
 
     const [phase, setPhase] = useState<Phase>('setup');
+    const [soundEnabled, setSoundEnabled] = useState(true);
 
-    // Setup
+    // Setup state
     const [groups, setGroups] = useState<Group[]>([]);
+    const [selectedGroup, setSelectedGroup] = useState<string>('');
     const [units, setUnits] = useState<Unit[]>([]);
-    const [selectedGroup, setSelectedGroup] = useState('');
     const [selectedUnitIds, setSelectedUnitIds] = useState<string[]>([]);
-    const [activeCategory, setActiveCategory] = useState<string | null>(null);
-    const [viewingUnits, setViewingUnits] = useState(false);
-    const [questionsPerStudent, setQuestionsPerStudent] = useState(6);
-    const [timerDuration, setTimerDuration] = useState<number>(10); // 5, 10, 15, 20, 25
-    const [noSave, setNoSave] = useState(false); // No-Save Mode
-    const [loadingSetup, setLoadingSetup] = useState(true);
-    const [starting, setStarting] = useState(false);
-
-    // Absent Students Feature
-    const [groupMembers, setGroupMembers] = useState<any[]>([]);
+    const [groupMembers, setGroupMembers] = useState<Student[]>([]);
     const [absentStudentIds, setAbsentStudentIds] = useState<string[]>([]);
+    const [questionsPerStudent, setQuestionsPerStudent] = useState<number>(6);
+    const [timerDuration, setTimerDuration] = useState<number>(10);
+    const [noSave, setNoSave] = useState<boolean>(false);
+    const [loadingSetup, setLoadingSetup] = useState<boolean>(true);
+    const [starting, setStarting] = useState<boolean>(false);
 
-    // Live Practice Timer & Translation Visibility
-    const [timeLeft, setTimeLeft] = useState(10);
-    const [timerActive, setTimerActive] = useState(false);
-    const [isPaused, setIsPaused] = useState(false);
-    const [showTranslation, setShowTranslation] = useState(false);
-
-    // Auto-speech (Text to Speech)
-    const handleSpeak = useCallback((text?: string) => {
-        if (!text || typeof window === 'undefined' || !window.speechSynthesis) return;
-        window.speechSynthesis.cancel();
-        setTimeout(() => {
-            const u = new SpeechSynthesisUtterance(text);
-            u.lang = 'en-GB';
-            u.rate = 1.0;
-            const availableVoices = window.speechSynthesis.getVoices();
-            const v = availableVoices.find(voice => voice.lang.startsWith('en')) || availableVoices[0];
-            if (v) u.voice = v;
-            window.speechSynthesis.speak(u);
-        }, 60);
-    }, []);
-
-    // Category Map logic
-    const categoryMap = units.reduce((acc, unit) => {
-        const cat = unit.category || 'Kategoriyasiz';
-        if (!acc[cat]) acc[cat] = [];
-        acc[cat].push(unit);
-        return acc;
-    }, {} as Record<string, Unit[]>);
-
-    const categories = Object.keys(categoryMap).sort((a, b) =>
-        a === 'Kategoriyasiz' ? 1 : b === 'Kategoriyasiz' ? -1 : a.localeCompare(b));
-    const displayedUnits = activeCategory ? (categoryMap[activeCategory] || []) : units;
-
-    const toggleUnitSelection = (unitId: string) => {
-        setSelectedUnitIds(prev =>
-            prev.includes(unitId) ? prev.filter(id => id !== unitId) : [...prev, unitId]
-        );
-    };
-
-    // Game state
-    const [sessionId, setSessionId] = useState('');
+    // Live Game state
+    const [sessionId, setSessionId] = useState<string>('');
+    const [sessionParticipants, setSessionParticipants] = useState<Participant[]>([]);
     const [currentStudent, setCurrentStudent] = useState<Student | null>(null);
     const [currentWords, setCurrentWords] = useState<Word[]>([]);
-    const [currentWordIdx, setCurrentWordIdx] = useState(0);
-    const [correctCount, setCorrectCount] = useState(0);
-    const [wrongCount, setWrongCount] = useState(0);
-    const [totalStudents, setTotalStudents] = useState(0);
-    const [currentStudentIndex, setCurrentStudentIndex] = useState(0);
-    const [submitting, setSubmitting] = useState(false);
-    const [showStopModal, setShowStopModal] = useState(false);
-    
-    // Performance Tracking
-    const [studentTotalTimeMs, setStudentTotalTimeMs] = useState(0);
-    const [wordStartTime, setWordStartTime] = useState<number>(0);
+    const [currentWordIdx, setCurrentWordIdx] = useState<number>(0);
+    const [correctCount, setCorrectCount] = useState<number>(0);
+    const [wrongCount, setWrongCount] = useState<number>(0);
+    const [studentQuestionAnswers, setStudentQuestionAnswers] = useState<any[]>([]);
+    const [studentTotalTimeMs, setStudentTotalTimeMs] = useState<number>(0);
+    const [wordStartTime, setWordStartTime] = useState<number>(Date.now());
+    const [currentStudentIndex, setCurrentStudentIndex] = useState<number>(0);
+    const [totalStudents, setTotalStudents] = useState<number>(0);
 
-    // Animations
-    const [showCorrect, setShowCorrect] = useState(false);
-    const [showWrong, setShowWrong] = useState(false);
+    // Announcer turn banner state
+    const [showTurnBanner, setShowTurnBanner] = useState<boolean>(false);
+    const [turnBannerStudent, setTurnBannerStudent] = useState<Student | null>(null);
 
-    // Summary
+    // Add Student during active session modal
+    const [showAddStudentModal, setShowAddStudentModal] = useState<boolean>(false);
+    const [addingStudentId, setAddingStudentId] = useState<string | null>(null);
+
+    // Roster Modal during live game
+    const [showRosterModal, setShowRosterModal] = useState<boolean>(false);
+
+    // Timer & Controls
+    const [timeLeft, setTimeLeft] = useState<number>(10);
+    const [timerActive, setTimerActive] = useState<boolean>(false);
+    const [isPaused, setIsPaused] = useState<boolean>(false);
+    const [showTranslation, setShowTranslation] = useState<boolean>(false);
+    const [answeredChoice, setAnsweredChoice] = useState<'correct' | 'wrong' | null>(null);
+    const [showCorrect, setShowCorrect] = useState<boolean>(false);
+    const [showWrong, setShowWrong] = useState<boolean>(false);
+    const [submitting, setSubmitting] = useState<boolean>(false);
+    const [showStopModal, setShowStopModal] = useState<boolean>(false);
+    const answeringWordIdxRef = useRef<number | null>(null);
+
+    // Summary state
     const [summary, setSummary] = useState<any>(null);
-    const [loadingSummary, setLoadingSummary] = useState(false);
-    const [copied, setCopied] = useState(false);
-
-    // History
+    const [loadingSummary, setLoadingSummary] = useState<boolean>(false);
     const [history, setHistory] = useState<any[]>([]);
-    const [loadingHistory, setLoadingHistory] = useState(false);
+    const [loadingHistory, setLoadingHistory] = useState<boolean>(false);
+    const [copied, setCopied] = useState<boolean>(false);
 
+    // Categories & Filter
+    const [categoriesTree, setCategoriesTree] = useState<any[]>([]);
+    const [viewMode, setViewMode] = useState<'category' | 'unit'>('category');
+    const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
+    const [unitSearch, setUnitSearch] = useState<string>('');
+    const [unitCategoryFilter, setUnitCategoryFilter] = useState<string>('all');
+    const [activeCategory, setActiveCategory] = useState<string | null>(null);
+
+    const categoryMap = useMemo(() => {
+        const map: Record<string, Unit[]> = {};
+        for (const u of units) {
+            const cat = u.category || 'Kategoriyasiz';
+            if (!map[cat]) map[cat] = [];
+            map[cat].push(u);
+        }
+        return map;
+    }, [units]);
+
+    const categoryNames = useMemo(() => {
+        return Object.keys(categoryMap).sort((a, b) => {
+            if (a === 'Kategoriyasiz') return 1;
+            if (b === 'Kategoriyasiz') return -1;
+            return a.localeCompare(b);
+        });
+    }, [categoryMap]);
+
+    useEffect(() => {
+        setSoundEnabled(announcer.isEnabled());
+    }, []);
+
+    const toggleSound = () => {
+        const next = !soundEnabled;
+        setSoundEnabled(next);
+        announcer.setEnabled(next);
+        toast.success(next ? 'Ovoz yoqildi 🔊' : 'Ovoz o\'chirildi 🔇');
+    };
+
+    const speakWord = useCallback((text: string) => {
+        if (!text || !soundEnabled || typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+        try {
+            window.speechSynthesis.cancel();
+            const u = new SpeechSynthesisUtterance(text.trim());
+            u.lang = 'en-US';
+            u.rate = 0.85;
+            u.pitch = 1.0;
+            const voices = window.speechSynthesis.getVoices();
+            if (voices.length > 0) {
+                const enVoice = voices.find(v => v.lang.startsWith('en') && (!v.name.includes('Google') || v.default));
+                if (enVoice) u.voice = enVoice;
+            }
+            window.speechSynthesis.speak(u);
+        } catch {}
+    }, [soundEnabled]);
+
+    // Auto-read English word when next words appear (word index > 0)
+    useEffect(() => {
+        if (phase !== 'game' || !soundEnabled) return;
+        // Word index 0 is pronounced automatically immediately after student name finishes!
+        if (currentWordIdx === 0) return;
+
+        const activeWord = currentWords[currentWordIdx];
+        if (!activeWord?.englishWord) return;
+
+        const timer = setTimeout(() => {
+            speakWord(activeWord.englishWord);
+        }, 150);
+
+        return () => clearTimeout(timer);
+    }, [phase, currentWordIdx, soundEnabled, currentWords, speakWord]);
+
+    // Load initial setup data
     useEffect(() => {
         if (!loading && (!user || (user.role !== 'teacher' && user.role !== 'admin'))) {
             router.push('/login');
+            return;
         }
+        if (user) loadSetupData();
     }, [user, loading, router]);
 
-    useEffect(() => {
-        if (user) loadSetup();
-    }, [user]);
-
-    // Timer countdown effect
-    useEffect(() => {
-        let interval: NodeJS.Timeout | undefined;
-        if (phase === 'game' && timerActive && !isPaused && timeLeft > 0 && !showTranslation) {
-            interval = setInterval(() => {
-                setTimeLeft(prev => {
-                    if (prev <= 1) {
-                        setTimerActive(false);
-                        setShowTranslation(true); // reveal translation automatically when timer reaches 0
-                        return 0;
-                    }
-                    return prev - 1;
-                });
-            }, 1000);
-        }
-        return () => { if (interval) clearInterval(interval); };
-    }, [phase, timerActive, isPaused, timeLeft, showTranslation]);
-
-    // Ceremony auto-skip
-    useEffect(() => {
-        let t: NodeJS.Timeout;
-        if (phase === 'ceremony' && summary) {
-            t = setTimeout(() => {
-                setPhase('summary');
-            }, 8000); // 8 seconds
-        }
-        return () => clearTimeout(t);
-    }, [phase, summary]);
-
-    // Keyboard Shortcuts
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (phase !== 'game' || showStopModal || submitting) return;
-
-            if (e.key === 'ArrowRight') {
-                e.preventDefault();
-                if (answeredChoice === null) handleAnswer(true);
-                else handleNextWord();
-            } else if (e.key === 'ArrowLeft') {
-                e.preventDefault();
-                if (answeredChoice === null) handleAnswer(false);
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                if (answeredChoice === null && !isPaused) {
-                    setIsPaused(true);
-                    setTimerActive(false);
-                }
-            } else if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                if (answeredChoice === null && isPaused) {
-                    setIsPaused(false);
-                    setTimerActive(true);
-                }
-            }
-        };
-
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }); // Run on every render to ensure latest state is captured inside handleKeyDown without stale closures
-
-    const [answeredChoice, setAnsweredChoice] = useState<'correct' | 'wrong' | null>(null);
-
-    // Auto speak and reset states when word appears in game mode
-    useEffect(() => {
-        if (phase === 'game' && currentWords[currentWordIdx]?.englishWord) {
-            const wordText = currentWords[currentWordIdx].englishWord;
-            setShowTranslation(false);
-            setAnsweredChoice(null);
-            setTimeLeft(timerDuration);
-            setTimerActive(true);
-            setIsPaused(false);
-            setWordStartTime(Date.now());
-            const t = setTimeout(() => handleSpeak(wordText), 300);
-            return () => clearTimeout(t);
-        }
-    }, [phase, currentStudentIndex, currentWordIdx, currentWords, timerDuration, handleSpeak]);
-
-    const loadSetup = async () => {
+    const loadSetupData = async () => {
         setLoadingSetup(true);
         try {
-            const [gRes, uRes, treeRes] = await Promise.all([
-                apiFetch('/api/teacher/groups'),
-                apiFetch(`/api/units?teacherId=${user?.id}`),
-                apiFetch('/api/teacher/categories/tree').catch(() => null)
+            const [gRes, catRes, uRes] = await Promise.all([
+                apiFetch('/api/teacher/groups').catch(() => []),
+                apiFetch('/api/teacher/categories/tree').catch(() => []),
+                apiFetch('/api/teacher/units').catch(() => apiFetch('/api/units')).catch(() => []),
             ]);
 
-            let loadedUnits: Unit[] = uRes?.units || uRes || [];
+            setCategoriesTree(catRes || []);
+            setGroups((gRes || []).filter((g: Group) => g.vocabularyMode !== false));
 
-            if (treeRes && Array.isArray(treeRes)) {
-                const catIdToPathName: Record<string, string> = {};
-                const flatten = (nodes: any[], depthStr: string) => {
-                    nodes.forEach(n => {
-                        catIdToPathName[n._id] = depthStr + n.name;
-                        if (n.children && n.children.length > 0) {
-                            flatten(n.children, depthStr + n.name + ' / ');
-                        }
-                    });
-                };
-                flatten(treeRes, '');
-                loadedUnits = loadedUnits.map((u: any) => ({
-                    ...u,
-                    category: (u.categoryId && catIdToPathName[u.categoryId]) ? catIdToPathName[u.categoryId] : (u.category || 'Kategoriyasiz')
-                }));
+            const catIdToPathName: Record<string, string> = {};
+            function traverse(nodes: any[]) {
+                for (const n of nodes) {
+                    catIdToPathName[n._id] = n.path || n.name;
+                    if (n.children && n.children.length > 0) traverse(n.children);
+                }
             }
+            if (catRes) traverse(catRes);
 
-            const vocabGroups = (gRes || []).filter((g: Group) => g.vocabularyMode !== false);
-            setGroups(vocabGroups);
+            const loadedUnits = (uRes || []).map((u: any) => ({
+                id: u._id || u.id,
+                title: u.title,
+                category: (u.categoryId && catIdToPathName[u.categoryId]) ? catIdToPathName[u.categoryId] : (u.category || 'Kategoriyasiz'),
+                categoryId: u.categoryId ?? null,
+                wordCount: u.wordCount !== undefined ? u.wordCount : undefined,
+            }));
             setUnits(loadedUnits);
         } catch {
             toast.error('Ma\'lumotlarni yuklashda xatolik');
@@ -461,6 +368,7 @@ export default function VocabGamePage() {
         }
     };
 
+    // Load group members when selected
     useEffect(() => {
         if (!selectedGroup) {
             setGroupMembers([]);
@@ -469,15 +377,34 @@ export default function VocabGamePage() {
         }
         apiFetch(`/api/teacher/groups/${selectedGroup}/members`)
             .then(data => {
-                setGroupMembers(data || []);
+                const members = (data || []).map((m: any) => ({
+                    _id: m._id || m.id,
+                    name: m.name,
+                    studentId: m.studentId,
+                    email: m.email,
+                    warningCard: m.warningCard,
+                }));
+                setGroupMembers(members);
                 setAbsentStudentIds([]);
             })
             .catch(() => {});
     }, [selectedGroup]);
 
+    // Turn Announcement Trigger Helper: first announces student name, then immediately speaks the first word!
+    const triggerTurnAnnouncement = useCallback((student: Student, firstWord?: string) => {
+        if (announcer.isEnabled()) {
+            announcer.announceStudentTurn(student.name, () => {
+                if (firstWord) {
+                    speakWord(firstWord);
+                }
+            });
+        }
+    }, [speakWord]);
+
+    // Start live session
     const handleStartSession = async () => {
         if (!selectedGroup || selectedUnitIds.length === 0) {
-            toast.error('Guruh va kamida bitta unit tanlang');
+            toast.error('Guruh va kamida bitta bo\'lim (unit) tanlang');
             return;
         }
         setStarting(true);
@@ -494,12 +421,16 @@ export default function VocabGamePage() {
                     absentStudentIds,
                 }),
             });
+
             setSessionId(data.session._id);
+            setSessionParticipants(data.session.participants || []);
             setCurrentStudent(data.currentStudent);
             setCurrentWords(data.words || []);
+            answeringWordIdxRef.current = null;
             setCurrentWordIdx(0);
             setCorrectCount(0);
             setWrongCount(0);
+            setStudentQuestionAnswers([]);
             setStudentTotalTimeMs(0);
             setTotalStudents(data.session.totalStudents);
             setCurrentStudentIndex(0);
@@ -508,7 +439,13 @@ export default function VocabGamePage() {
             setIsPaused(false);
             setShowTranslation(false);
             setAnsweredChoice(null);
+            setWordStartTime(Date.now());
             setPhase('game');
+
+            if (data.currentStudent) {
+                const firstWord = (data.words || [])[0]?.englishWord;
+                triggerTurnAnnouncement(data.currentStudent, firstWord);
+            }
         } catch (err: any) {
             toast.error(err.message || 'Sessiyani boshlashda xatolik');
         } finally {
@@ -516,9 +453,59 @@ export default function VocabGamePage() {
         }
     };
 
+    // Add student during active session
+    const handleAddLateStudent = async (student: Student) => {
+        if (!sessionId) return;
+        setAddingStudentId(student._id);
+        try {
+            const res = await apiFetch(`/api/teacher/vocab-game/session/${sessionId}/add-student`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ studentId: student._id }),
+            });
+
+            toast.success(res.message || `${student.name} sessiyaga qo'shildi!`);
+            setSessionParticipants(res.session?.participants || []);
+            setTotalStudents(res.session?.totalStudents || totalStudents + 1);
+            setAbsentStudentIds(prev => prev.filter(id => id !== student._id));
+            setShowAddStudentModal(false);
+        } catch (err: any) {
+            toast.error(err.message || 'O\'quvchini qo\'shishda xatolik');
+        } finally {
+            setAddingStudentId(null);
+        }
+    };
+
+    // Timer Tick
+    useEffect(() => {
+        let interval: any = null;
+        if (timerActive && !isPaused && phase === 'game') {
+            interval = setInterval(() => {
+                setTimeLeft(prev => {
+                    if (prev <= 1) {
+                        // Vaqt tugaganda avtomatik xatoga olinmaydi!
+                        // Taymer to'xtatiladi va javob tarjimasi ko'rsatiladi.
+                        setTimerActive(false);
+                        setShowTranslation(true);
+                        return 0;
+                    }
+                    return prev - 1;
+                });
+            }, 1000);
+        }
+        return () => {
+            if (interval) clearInterval(interval);
+        };
+    }, [timerActive, isPaused, phase]);
+
+    // Handle single question result
     const handleAnswer = (isCorrect: boolean) => {
         if (answeredChoice !== null) return;
+        if (answeringWordIdxRef.current === currentWordIdx) return;
+        if (currentWordIdx >= questionsPerStudent) return;
+        if ((correctCount + wrongCount) >= questionsPerStudent) return;
 
+        answeringWordIdxRef.current = currentWordIdx;
         const choice = isCorrect ? 'correct' : 'wrong';
         setAnsweredChoice(choice);
         setShowTranslation(true);
@@ -528,21 +515,41 @@ export default function VocabGamePage() {
         const timeTaken = Date.now() - wordStartTime;
         setStudentTotalTimeMs(prev => prev + timeTaken);
 
+        const activeWord = currentWords[currentWordIdx];
+        if (activeWord) {
+            setStudentQuestionAnswers(prev => {
+                const filtered = prev.filter(qa => qa.wordId !== activeWord._id);
+                return [
+                    ...filtered,
+                    {
+                        wordId: activeWord._id,
+                        englishWord: activeWord.englishWord,
+                        uzbekTranslation: activeWord.uzbekTranslation,
+                        phonetic: activeWord.phonetic,
+                        emoji: activeWord.emoji,
+                        result: choice,
+                        responseTimeMs: timeTaken,
+                    }
+                ];
+            });
+        }
+
         if (isCorrect) {
             setShowCorrect(true);
-            setCorrectCount(c => c + 1);
+            setCorrectCount(c => Math.min(questionsPerStudent, c + 1));
             playSuccessSound();
             setTimeout(() => setShowCorrect(false), 1200);
         } else {
             setShowWrong(true);
-            setWrongCount(w => w + 1);
+            setWrongCount(w => Math.min(questionsPerStudent, w + 1));
             playWrongSound();
             setTimeout(() => setShowWrong(false), 1200);
         }
-        // Word stays on current word. Pressed button transforms into "Keyingi so'z"
     };
 
+    // Next word or finish student
     const handleNextWord = () => {
+        answeringWordIdxRef.current = null;
         const next = currentWordIdx + 1;
         if (next >= questionsPerStudent || next >= currentWords.length) {
             finishCurrentStudent(correctCount, wrongCount);
@@ -553,10 +560,14 @@ export default function VocabGamePage() {
             setTimeLeft(timerDuration);
             setTimerActive(true);
             setIsPaused(false);
+            setWordStartTime(Date.now());
         }
     };
 
+    // Submit finished student
     const finishCurrentStudent = async (finalCorrect: number, finalWrong: number) => {
+        const safeCorrect = Math.min(questionsPerStudent, Math.max(0, finalCorrect));
+        const safeWrong = Math.min(questionsPerStudent - safeCorrect, Math.max(0, finalWrong));
         setSubmitting(true);
         try {
             const res = await apiFetch('/api/teacher/vocab-game/answer', {
@@ -565,29 +576,42 @@ export default function VocabGamePage() {
                 body: JSON.stringify({
                     sessionId,
                     studentId: currentStudent?._id,
-                    correctCount: finalCorrect,
-                    wrongCount: finalWrong,
+                    correctCount: safeCorrect,
+                    wrongCount: safeWrong,
                     wordIds: currentWords.map(w => w._id),
-                    totalTimeMs: studentTotalTimeMs
+                    questionAnswers: studentQuestionAnswers,
+                    totalTimeMs: studentTotalTimeMs,
                 }),
             });
+
+            if (res.session?.participants) {
+                setSessionParticipants(res.session.participants);
+            }
 
             if (res.isFinished) {
                 loadSummary(sessionId);
                 setPhase('ceremony');
             } else {
+                answeringWordIdxRef.current = null;
                 setCurrentStudent(res.nextStudent);
                 setCurrentWords(res.nextWords || []);
                 setCurrentWordIdx(0);
                 setCorrectCount(0);
                 setWrongCount(0);
-                setStudentTotalTimeMs(0); // Reset for next student
+                setStudentQuestionAnswers([]);
+                setStudentTotalTimeMs(0);
                 setCurrentStudentIndex(res.session.currentStudentIndex);
                 setTimeLeft(timerDuration);
                 setTimerActive(true);
                 setIsPaused(false);
                 setShowTranslation(false);
                 setAnsweredChoice(null);
+                setWordStartTime(Date.now());
+
+                if (res.nextStudent) {
+                    const firstWord = (res.nextWords || [])[0]?.englishWord;
+                    triggerTurnAnnouncement(res.nextStudent, firstWord);
+                }
             }
         } catch (err: any) {
             toast.error(err.message || 'Xatolik yuz berdi');
@@ -601,10 +625,78 @@ export default function VocabGamePage() {
         try {
             const data = await apiFetch(`/api/teacher/vocab-game/summary/${sid}`);
             setSummary(data);
+            if (data?.session?.groupId?.telegramChatId) {
+                setTelegramChatId(data.session.groupId.telegramChatId);
+            }
+            if (data?.telegramMessage) {
+                setTelegramEditableText(data.telegramMessage);
+            }
         } catch {
             toast.error('Xulosa yuklanmadi');
         } finally {
             setLoadingSummary(false);
+        }
+    };
+
+    const handleSendTelegram = async () => {
+        if (!summary) return;
+        if (!telegramChatId.trim()) {
+            toast.error('Iltimos, Telegram guruh ID raqamini kiriting');
+            return;
+        }
+
+        const raw = telegramChatId.trim();
+        let normalized = raw;
+        if (raw && !raw.startsWith('@')) {
+            const cleaned = raw.replace(/\s+/g, '');
+            if (cleaned.startsWith('100') && cleaned.length >= 12) normalized = '-' + cleaned;
+            else if (/^\d{9,13}$/.test(cleaned)) normalized = `-100${cleaned}`;
+            else if (/^-\d{9,13}$/.test(cleaned) && !cleaned.startsWith('-100')) normalized = `-100${cleaned.slice(1)}`;
+            else normalized = cleaned;
+        }
+
+        setSendingTelegram(true);
+        const toastId = toast.loading('Telegramga yuborilmoqda...');
+
+        try {
+            let imageBase64: string | undefined = undefined;
+
+            if (telegramSendType === 'image' || telegramSendType === 'both') {
+                const canvas = generateSummaryCanvas();
+                if (canvas) {
+                    imageBase64 = canvas.toDataURL('image/png');
+                }
+            }
+
+            const payload: any = {
+                sessionId: summary.session?._id,
+                groupId: summary.session?.groupId?._id || summary.session?.groupId?.id,
+                overrideChatId: normalized,
+                sendType: telegramSendType,
+                text: telegramEditableText,
+            };
+
+            if (imageBase64) {
+                payload.imageBase64 = imageBase64;
+            }
+
+            const res = await apiFetch('/api/telegram/send-report', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+
+            if (res?.success) {
+                toast.success('Telegramga muvaffaqiyatli yuborildi!', { id: toastId });
+                setShowTelegramModal(false);
+            } else {
+                toast.error(res?.message || 'Telegramga yuborishda xatolik', { id: toastId });
+            }
+        } catch (err: any) {
+            console.error('Telegram send error:', err);
+            toast.error(err.message || 'Telegramga yuborishda xatolik', { id: toastId });
+        } finally {
+            setSendingTelegram(false);
         }
     };
 
@@ -620,731 +712,1467 @@ export default function VocabGamePage() {
         }
     };
 
+    const [editingResultId, setEditingResultId] = useState<string | null>(null);
+    const [editCorrect, setEditCorrect] = useState<number>(0);
+    const [editTotal, setEditTotal] = useState<number>(6);
+    const [savingEdit, setSavingEdit] = useState<boolean>(false);
+    const [exportingImage, setExportingImage] = useState<boolean>(false);
+    const summaryRef = useRef<HTMLDivElement>(null);
+
+    // Telegram Modal State
+    const [showTelegramModal, setShowTelegramModal] = useState<boolean>(false);
+    const [telegramChatId, setTelegramChatId] = useState<string>('');
+    const [telegramSendType, setTelegramSendType] = useState<'both' | 'image' | 'text'>('both');
+    const [telegramEditableText, setTelegramEditableText] = useState<string>('');
+    const [sendingTelegram, setSendingTelegram] = useState<boolean>(false);
+
+    const handleSaveStudentScore = async (resultId: string) => {
+        setSavingEdit(true);
+        try {
+            const res = await apiFetch(`/api/teacher/vocab-game/result/${resultId}`, {
+                method: 'PATCH',
+                body: JSON.stringify({
+                    correctCount: editCorrect,
+                    questionsAsked: editTotal,
+                }),
+            });
+
+            if (res?.success) {
+                toast.success('Natija muvaffaqiyatli yangilandi!');
+                setEditingResultId(null);
+                // Reload summary to recalculate all stats live
+                if (sessionId) {
+                    await loadSummary(sessionId);
+                }
+            } else {
+                toast.error(res?.message || 'Saqlashda xatolik');
+            }
+        } catch (err: any) {
+            toast.error(err.message || 'Xatolik yuz berdi');
+        } finally {
+            setSavingEdit(false);
+        }
+    };
+
+    const [togglingWordKey, setTogglingWordKey] = useState<string | null>(null);
+
+    const handleToggleWord = async (resultId: string, englishWord: string, currentStatus: 'correct' | 'wrong') => {
+        const key = `${resultId}_${englishWord}`;
+        setTogglingWordKey(key);
+        const newStatus = currentStatus === 'correct' ? 'wrong' : 'correct';
+        try {
+            const res = await apiFetch(`/api/teacher/vocab-game/result/${resultId}`, {
+                method: 'PATCH',
+                body: JSON.stringify({
+                    toggleWord: englishWord,
+                    newResult: newStatus,
+                }),
+            });
+
+            if (res?.success) {
+                toast.success(`"${englishWord}" ${newStatus === 'correct' ? "TO'G'RI" : "NOTO'G'RI"} ga o'zgartirildi!`);
+                if (sessionId) {
+                    await loadSummary(sessionId);
+                }
+            } else {
+                toast.error(res?.message || 'Xatolik yuz berdi');
+            }
+        } catch (err: any) {
+            toast.error(err.message || 'Xatolik yuz berdi');
+        } finally {
+            setTogglingWordKey(null);
+        }
+    };
+
+    // Helper to generate the native 2D canvas for the summary
+    const generateSummaryCanvas = (): HTMLCanvasElement | null => {
+        if (!summary) return null;
+        const results: GameResult[] = summary.results || [];
+        const stats = summary.stats;
+        const groupName = summary.session?.groupId?.name || 'Guruh';
+        const dateStr = new Date(summary.session?.createdAt || Date.now()).toLocaleDateString('uz-UZ');
+
+        const width = 1200;
+        const colW = 525; // (1100 - 50) / 2
+        const maxInnerW = colW - 28; // padding inside sub-card
+
+        // Helper interface and layout measuring function
+        interface CanvasChip {
+            text: string;
+            w: number;
+            type: 'correct' | 'wrong' | 'empty';
+        }
+
+        const measureCanvasChips = (
+            words: string[],
+            type: 'correct' | 'wrong',
+            maxW: number
+        ): { rows: CanvasChip[][]; height: number } => {
+            const prefix = type === 'correct' ? '✓' : '✕';
+            if (!words || words.length === 0) {
+                const emptyText = type === 'correct' ? "To'g'ri so'z yo'q" : "🎉 Barcha so'zlar to'g'ri (A'lo!)";
+                const estW = Math.round(emptyText.length * 7.5) + 24;
+                return {
+                    rows: [[{ text: emptyText, w: estW, type: 'empty' }]],
+                    height: 30,
+                };
+            }
+
+            const rows: CanvasChip[][] = [];
+            let currentRow: CanvasChip[] = [];
+            let currentX = 0;
+
+            words.forEach(word => {
+                const displayText = `${prefix}  ${word}`;
+                const chipW = Math.max(68, Math.round(displayText.length * 7.5) + 24);
+                if (currentRow.length > 0 && currentX + chipW > maxW) {
+                    rows.push(currentRow);
+                    currentRow = [];
+                    currentX = 0;
+                }
+                currentRow.push({ text: displayText, w: chipW, type });
+                currentX += chipW + 8;
+            });
+
+            if (currentRow.length > 0) {
+                rows.push(currentRow);
+            }
+
+            const chipH = 28;
+            const gapY = 8;
+            const totalHeight = rows.length * chipH + Math.max(0, rows.length - 1) * gapY;
+            return { rows, height: totalHeight };
+        };
+
+        // 1. Calculate student card layouts & dynamic total canvas height
+        const studentLayouts = results.map(r => {
+            const cWords = (r.correctWords || []).map(w => w.englishWord);
+            const wWords = (r.wrongWords || []).map(w => w.englishWord);
+            const cLayout = measureCanvasChips(cWords, 'correct', maxInnerW);
+            const wLayout = measureCanvasChips(wWords, 'wrong', maxInnerW);
+            const contentBoxH = Math.max(cLayout.height, wLayout.height) + 24; // 12px top/bottom padding
+            const cardH = 62 + 24 + contentBoxH + 16; // Header (62px) + Labels (24px) + Boxes + Bottom padding
+            return { r, cWords, wWords, cLayout, wLayout, contentBoxH, cardH };
+        });
+
+        let calculatedHeight = 180; // Header
+        if (stats) calculatedHeight += 95; // Stats cards
+        if (summary.difficultWords && summary.difficultWords.length > 0) {
+            calculatedHeight += 160;
+        }
+        calculatedHeight += 35; // Section title
+
+        studentLayouts.forEach(sl => {
+            calculatedHeight += sl.cardH + 16; // Card + gap
+        });
+        calculatedHeight += 70; // Footer
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = Math.max(800, calculatedHeight);
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return null;
+
+        // 1. Background Gradient
+        const bgGrad = ctx.createLinearGradient(0, 0, width, canvas.height);
+        bgGrad.addColorStop(0, '#090d16');
+        bgGrad.addColorStop(0.5, '#0d1322');
+        bgGrad.addColorStop(1, '#06080e');
+        ctx.fillStyle = bgGrad;
+        ctx.fillRect(0, 0, width, canvas.height);
+
+        // Subtle outer border
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(10, 10, width - 20, canvas.height - 20);
+
+        let y = 50;
+
+        // 2. Header
+        ctx.fillStyle = '#6366f1';
+        ctx.font = 'bold 16px sans-serif';
+        ctx.fillText('MT-VOCAB LIVE VOCABULARY REPORT', 50, y);
+
+        y += 36;
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '900 32px sans-serif';
+        ctx.fillText(`🏆 ${groupName} — Lug'at Sessiyasi Natijalari`, 50, y);
+
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.font = '14px sans-serif';
+        ctx.fillText(`Sana: ${dateStr}   •   Qatnashuvchilar: ${results.length} ta o'quvchi`, 50, y + 25);
+
+        y += 65;
+
+        // 3. Stats Bar
+        if (stats) {
+            const statBoxes = [
+                { label: "O'QUVCHILAR", val: `${stats.totalStudents}`, color: '#ffffff' },
+                { label: "JAMI SAVOLLAR", val: `${stats.totalQuestions}`, color: '#ffffff' },
+                { label: "TO'G'RI / XATO", val: `${stats.totalCorrect} / ${stats.totalWrong}`, color: '#10b981' },
+                { label: "UMUMIY ANIKLIK", val: `${stats.avgAccuracy}%`, color: '#818cf8' },
+            ];
+            const boxW = (width - 100 - (statBoxes.length - 1) * 16) / statBoxes.length;
+
+            statBoxes.forEach((sb, idx) => {
+                const bx = 50 + idx * (boxW + 16);
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
+                ctx.beginPath();
+                ctx.roundRect(bx, y, boxW, 70, 12);
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+                ctx.stroke();
+
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+                ctx.font = 'bold 10px sans-serif';
+                ctx.fillText(sb.label, bx + 16, y + 25);
+
+                ctx.fillStyle = sb.color;
+                ctx.font = 'bold 22px sans-serif';
+                ctx.fillText(sb.val, bx + 16, y + 54);
+            });
+
+            y += 95;
+        }
+
+        // 4. Difficult Words Section
+        if (summary.difficultWords && summary.difficultWords.length > 0) {
+            ctx.fillStyle = 'rgba(244, 63, 94, 0.08)';
+            ctx.beginPath();
+            ctx.roundRect(50, y, width - 100, 120, 14);
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(244, 63, 94, 0.2)';
+            ctx.stroke();
+
+            ctx.fillStyle = '#f43f5e';
+            ctx.font = 'bold 12px sans-serif';
+            ctx.fillText('⚠ ENG KO\'P QIYINCHILIK TUG\'DIRGAN SO\'ZLAR', 70, y + 30);
+
+            const wordsToDraw = summary.difficultWords.slice(0, 6);
+            let chipX = 70;
+            const chipY = y + 50;
+
+            wordsToDraw.forEach((dw: any) => {
+                const text = `${dw.englishWord} (${dw.failCount}x xato)`;
+                ctx.font = 'bold 12px sans-serif';
+                const chipW = ctx.measureText(text).width + 24;
+
+                ctx.fillStyle = 'rgba(244, 63, 94, 0.15)';
+                ctx.beginPath();
+                ctx.roundRect(chipX, chipY, chipW, 32, 8);
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(244, 63, 94, 0.3)';
+                ctx.stroke();
+
+                ctx.fillStyle = '#fda4af';
+                ctx.fillText(text, chipX + 12, chipY + 20);
+
+                chipX += chipW + 12;
+            });
+
+            y += 145;
+        }
+
+        // 5. Students Section Title
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 18px sans-serif';
+        ctx.fillText("O'quvchilar Ko'rsatkichi va Lug'at Tahlili", 50, y);
+        y += 32;
+
+        // 6. Draw each student card
+        studentLayouts.forEach((sl, idx) => {
+            const { r, cWords, wWords, cLayout, wLayout, contentBoxH, cardH } = sl;
+            const stName = r.studentId?.name || "Noma'lum";
+            const stCode = r.studentId?.studentId || "";
+            const correct = r.correctCount || 0;
+            const asked = r.questionsAsked || 0;
+            const acc = r.accuracy || 0;
+
+            // Outer Student Card Container
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
+            ctx.beginPath();
+            ctx.roundRect(50, y, width - 100, cardH, 16);
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+
+            // Rank Badge (Left)
+            const isTop3 = idx < 3;
+            ctx.fillStyle = isTop3 ? 'rgba(234, 179, 8, 0.15)' : 'rgba(99, 102, 241, 0.15)';
+            ctx.beginPath();
+            ctx.roundRect(65, y + 14, 34, 34, 9);
+            ctx.fill();
+            ctx.strokeStyle = isTop3 ? 'rgba(234, 179, 8, 0.35)' : 'rgba(99, 102, 241, 0.3)';
+            ctx.stroke();
+
+            ctx.fillStyle = isTop3 ? '#fde047' : '#a5b4fc';
+            ctx.font = 'bold 14px sans-serif';
+            ctx.fillText(`${idx + 1}`, idx + 1 < 10 ? 77 : 72, y + 36);
+
+            // Student Name
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 17px sans-serif';
+            ctx.fillText(stName, 112, y + 37);
+
+            // Student ID Tag
+            let nameEnd = 112 + ctx.measureText(stName).width;
+            if (stCode) {
+                const nameW = ctx.measureText(stName).width;
+                const idText = `ID: ${stCode}`;
+                ctx.font = 'bold 11px monospace';
+                const idW = ctx.measureText(idText).width + 16;
+                const idX = 112 + nameW + 12;
+
+                ctx.fillStyle = 'rgba(99, 102, 241, 0.15)';
+                ctx.beginPath();
+                ctx.roundRect(idX, y + 20, idW, 22, 6);
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(99, 102, 241, 0.3)';
+                ctx.stroke();
+
+                ctx.fillStyle = '#818cf8';
+                ctx.fillText(idText, idX + 8, y + 35);
+                nameEnd = idX + idW;
+            }
+
+            // Accuracy Pill Badge & Analytic Progress Bar (Right)
+            // Color tiers: 80%+ Green (Yashil), 50-79% Yellow (Sariq), <50% Red (Qizil)
+            const isHigh = acc >= 80;
+            const isMid = acc >= 50;
+            const badgeBg = isHigh ? 'rgba(16, 185, 129, 0.16)' : isMid ? 'rgba(234, 179, 8, 0.16)' : 'rgba(239, 68, 68, 0.16)';
+            const badgeBorder = isHigh ? 'rgba(16, 185, 129, 0.45)' : isMid ? 'rgba(234, 179, 8, 0.45)' : 'rgba(239, 68, 68, 0.45)';
+            const badgeTextCol = isHigh ? '#34d399' : isMid ? '#fde047' : '#fca5a5';
+
+            const scoreBadgeText = `${correct}/${asked}  •  ${acc}%`;
+            ctx.font = 'bold 13px sans-serif';
+            const scoreBadgeW = ctx.measureText(scoreBadgeText).width + 24;
+            const scoreBadgeX = width - 65 - scoreBadgeW;
+
+            // Score Pill Badge
+            ctx.fillStyle = badgeBg;
+            ctx.beginPath();
+            ctx.roundRect(scoreBadgeX, y + 15, scoreBadgeW, 30, 8);
+            ctx.fill();
+            ctx.strokeStyle = badgeBorder;
+            ctx.stroke();
+
+            ctx.fillStyle = badgeTextCol;
+            ctx.fillText(scoreBadgeText, scoreBadgeX + 12, y + 35);
+
+            // Analytic Progress Bar (between student name/ID and score badge)
+            const availableBarSpace = scoreBadgeX - nameEnd - 30;
+            if (availableBarSpace >= 60) {
+                const barW = Math.max(80, Math.min(260, availableBarSpace));
+                const barX = scoreBadgeX - 18 - barW;
+                const barY = y + 26;
+                const barH = 8;
+
+                // Track (dark sleek background with rounded corners)
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+                ctx.beginPath();
+                ctx.roundRect(barX, barY, barW, barH, 4);
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
+                ctx.stroke();
+
+                // Filled analytic progress
+                const fillW = Math.max(0, Math.min(barW, Math.round((barW * acc) / 100)));
+                if (fillW > 0) {
+                    const barGrad = ctx.createLinearGradient(barX, 0, barX + fillW, 0);
+                    if (isHigh) {
+                        barGrad.addColorStop(0, '#059669');
+                        barGrad.addColorStop(1, '#34d399');
+                    } else if (isMid) {
+                        barGrad.addColorStop(0, '#d97706');
+                        barGrad.addColorStop(1, '#fde047');
+                    } else {
+                        barGrad.addColorStop(0, '#b91c1c');
+                        barGrad.addColorStop(1, '#f87171');
+                    }
+                    ctx.fillStyle = barGrad;
+                    ctx.beginPath();
+                    ctx.roundRect(barX, barY, fillW, barH, 4);
+                    ctx.fill();
+                }
+            }
+
+            // Divider inside card
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
+            ctx.beginPath();
+            ctx.moveTo(65, y + 58);
+            ctx.lineTo(width - 65, y + 58);
+            ctx.stroke();
+
+            // ── Two Columns (Left: To'g'ri, Right: Xatolar) ──
+            const col1X = 65;
+            const col2X = 65 + colW + 20; // 610
+            const labelsY = y + 78;
+            const boxesY = y + 88;
+
+            // Column 1 Label: Correct Words
+            ctx.fillStyle = '#34d399';
+            ctx.font = 'bold 11px sans-serif';
+            ctx.fillText(`✓ TO'G'RI TOPILGAN SO'ZLAR (${cWords.length})`, col1X, labelsY);
+
+            // Column 2 Label: Wrong Words
+            ctx.fillStyle = '#f87171';
+            ctx.font = 'bold 11px sans-serif';
+            ctx.fillText(`✕ MASHQ QILISH KERAK / XATOLAR (${wWords.length})`, col2X, labelsY);
+
+            // Box 1 (Correct) Container
+            ctx.fillStyle = 'rgba(16, 185, 129, 0.04)';
+            ctx.beginPath();
+            ctx.roundRect(col1X, boxesY, colW, contentBoxH, 10);
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(16, 185, 129, 0.18)';
+            ctx.stroke();
+
+            // Box 2 (Wrong) Container
+            ctx.fillStyle = 'rgba(244, 63, 94, 0.04)';
+            ctx.beginPath();
+            ctx.roundRect(col2X, boxesY, colW, contentBoxH, 10);
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(244, 63, 94, 0.18)';
+            ctx.stroke();
+
+            // Render Correct Chips
+            let curChipY = boxesY + 12;
+            ctx.font = 'bold 12px sans-serif';
+            cLayout.rows.forEach(row => {
+                let curChipX = col1X + 12;
+                row.forEach(chip => {
+                    const textW = ctx.measureText(chip.text).width;
+                    const finalChipW = Math.max(chip.w, textW + 20);
+
+                    if (chip.type === 'empty') {
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
+                        ctx.beginPath();
+                        ctx.roundRect(curChipX, curChipY, finalChipW, 28, 7);
+                        ctx.fill();
+                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+                        ctx.stroke();
+
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+                        ctx.fillText(chip.text, curChipX + 10, curChipY + 18);
+                    } else {
+                        // High-style Emerald Pill Badge
+                        ctx.fillStyle = 'rgba(16, 185, 129, 0.15)';
+                        ctx.beginPath();
+                        ctx.roundRect(curChipX, curChipY, finalChipW, 28, 7);
+                        ctx.fill();
+                        ctx.strokeStyle = 'rgba(16, 185, 129, 0.35)';
+                        ctx.stroke();
+
+                        ctx.fillStyle = '#6ee7b7';
+                        ctx.fillText(chip.text, curChipX + 10, curChipY + 18);
+                    }
+                    curChipX += finalChipW + 8;
+                });
+                curChipY += 28 + 8;
+            });
+
+            // Render Wrong Chips
+            curChipY = boxesY + 12;
+            wLayout.rows.forEach(row => {
+                let curChipX = col2X + 12;
+                row.forEach(chip => {
+                    const textW = ctx.measureText(chip.text).width;
+                    const finalChipW = Math.max(chip.w, textW + 20);
+
+                    if (chip.type === 'empty') {
+                        // All correct celebration pill
+                        ctx.fillStyle = 'rgba(16, 185, 129, 0.15)';
+                        ctx.beginPath();
+                        ctx.roundRect(curChipX, curChipY, finalChipW, 28, 7);
+                        ctx.fill();
+                        ctx.strokeStyle = 'rgba(16, 185, 129, 0.35)';
+                        ctx.stroke();
+
+                        ctx.fillStyle = '#34d399';
+                        ctx.fillText(chip.text, curChipX + 10, curChipY + 18);
+                    } else {
+                        // High-style Rose/Coral Pill Badge
+                        ctx.fillStyle = 'rgba(244, 63, 94, 0.15)';
+                        ctx.beginPath();
+                        ctx.roundRect(curChipX, curChipY, finalChipW, 28, 7);
+                        ctx.fill();
+                        ctx.strokeStyle = 'rgba(244, 63, 94, 0.35)';
+                        ctx.stroke();
+
+                        ctx.fillStyle = '#fda4af';
+                        ctx.fillText(chip.text, curChipX + 10, curChipY + 18);
+                    }
+                    curChipX += finalChipW + 8;
+                });
+                curChipY += 28 + 8;
+            });
+
+            y += cardH + 16;
+        });
+
+        // 7. Footer brand mark
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.font = '12px sans-serif';
+        ctx.fillText('MT-Vocab Learning System • Avtomatik Hisobot', 50, y + 25);
+
+        return canvas;
+    };
+
+    const exportSummaryImage = async () => {
+        if (!summary) {
+            toast.error('Hisobot topilmadi');
+            return;
+        }
+        setExportingImage(true);
+        const toastId = toast.loading('Rasm tayyorlanmoqda...');
+
+        try {
+            const canvas = generateSummaryCanvas();
+            if (!canvas) throw new Error('Canvas context not supported');
+
+            const groupName = summary.session?.groupId?.name || 'Guruh';
+            const imgData = canvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            const dateFileStr = new Date().toISOString().slice(0, 10);
+            link.download = `lugat-natijalari-${groupName}-${dateFileStr}.png`;
+            link.href = imgData;
+            link.click();
+
+            toast.success('Rasm muvaffaqiyatli saqlandi!', { id: toastId });
+        } catch (err: any) {
+            console.error('Canvas export error:', err);
+            toast.error('Rasmni saqlashda xatolik: ' + (err.message || ''), { id: toastId });
+        } finally {
+            setExportingImage(false);
+        }
+    };
+
     const copyTelegram = () => {
         if (!summary?.telegramMessage) return;
         navigator.clipboard.writeText(summary.telegramMessage);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
-        toast.success('Telegram xabari nusxalandi!');
+        toast.success('Telegram hisoboti nusxalandi!');
     };
 
-    const currentWord = currentWords[currentWordIdx];
-    const progressPct = totalStudents > 0 ? Math.round((currentStudentIndex / totalStudents) * 100) : 0;
+    // Keyboard shortcuts for live game:
+    // > or ArrowRight: True (or Next if already answered)
+    // < or ArrowLeft: False (Wrong)
+    // ArrowUp: Stop time (Pause)
+    // ArrowDown: Start time (Resume)
+    // Space / Enter: Next or toggle pause
+    useEffect(() => {
+        if (phase !== 'game') return;
 
-    if (loading || !user) return (
-        <div className="min-h-screen flex items-center justify-center">
-            <Loader2 className="w-10 h-10 text-indigo-500 animate-spin" />
-        </div>
-    );
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.repeat) return;
+            if (showRosterModal || showAddStudentModal || showStopModal) return;
+            const target = e.target as HTMLElement;
+            if (target && ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) return;
 
-    // ── SETUP PHASE ────────────────────────────────────────────────────────────
+            if (e.key === 'ArrowRight' || e.key === '>' || e.key === '.') {
+                e.preventDefault();
+                if (answeredChoice === null) {
+                    handleAnswer(true);
+                } else {
+                    handleNextWord();
+                }
+            } else if (e.key === 'ArrowLeft' || e.key === '<' || e.key === ',') {
+                e.preventDefault();
+                if (answeredChoice === null) {
+                    handleAnswer(false);
+                }
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                setIsPaused(true);
+            } else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                setIsPaused(false);
+            } else if (e.code === 'Space' || e.code === 'Enter') {
+                e.preventDefault();
+                if (answeredChoice !== null) {
+                    handleNextWord();
+                } else {
+                    setIsPaused(p => !p);
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [
+        phase,
+        answeredChoice,
+        showRosterModal,
+        showAddStudentModal,
+        showStopModal,
+        currentWordIdx,
+        questionsPerStudent,
+        currentWords,
+        correctCount,
+        wrongCount,
+        timerDuration
+    ]);
+
+    // ─── SETUP PHASE (MATCHING IMAGE 1) ──────────────────────────────────────
     if (phase === 'setup') {
+        const canStart = selectedGroup && selectedUnitIds.length > 0 && !starting;
+
         return (
-            <div className="min-h-[calc(100vh-100px)] flex flex-col items-center justify-center p-4 sm:p-6">
-                <div className="max-w-2xl w-full mx-auto space-y-6 animate-fade-in my-auto">
-                    {/* Header */}
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h1 className="text-3xl font-black text-white tracking-tight flex items-center gap-3">
-                                <span className="text-4xl">🎯</span> Lug'at O'yini
-                            </h1>
-                            <p className="text-white/40 text-sm font-bold mt-1">O'qituvchi boshqaradigan live lug'at sessiyasi</p>
+            <div className="w-full min-h-[calc(100vh-140px)] flex flex-col justify-center items-center py-6 px-3 animate-fade-in">
+                <div className="w-full max-w-2xl mx-auto self-center flex flex-col gap-4 my-auto">
+                    {/* ── Header ── */}
+                    <div className="flex items-center justify-between px-1">
+                        <div className="flex items-center gap-3">
+                            <div className="text-3xl">🎯</div>
+                            <div>
+                                <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+                                    Lug'at O'yini
+                                </h1>
+                                <p className="text-xs text-white/50 font-medium">
+                                    O'qituvchi boshqaradigan live lug'at sessiyasi
+                                </p>
+                            </div>
                         </div>
+
                         <button
+                            type="button"
                             onClick={() => { setPhase('history'); loadHistory(); }}
-                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black text-white/60 hover:text-white transition-all"
-                            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
+                            className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold text-xs flex items-center gap-1.5 transition-all"
                         >
-                            <BarChart3 className="w-4 h-4" /> Tarix
+                            <BarChart3 className="w-3.5 h-3.5 text-white/60" />
+                            <span>Tarix</span>
                         </button>
                     </div>
 
-                    {/* Setup Card */}
-                    <div className="glass-card p-8 space-y-6">
-                        <h2 className="text-lg font-black text-white">Sessiyani sozlash</h2>
+                    {/* ── Main Settings Card (Sessiyani sozlash) ── */}
+                    <div className="p-6 sm:p-7 rounded-3xl border border-white/10 bg-[#0c1220]/90 backdrop-blur-xl shadow-2xl flex flex-col gap-5">
+                        <h2 className="text-lg font-black text-white">
+                            Sessiyani sozlash
+                        </h2>
 
-                        {/* Group Select */}
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-white/40">Guruh</label>
-                            {loadingSetup ? (
-                                <div className="h-12 rounded-xl bg-white/5 animate-pulse" />
-                            ) : (
-                                <select
-                                    value={selectedGroup}
-                                    onChange={e => setSelectedGroup(e.target.value)}
-                                    className="w-full h-12 rounded-xl px-4 bg-white/5 border border-white/10 text-white font-bold outline-none focus:border-indigo-500 transition-all"
-                                >
-                                    <option value="" className="bg-gray-900">— Guruh tanlang —</option>
-                                    {groups.map(g => (
-                                        <option key={g._id || g.id} value={g._id || g.id} className="bg-gray-900">
-                                            {g.name} {g.memberCount ? `(${g.memberCount} ta)` : ''}
-                                        </option>
-                                    ))}
-                                </select>
-                            )}
-                            {!loadingSetup && groups.length === 0 && (
-                                <p className="text-xs text-amber-400/70 mt-1">⚠️ Lug'at rejimi yoqilgan guruhlar topilmadi. Guruhlar bo'limidan lug'at rejimini yoqing.</p>
-                            )}
+                        {/* Guruh Tanlash */}
+                        <div>
+                            <label className="block text-[11px] font-black uppercase tracking-wider text-white/40 mb-2">
+                                GURUH
+                            </label>
+                            <select
+                                value={selectedGroup}
+                                onChange={e => setSelectedGroup(e.target.value)}
+                                className="w-full rounded-2xl px-4 py-3.5 bg-white/5 border border-white/10 text-white font-bold outline-none focus:border-indigo-500 transition-all text-sm cursor-pointer"
+                            >
+                                <option value="" className="bg-gray-900">— Guruh tanlang —</option>
+                                {groups.map(g => (
+                                    <option key={g._id || g.id} value={g._id || g.id} className="bg-gray-900">
+                                        {g.name}
+                                    </option>
+                                ))}
+                            </select>
                         </div>
 
-                        {/* Absent Students Selection */}
+                        {/* O'quvchilar Davomati (Keldi / Kelmadi) */}
                         {selectedGroup && groupMembers.length > 0 && (
-                            <div className="glass-card p-5 sm:p-6 flex flex-col gap-3 rounded-2xl bg-white/[0.02] border border-white/10">
-                                <h2 className="text-sm font-black text-white uppercase tracking-[0.1em] flex items-center gap-2">
-                                    <Users className="w-4 h-4 text-emerald-400" />
-                                    O'quvchilar Davomati
-                                </h2>
-                                <p className="text-[10px] sm:text-xs text-white/50 font-bold uppercase tracking-widest">
-                                    Kelmagan o'quvchilarni belgilang (ulardan so'ralmaydi)
-                                </p>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-2 max-h-56 overflow-y-auto custom-scrollbar pr-2">
-                                    {groupMembers.map(m => {
-                                        const isAbsent = absentStudentIds.includes(m.id);
-                                        return (
-                                            <label
-                                                key={m.id}
-                                                className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all active:scale-[0.98] select-none ${
-                                                    isAbsent 
-                                                    ? 'bg-red-500/10 border-red-500/30 shadow-[inset_0_0_20px_rgba(239,68,68,0.1)]' 
-                                                    : 'bg-emerald-500/10 border-emerald-500/30 hover:bg-emerald-500/20'
-                                                }`}
-                                            >
-                                                <input
-                                                    type="checkbox"
-                                                    checked={isAbsent}
-                                                    onChange={(e) => {
-                                                        if (e.target.checked) {
-                                                            setAbsentStudentIds(prev => [...prev, m.id]);
-                                                        } else {
-                                                            setAbsentStudentIds(prev => prev.filter(id => id !== m.id));
-                                                        }
+                            <div>
+                                <div className="flex items-center justify-between mb-2">
+                                    <label className="text-[11px] font-black uppercase tracking-wider text-white/40">
+                                        O'QUVCHILAR DAVOMATI ({groupMembers.length - absentStudentIds.length} / {groupMembers.length} TA QATNASHADI)
+                                    </label>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setAbsentStudentIds([])}
+                                            className="text-[11px] font-bold text-emerald-400 hover:underline cursor-pointer"
+                                        >
+                                            Hammasi keldi
+                                        </button>
+                                        <span className="text-white/20">•</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => setAbsentStudentIds(groupMembers.map(m => m._id))}
+                                            className="text-[11px] font-bold text-rose-400 hover:underline cursor-pointer"
+                                        >
+                                            Hech kim kelmadi
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-2.5 max-h-52 overflow-y-auto custom-scrollbar">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                                        {groupMembers.map((st, idx) => {
+                                            const isAbsent = absentStudentIds.includes(st._id);
+                                            return (
+                                                <button
+                                                    key={st._id}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setAbsentStudentIds(prev =>
+                                                            prev.includes(st._id)
+                                                                ? prev.filter(id => id !== st._id)
+                                                                : [...prev, st._id]
+                                                        );
                                                     }}
-                                                    className="w-4 h-4 rounded text-red-500 bg-white/10 border-white/20 focus:ring-red-500 focus:ring-offset-gray-900 cursor-pointer"
-                                                />
-                                                <div className="flex flex-col">
-                                                    <span className={`text-sm font-black ${isAbsent ? 'text-red-400 line-through opacity-70' : 'text-emerald-400'}`}>
-                                                        {m.name}
+                                                    className={`flex items-center justify-between p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                                                        isAbsent
+                                                            ? 'bg-rose-500/10 border-rose-500/25 text-rose-300 opacity-60'
+                                                            : 'bg-emerald-500/10 border-emerald-500/25 text-emerald-300'
+                                                    }`}
+                                                >
+                                                    <div className="flex items-center gap-2 min-w-0 pr-1">
+                                                        <span className="text-[10px] font-mono opacity-50">{idx + 1}.</span>
+                                                        <span className="text-xs font-bold truncate">{st.name}</span>
+                                                    </div>
+                                                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-md shrink-0 ${
+                                                        isAbsent
+                                                            ? 'bg-rose-500/20 text-rose-400'
+                                                            : 'bg-emerald-500/20 text-emerald-400'
+                                                    }`}>
+                                                        {isAbsent ? '✕ Kelmadi' : '✓ Keldi'}
                                                     </span>
-                                                    <span className={`text-[9px] uppercase tracking-widest font-bold ${isAbsent ? 'text-red-400/50' : 'text-emerald-400/50'}`}>
-                                                        {isAbsent ? 'Kelmagan' : 'Kelgan'}
-                                                    </span>
-                                                </div>
-                                            </label>
-                                        );
-                                    })}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
                             </div>
                         )}
 
-                        {/* Unit Select (Checkbox Mode) */}
-                        <div className="space-y-3">
-                            <div className="flex items-center justify-between">
-                                <label className="text-xs font-black uppercase tracking-widest text-white/50">
-                                    Lug'at Bo'limlari ({selectedUnitIds.length} ta tanlandi)
-                                </label>
-                                {viewingUnits && (
-                                    <button
-                                        type="button"
-                                        onClick={() => { setViewingUnits(false); setActiveCategory(null); }}
-                                        className="text-xs font-black text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-1.5 px-3 py-1 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20"
-                                    >
-                                        <ArrowLeft className="w-3.5 h-3.5" /> Kategoriyalarga qaytish
-                                    </button>
-                                )}
-                            </div>
-
-                            {loadingSetup ? (
-                                <div className="h-32 rounded-xl bg-white/5 animate-pulse" />
-                            ) : (
-                                <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-3 max-h-[380px] overflow-y-auto custom-scrollbar">
-                                    {!viewingUnits ? (
-                                        <>
-                                            {/* Categories list */}
-                                            {categories.filter(cat => cat !== 'Kategoriyasiz' && cat !== 'Uncategorized').map(cat => {
-                                                const unitsInCat = categoryMap[cat] || [];
-                                                const selectedInCat = unitsInCat.filter(u => selectedUnitIds.includes(u.id)).length;
-                                                return (
-                                                    <button
-                                                        key={cat}
-                                                        type="button"
-                                                        onClick={() => { setActiveCategory(cat); setViewingUnits(true); }}
-                                                        className="w-full flex items-center justify-between p-4 rounded-xl transition-all bg-white/[0.03] hover:bg-white/10 border border-white/10 text-left group active:scale-[0.98]"
-                                                    >
-                                                        <div className="flex items-center gap-3.5">
-                                                            <div className="w-11 h-11 rounded-xl bg-indigo-500/15 flex items-center justify-center border border-indigo-500/30 group-hover:bg-indigo-500/25 transition-all">
-                                                                <BookOpen className="w-5 h-5 text-indigo-400" />
-                                                            </div>
-                                                            <div>
-                                                                <span className="font-extrabold text-base text-white block leading-tight">{cat}</span>
-                                                                <span className="text-xs text-white/40 font-bold">{unitsInCat.length} bo'lim</span>
-                                                            </div>
-                                                        </div>
-                                                        {selectedInCat > 0 ? (
-                                                            <span className="px-3 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-xs font-black shadow-sm">
-                                                                {selectedInCat} tanlandi
-                                                            </span>
-                                                        ) : (
-                                                            <ChevronRight className="w-5 h-5 text-white/40 group-hover:text-white transition-colors" />
-                                                        )}
-                                                    </button>
-                                                );
-                                            })}
-
-                                            {/* Root / Uncategorized units section */}
-                                            {(() => {
-                                                const rootUnits = units.filter(u => !u.category || u.category === 'Kategoriyasiz' || u.category === 'Uncategorized');
-                                                if (rootUnits.length === 0) return null;
-                                                return (
-                                                    <div className="space-y-2 pt-2">
-                                                        {categories.length > 1 && (
-                                                            <div className="text-xs font-black uppercase tracking-widest text-white/40 pt-1 pb-1">
-                                                                Kategoriyasiz bo'limlar
-                                                            </div>
-                                                        )}
-                                                        <div className="flex items-center gap-2 mb-2">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    const ids = rootUnits.map(u => u.id);
-                                                                    setSelectedUnitIds(p => Array.from(new Set([...p, ...ids])));
-                                                                }}
-                                                                className="flex-1 py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25 active:scale-95 transition-all"
-                                                            >
-                                                                ✓ Hammasini tanlash
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    const ids = rootUnits.map(u => u.id);
-                                                                    setSelectedUnitIds(p => p.filter(id => !ids.includes(id)));
-                                                                }}
-                                                                className="flex-1 py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider bg-red-500/15 border border-red-500/30 text-red-400 hover:bg-red-500/25 active:scale-95 transition-all"
-                                                            >
-                                                                ✕ Bekor qilish
-                                                            </button>
-                                                        </div>
-                                                        {rootUnits.map(unit => {
-                                                            const sel = selectedUnitIds.includes(unit.id);
-                                                            return (
-                                                                <button
-                                                                    type="button"
-                                                                    key={unit.id}
-                                                                    onClick={() => toggleUnitSelection(unit.id)}
-                                                                    className={`w-full flex items-center justify-between p-3.5 rounded-xl border transition-all ${
-                                                                        sel ? 'bg-indigo-500/20 border-indigo-500/50 text-white' : 'bg-white/5 border-white/5 text-white/60 hover:bg-white/10'
-                                                                    }`}
-                                                                >
-                                                                    <span className="text-sm font-extrabold text-left">{unit.title}</span>
-                                                                    <div className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all ${
-                                                                        sel ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/40' : 'bg-white/10 border border-white/20'
-                                                                    }`}>
-                                                                        {sel && <Check className="w-4 h-4 stroke-[3]" />}
-                                                                    </div>
-                                                                </button>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                );
-                                            })()}
-                                        </>
-                                    ) : (
-                                        <>
-                                            <div className="flex items-center justify-between pb-3 mb-2 border-b border-white/10">
-                                                <div className="flex items-center gap-3">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => { setViewingUnits(false); setActiveCategory(null); }}
-                                                        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/40 text-indigo-300 text-xs sm:text-sm font-black transition-all active:scale-95 shadow-sm"
-                                                    >
-                                                        <ArrowLeft className="w-4 h-4" />
-                                                        <span>Orqaga</span>
-                                                    </button>
-                                                    <span className="text-sm font-black text-white truncate max-w-[140px]">{activeCategory}</span>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            const ids = displayedUnits.map(u => u.id);
-                                                            setSelectedUnitIds(p => Array.from(new Set([...p, ...ids])));
-                                                        }}
-                                                        className="py-2 px-3 rounded-xl text-xs font-black uppercase tracking-wider bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25 active:scale-95 transition-all shadow-sm"
-                                                    >
-                                                        ✓ Hammasi
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            const ids = displayedUnits.map(u => u.id);
-                                                            setSelectedUnitIds(p => p.filter(id => !ids.includes(id)));
-                                                        }}
-                                                        className="py-2 px-3 rounded-xl text-xs font-black uppercase tracking-wider bg-red-500/15 border border-red-500/30 text-red-400 hover:bg-red-500/25 active:scale-95 transition-all shadow-sm"
-                                                    >
-                                                        ✕ Bekor
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <div className="space-y-2">
-                                                {displayedUnits.map(unit => {
-                                                    const sel = selectedUnitIds.includes(unit.id);
-                                                    return (
-                                                        <button
-                                                            type="button"
-                                                            key={unit.id}
-                                                            onClick={() => toggleUnitSelection(unit.id)}
-                                                            className={`w-full flex items-center justify-between p-3.5 rounded-xl border transition-all ${
-                                                                sel ? 'bg-indigo-500/20 border-indigo-500/50 text-white' : 'bg-white/5 border-white/5 text-white/60 hover:bg-white/10'
-                                                            }`}
-                                                        >
-                                                            <span className="text-sm font-extrabold text-left">{unit.title}</span>
-                                                            <div className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all ${
-                                                                sel ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/40' : 'bg-white/10 border border-white/20'
-                                                            }`}>
-                                                                {sel && <Check className="w-4 h-4 stroke-[3]" />}
-                                                            </div>
-                                                        </button>
-                                                    );
-                                                })}
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
+                    {/* Lug'at Bo'limlari */}
+                    <div>
+                        <div className="flex items-center justify-between mb-2">
+                            <label className="text-[11px] font-black uppercase tracking-wider text-white/40">
+                                LUG'AT BO'LIMLARI ({selectedUnitIds.length} TA TANLANDI)
+                            </label>
+                            {activeCategory && (
+                                <button
+                                    type="button"
+                                    onClick={() => setActiveCategory(null)}
+                                    className="text-xs text-indigo-400 hover:text-indigo-300 font-bold flex items-center gap-1"
+                                >
+                                    <ArrowLeft className="w-3 h-3" /> Orqaga
+                                </button>
                             )}
                         </div>
 
-                        {/* Questions per Student */}
-                        <div className="space-y-3">
-                            <label className="text-xs font-black uppercase tracking-widest text-white/50">
-                                Har bir o'quvchiga savol soni: <span className="text-indigo-400 text-base ml-1 font-black">{questionsPerStudent}</span>
-                            </label>
-                            <div className="flex items-center gap-3">
-                                {[3, 5, 6, 8, 10, 12].map(n => (
-                                    <button
-                                        key={n}
-                                        onClick={() => setQuestionsPerStudent(n)}
-                                        className={`flex-1 py-3.5 rounded-xl text-sm sm:text-base font-black transition-all active:scale-95 ${
-                                            questionsPerStudent === n
-                                                ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/40 scale-[1.02]'
-                                                : 'bg-white/5 text-white/40 hover:text-white hover:bg-white/10'
-                                        }`}
-                                    >
-                                        {n}
-                                    </button>
-                                ))}
+                        {/* Category & Unit Browser Container */}
+                        <div className="rounded-2xl border border-white/10 bg-white/[0.02] overflow-hidden">
+                            {!activeCategory ? (
+                                /* Categories List View (Image 1) */
+                                <div className="max-h-72 overflow-y-auto custom-scrollbar divide-y divide-white/5">
+                                    {categoryNames.length === 0 ? (
+                                        <div className="p-8 text-center text-xs text-white/40 font-bold">
+                                            Bo'limlar mavjud emas
+                                        </div>
+                                    ) : (
+                                        categoryNames.map(cat => {
+                                            const catUnits = categoryMap[cat] || [];
+                                            const selectedInCat = catUnits.filter(u => selectedUnitIds.includes(u.id)).length;
+
+                                            return (
+                                                <button
+                                                    key={cat}
+                                                    type="button"
+                                                    onClick={() => setActiveCategory(cat)}
+                                                    className="w-full flex items-center justify-between p-3.5 hover:bg-white/[0.04] transition-all text-left group"
+                                                >
+                                                    <div className="flex items-center gap-3 min-w-0 pr-2">
+                                                        <div className="w-9 h-9 rounded-xl border border-indigo-500/30 bg-indigo-500/10 flex items-center justify-center shrink-0">
+                                                            <BookOpen className="w-4 h-4 text-indigo-400" />
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <p className="font-bold text-sm text-white truncate group-hover:text-indigo-300 transition-colors">
+                                                                {cat}
+                                                            </p>
+                                                            <p className="text-[11px] font-medium text-white/40">
+                                                                {catUnits.length} bo'lim
+                                                            </p>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex items-center gap-2 shrink-0">
+                                                        {selectedInCat > 0 && (
+                                                            <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-indigo-500/20 text-indigo-300 font-mono">
+                                                                {selectedInCat} tanlandi
+                                                            </span>
+                                                        )}
+                                                        <ChevronRight className="w-4 h-4 text-white/30 group-hover:text-white transition-colors" />
+                                                    </div>
+                                                </button>
+                                            );
+                                        })
+                                    )}
+                                </div>
+                            ) : (
+                                /* Units List Inside Category */
+                                <div className="p-3 space-y-2">
+                                    <div className="flex items-center justify-between pb-2 border-b border-white/5 px-1">
+                                        <span className="text-xs font-black text-white truncate">
+                                            {activeCategory}
+                                        </span>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const catUnits = categoryMap[activeCategory] || [];
+                                                    const ids = catUnits.map(u => u.id);
+                                                    setSelectedUnitIds(prev => Array.from(new Set([...prev, ...ids])));
+                                                }}
+                                                className="text-[11px] font-bold text-indigo-400 hover:underline"
+                                            >
+                                                Hammasi
+                                            </button>
+                                            <span className="text-white/20">•</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const catUnits = categoryMap[activeCategory] || [];
+                                                    const ids = catUnits.map(u => u.id);
+                                                    setSelectedUnitIds(prev => prev.filter(id => !ids.includes(id)));
+                                                }}
+                                                className="text-[11px] font-bold text-rose-400 hover:underline"
+                                            >
+                                                Bekor
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="max-h-60 overflow-y-auto space-y-1.5 custom-scrollbar pr-1">
+                                        {(categoryMap[activeCategory] || []).map(u => {
+                                            const isSelected = selectedUnitIds.includes(u.id);
+                                            return (
+                                                <button
+                                                    key={u.id}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setSelectedUnitIds(prev =>
+                                                            isSelected ? prev.filter(id => id !== u.id) : [...prev, u.id]
+                                                        );
+                                                    }}
+                                                    className={`w-full flex items-center justify-between p-2.5 rounded-xl transition-all text-left border ${
+                                                        isSelected
+                                                            ? 'bg-indigo-500/20 border-indigo-500/40 text-indigo-200'
+                                                            : 'bg-white/5 border-white/5 hover:border-white/10 text-white/70 hover:text-white'
+                                                    }`}
+                                                >
+                                                    <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                                                        <div className={`w-5 h-5 rounded flex items-center justify-center text-xs shrink-0 border ${
+                                                            isSelected ? 'bg-indigo-500 border-indigo-400 text-white' : 'border-white/20 bg-white/5'
+                                                        }`}>
+                                                            {isSelected && <Check className="w-3.5 h-3.5" />}
+                                                        </div>
+                                                        <span className="text-xs font-bold truncate">{u.title}</span>
+                                                    </div>
+                                                    {u.wordCount !== undefined && (
+                                                        <span className="text-[10px] font-mono text-white/40 shrink-0">
+                                                            {u.wordCount} ta so'z
+                                                        </span>
+                                                    )}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Har bir o'quvchiga savol soni */}
+                    <div>
+                        <label className="block text-[11px] font-black uppercase tracking-wider text-white/40 mb-2">
+                            HAR BIR O'QUVCHIGA SAVOL SONI: <span className="text-indigo-400 font-mono font-bold">{questionsPerStudent}</span>
+                        </label>
+                        <div className="flex items-center gap-1.5">
+                            {[3, 5, 6, 8, 10, 12].map(n => (
+                                <button
+                                    key={n}
+                                    type="button"
+                                    onClick={() => setQuestionsPerStudent(n)}
+                                    className={`flex-1 py-2.5 rounded-xl text-xs font-black transition-all ${
+                                        questionsPerStudent === n
+                                            ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                                            : 'bg-white/5 text-white/40 hover:text-white hover:bg-white/10'
+                                    }`}
+                                >
+                                    {n}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Har bir so'z uchun vaqt */}
+                    <div>
+                        <label className="block text-[11px] font-black uppercase tracking-wider text-white/40 mb-2">
+                            HAR BIR SO'Z UCHUN VAQT: <span className="text-indigo-400 font-mono font-bold">{timerDuration} SEK</span>
+                        </label>
+                        <div className="flex items-center gap-1.5">
+                            {[5, 10, 15, 20, 25].map(sec => (
+                                <button
+                                    key={sec}
+                                    type="button"
+                                    onClick={() => setTimerDuration(sec)}
+                                    className={`flex-1 py-2.5 rounded-xl text-xs font-black transition-all ${
+                                        timerDuration === sec
+                                            ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                                            : 'bg-white/5 text-white/40 hover:text-white hover:bg-white/10'
+                                    }`}
+                                >
+                                    {sec}s
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Tarix saqlanmasin (No-Save Rejimi) */}
+                    <div className="flex items-center justify-between p-3.5 rounded-2xl bg-white/[0.03] border border-white/5">
+                        <div className="flex items-center gap-3">
+                            <span className="text-xl">🚫</span>
+                            <div>
+                                <p className="text-xs font-bold text-white">Tarix saqlanmasin (No-Save Rejimi)</p>
+                                <p className="text-[10px] text-white/40 font-medium">Natijalar saqlanmaydi va reyting o'zgarmaydi</p>
+                            </div>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setNoSave(!noSave)}
+                            className={`w-12 h-6 rounded-full transition-colors relative p-0.5 cursor-pointer ${
+                                noSave ? 'bg-indigo-600' : 'bg-white/10'
+                            }`}
+                        >
+                            <div className={`w-5 h-5 rounded-full bg-white transition-transform ${
+                                noSave ? 'translate-x-6' : 'translate-x-0'
+                            }`} />
+                        </button>
+                    </div>
+
+                    {/* Start Button (Golden / Amber gradient as in Image 1) */}
+                    <button
+                        type="button"
+                        onClick={handleStartSession}
+                        disabled={starting || !selectedGroup || selectedUnitIds.length === 0}
+                        className="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-gray-950 font-black text-sm sm:text-base tracking-wide flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 transition-all active:scale-[0.99] disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer mt-1"
+                    >
+                        {starting ? (
+                            <>
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                                <span>Yuklanmoqda...</span>
+                            </>
+                        ) : (
+                            <>
+                                <Play className="w-4 h-4 fill-current" />
+                                <span>Sessiyani Boshlash</span>
+                            </>
+                        )}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+    // ─── GAME PHASE (MATCHING IMAGE 2) ────────────────────────────────────────
+    if (phase === 'game') {
+        const activeWord = currentWords[currentWordIdx];
+        const activeStudentsCount = sessionParticipants.filter(p => p.status !== 'absent').length || totalStudents || 1;
+        const currentStudentProgressNumber = Math.min(currentStudentIndex + 1, activeStudentsCount);
+
+        // Session-wide totals
+        const totalCorrectSession = sessionParticipants.reduce(
+            (sum, p) => (p.studentId === currentStudent?._id ? sum : sum + (p.correctAnswers || 0)),
+            0
+        ) + correctCount;
+        const totalWrongSession = sessionParticipants.reduce(
+            (sum, p) => (p.studentId === currentStudent?._id ? sum : sum + (p.wrongAnswers || 0)),
+            0
+        ) + wrongCount;
+        const totalAnswered = totalCorrectSession + totalWrongSession;
+        const overallAccuracy = totalAnswered > 0 ? Math.round((totalCorrectSession / totalAnswered) * 100) : 0;
+
+        // Current student specific totals
+        const studentAnswered = correctCount + wrongCount;
+        const studentAccuracy = studentAnswered > 0 ? Math.round((correctCount / studentAnswered) * 100) : 0;
+
+        const unjoinedMembers = groupMembers.filter(
+            m => !sessionParticipants.some(p => p.studentId === m._id)
+        );
+
+        return (
+            <div className="w-full min-h-[calc(100vh-140px)] flex flex-col justify-center items-center py-4 px-2 sm:px-4 animate-fade-in relative">
+                <div className="w-full max-w-5xl mx-auto self-center flex flex-col gap-4 my-auto">
+                    <Confetti trigger={showCorrect} />
+                    <WrongAnim trigger={showWrong} />
+
+                {/* ── Top Bar: Orqaga + Sinf Ro'yxati + Kelgan O'quvchini Qo'shish ── */}
+                <div className="flex items-center justify-between gap-2 px-1">
+                    <button
+                        type="button"
+                        onClick={() => { setIsPaused(true); setShowStopModal(true); }}
+                        className="text-xs sm:text-sm font-bold text-white/70 hover:text-white flex items-center gap-1.5 transition-colors py-1.5 px-3 rounded-xl hover:bg-white/5 border border-transparent hover:border-white/10 cursor-pointer"
+                    >
+                        <ArrowLeft className="w-4 h-4" />
+                        <span>Orqaga (Sessiyani yakunlash)</span>
+                    </button>
+
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={() => setShowRosterModal(true)}
+                            className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer"
+                        >
+                            <Users className="w-4 h-4 text-indigo-400" />
+                            <span>Sinf Ro'yxati</span>
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => setShowAddStudentModal(true)}
+                            className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs sm:text-sm flex items-center gap-1.5 transition-all shadow-md active:scale-95 cursor-pointer"
+                        >
+                            <UserPlus className="w-4 h-4" />
+                            <span>+ Kelgan o'quvchini qo'shish</span>
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={toggleSound}
+                            className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-white border border-white/10 transition-colors cursor-pointer"
+                            title={soundEnabled ? 'Ovozni o\'chirish' : 'Ovozni yoqish'}
+                        >
+                            {soundEnabled ? <Volume2 className="w-4 h-4 text-emerald-400" /> : <VolumeX className="w-4 h-4 text-white/40" />}
+                        </button>
+                    </div>
+                </div>
+
+                {/* ── Main Game Card (Matching media_1789147643551.png) ── */}
+                <div className="w-full rounded-3xl border border-white/10 bg-[#070b16] relative overflow-hidden shadow-2xl p-6 sm:p-10 flex flex-col justify-between min-h-[460px]">
+                    {/* Geometric Golden Watermark Background */}
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20 select-none overflow-hidden">
+                        <svg className="w-[520px] h-[520px] text-amber-500/30" viewBox="0 0 200 200" fill="none" stroke="currentColor" strokeWidth="1.5">
+                            <polygon points="60,20 140,20 180,60 180,140 140,180 60,180 20,140 20,60" />
+                            <polygon points="70,30 130,30 170,70 170,130 130,170 70,170 30,130 30,70" strokeWidth="1" strokeDasharray="3 3" />
+                            <rect x="55" y="55" width="90" height="90" rx="10" strokeWidth="1.2" />
+                            <circle cx="100" cy="100" r="35" strokeWidth="1" />
+                            <circle cx="100" cy="100" r="15" strokeWidth="0.8" />
+                            <line x1="20" y1="20" x2="180" y2="180" strokeWidth="0.7" opacity="0.6" />
+                            <line x1="180" y1="20" x2="20" y2="180" strokeWidth="0.7" opacity="0.6" />
+                        </svg>
+                    </div>
+
+                    {/* Top Row: Current Student (Left) & Live Scores (Right) */}
+                    <div className="flex items-start justify-between w-full z-10">
+                        <div className="flex items-center gap-3.5">
+                            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-indigo-600 text-white font-black text-2xl flex items-center justify-center shadow-lg shadow-indigo-600/40 border border-indigo-400/30 shrink-0">
+                                {currentStudent?.name?.charAt(0).toUpperCase() || 'M'}
+                            </div>
+                            <div>
+                                <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                                    {currentStudent?.name || 'O\'quvchi'}
+                                </h2>
+                                <div className="flex items-center gap-2 mt-1">
+                                    <span className="px-2 py-0.5 rounded-md bg-indigo-500/25 border border-indigo-500/40 text-indigo-300 font-black text-[10px] tracking-wider uppercase">
+                                        O'QUVCHI
+                                    </span>
+                                    {currentStudent?.warningCard && (
+                                        <span className="flex items-center gap-1 text-[11px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-md">
+                                            <span>⚠️</span> Ogohlantirish bor
+                                        </span>
+                                    )}
+                                </div>
                             </div>
                         </div>
 
-                        {/* Timer per Word */}
-                        <div className="space-y-3">
-                            <label className="text-xs font-black uppercase tracking-widest text-white/50">
-                                Har bir so'z uchun vaqt: <span className="text-indigo-400 text-base ml-1 font-black">{timerDuration} sek</span>
-                            </label>
-                            <div className="flex items-center gap-2 sm:gap-3">
-                                {[5, 10, 15, 20, 25].map(sec => (
-                                    <button
-                                        key={sec}
-                                        type="button"
-                                        onClick={() => setTimerDuration(sec)}
-                                        className={`flex-1 py-3 rounded-xl text-xs sm:text-sm font-black transition-all active:scale-95 ${
-                                            timerDuration === sec
-                                                ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/40 scale-[1.02]'
-                                                : 'bg-white/5 text-white/40 hover:text-white hover:bg-white/10'
-                                        }`}
-                                    >
-                                        {sec}s
-                                    </button>
-                                ))}
+                        <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-950/40 border border-emerald-500/40 text-emerald-400 font-black text-xs sm:text-sm">
+                                <Check className="w-4 h-4" />
+                                <span>{correctCount} TO'G'RI</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-950/40 border border-rose-500/40 text-rose-400 font-black text-xs sm:text-sm">
+                                <X className="w-4 h-4" />
+                                <span>{wrongCount} NOTO'G'RI</span>
                             </div>
                         </div>
+                    </div>
 
-                        {/* No-Save Mode Toggle */}
-                        <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10">
-                            <div className="flex items-center gap-3">
-                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm transition-colors ${noSave ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40' : 'bg-white/5 text-white/30'}`}>
-                                    🚫
-                                </div>
-                                <div>
-                                    <p className="text-sm font-black text-white">Tarix saqlanmasin (No-Save Rejimi)</p>
-                                    <p className="text-[11px] text-white/40 font-bold">Natijalar saqlanmaydi va reyting o'zgarmaydi</p>
+                    {/* Center: Timer + Word + Phonetic + Reveal Button */}
+                    <div className="flex flex-col items-center justify-center text-center my-6 z-10 w-full">
+                        {/* Circular Timer with Vaqtni to'xtatish below */}
+                        <div className="flex flex-col items-center">
+                            <div className="relative flex items-center justify-center w-[90px] h-[90px] sm:w-[110px] sm:h-[110px]">
+                                <svg className="absolute inset-0 -rotate-90 w-full h-full" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="6" />
+                                    <circle
+                                        cx="50"
+                                        cy="50"
+                                        r="42"
+                                        fill="none"
+                                        stroke={isPaused ? '#f59e0b' : timeLeft <= 3 ? '#ef4444' : '#6366f1'}
+                                        strokeWidth="6"
+                                        strokeDasharray={`${2 * Math.PI * 42 * (timerDuration > 0 ? timeLeft / timerDuration : 0)} ${2 * Math.PI * 42}`}
+                                        strokeLinecap="round"
+                                        style={{ transition: 'stroke-dasharray 1s linear, stroke 0.3s' }}
+                                    />
+                                </svg>
+                                <div className="text-center z-10 flex flex-col items-center justify-center">
+                                    <span className="text-3xl sm:text-4xl font-black text-white leading-none tabular-nums">
+                                        {timeLeft}
+                                    </span>
+                                    <span className="text-[9px] font-black uppercase tracking-wider text-white/50 mt-0.5">
+                                        {isPaused ? 'PAUZA' : 'SEC'}
+                                    </span>
                                 </div>
                             </div>
+
                             <button
                                 type="button"
-                                onClick={() => setNoSave(prev => !prev)}
-                                className={`relative w-12 h-6 rounded-full transition-all duration-300 ${noSave ? 'bg-amber-500' : 'bg-white/10'}`}
+                                onClick={() => {
+                                    if (timeLeft === 0) {
+                                        setTimeLeft(timerDuration);
+                                        setTimerActive(true);
+                                        setIsPaused(false);
+                                    } else {
+                                        setIsPaused(p => !p);
+                                    }
+                                }}
+                                className="text-[11px] font-bold text-white/60 hover:text-white flex items-center gap-1 mt-1 cursor-pointer transition-colors"
                             >
-                                <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-all duration-300 ${noSave ? 'left-6' : 'left-0.5'}`} />
+                                {timeLeft === 0 ? (
+                                    <>
+                                        <RefreshCw className="w-3 h-3 text-amber-400" />
+                                        <span>+Vaqt berish</span>
+                                    </>
+                                ) : isPaused ? (
+                                    <>
+                                        <Play className="w-3 h-3 text-amber-400 fill-current" />
+                                        <span>Davom ettirish</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Pause className="w-3 h-3 fill-current" />
+                                        <span>Vaqtni to'xtatish</span>
+                                    </>
+                                )}
                             </button>
                         </div>
 
-                        {/* Start Button */}
-                        <button
-                            onClick={handleStartSession}
-                            disabled={starting || !selectedGroup || selectedUnitIds.length === 0}
-                            className="w-full font-black text-white text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed shadow-lg"
-                            style={{
-                                height: '42px',
-                                margin: '6px 0px 0px 0px',
-                                borderRadius: 'var(--theme-radius-btn, 12px)',
-                                background: 'var(--theme-primary, linear-gradient(135deg, #6366f1, #4f46e5))',
-                                boxShadow: 'var(--theme-shadow-btn, 0 4px 20px rgba(99,102,241,0.4))',
-                                fontFamily: 'var(--theme-font-family, inherit)',
-                            }}
-                        >
-                            {starting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 fill-current" />}
-                            {starting ? 'Boshlanmoqda...' : 'Sessiyani Boshlash'}
-                        </button>
+                        {/* Large English Word + Speaker Pronounce */}
+                        <div className="mt-5 flex items-center justify-center gap-3">
+                            <h1 className="text-5xl sm:text-7xl md:text-8xl font-black text-white tracking-tight uppercase drop-shadow-2xl">
+                                {activeWord?.englishWord || '...'}
+                            </h1>
+                            {activeWord?.englishWord && (
+                                <button
+                                    type="button"
+                                    onClick={() => speakWord(activeWord.englishWord)}
+                                    className="p-2.5 rounded-2xl bg-white/5 hover:bg-white/10 text-white/60 hover:text-white border border-white/10 transition-all cursor-pointer active:scale-95"
+                                    title="Talaffuzni eshitish"
+                                >
+                                    <Volume2 className="w-6 h-6 sm:w-8 sm:h-8" />
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Phonetic / Subtitle */}
+                        <p className="text-sm sm:text-base font-mono text-white/40 mt-1">
+                            {activeWord?.phonetic ? `[${activeWord.phonetic}]` : activeWord?.englishWord?.toLowerCase()}
+                        </p>
+
+                        {/* Javobni ko'rsatish toggle */}
+                        <div className="mt-3 min-h-[40px] flex items-center justify-center">
+                            {showTranslation ? (
+                                <p className="text-xl sm:text-3xl font-black text-amber-300 animate-fade-in tracking-wide">
+                                    {activeWord?.uzbekTranslation}
+                                </p>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={() => setShowTranslation(true)}
+                                    className="text-xs font-bold text-white/50 hover:text-white/90 flex items-center gap-1.5 py-1.5 px-4 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 transition-all cursor-pointer"
+                                >
+                                    <Eye className="w-3.5 h-3.5" />
+                                    <span>Javobni ko'rsatish</span>
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Action Controls: 3 Buttons (Noto'g'ri | Vaqtni to'xtatish | To'g'ri) */}
+                    <div className="w-full z-10 pt-2">
+                        {answeredChoice === null ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full">
+                                <button
+                                    type="button"
+                                    onClick={() => handleAnswer(false)}
+                                    disabled={submitting}
+                                    className="py-3.5 sm:py-4 px-4 rounded-2xl font-black text-rose-300 bg-rose-950/40 hover:bg-rose-900/60 border border-rose-600/60 shadow-lg shadow-rose-950/40 transition-all flex items-center justify-center gap-2 text-sm sm:text-base cursor-pointer active:scale-95"
+                                >
+                                    <X className="w-5 h-5 text-rose-400" />
+                                    <span>Noto'g'ri</span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        if (timeLeft === 0) {
+                                            setTimeLeft(timerDuration);
+                                            setTimerActive(true);
+                                            setIsPaused(false);
+                                        } else {
+                                            setIsPaused(p => !p);
+                                        }
+                                    }}
+                                    className="py-3.5 sm:py-4 px-4 rounded-2xl font-black text-amber-300 bg-amber-950/40 hover:bg-amber-900/60 border border-amber-500/60 shadow-lg shadow-amber-950/40 transition-all flex items-center justify-center gap-2 text-sm sm:text-base cursor-pointer active:scale-95"
+                                >
+                                    {timeLeft === 0 ? (
+                                        <>
+                                            <RefreshCw className="w-5 h-5 text-amber-400" />
+                                            <span>+Vaqt berish ({timerDuration}s)</span>
+                                        </>
+                                    ) : isPaused ? (
+                                        <>
+                                            <Play className="w-5 h-5 text-amber-400 fill-current" />
+                                            <span>Davom ettirish</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Pause className="w-5 h-5 text-amber-400 fill-current" />
+                                            <span>Vaqtni to'xtatish</span>
+                                        </>
+                                    )}
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => handleAnswer(true)}
+                                    disabled={submitting}
+                                    className="py-3.5 sm:py-4 px-4 rounded-2xl font-black text-emerald-300 bg-emerald-950/40 hover:bg-emerald-900/60 border border-emerald-500/60 shadow-lg shadow-emerald-950/40 transition-all flex items-center justify-center gap-2 text-sm sm:text-base cursor-pointer active:scale-95"
+                                >
+                                    <Check className="w-5 h-5 text-emerald-400" />
+                                    <span>To'g'ri</span>
+                                </button>
+                            </div>
+                        ) : (
+                            <button
+                                type="button"
+                                onClick={handleNextWord}
+                                disabled={submitting}
+                                className="w-full py-4 rounded-2xl font-black text-white bg-indigo-600 hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-600/40 text-base sm:text-lg flex items-center justify-center gap-2 active:scale-[0.99] cursor-pointer"
+                            >
+                                {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <span>Keyingi so'z ➔ (Enter / Bo'sh joy)</span>}
+                            </button>
+                        )}
+                    </div>
+                </div>
+
+                {/* ── 5 Stat Cards (Bottom Row - Matching media_1789147643551.png) ── */}
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 w-full">
+                    {/* 1. JORIY SO'Z */}
+                    <div className="p-3.5 sm:p-4 rounded-2xl bg-[#0b1222] border border-white/5 flex flex-col items-center justify-center text-center">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-white/40 mb-1">
+                            JORIY SO'Z
+                        </span>
+                        <span className="text-lg sm:text-xl font-black text-white">
+                            {currentWordIdx + 1} / {questionsPerStudent}
+                        </span>
+                    </div>
+
+                    {/* 2. TO'G'RI */}
+                    <div className="p-3.5 sm:p-4 rounded-2xl bg-[#0b1222] border border-white/5 flex flex-col items-center justify-center text-center">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400/60 mb-1">
+                            TO'G'RI
+                        </span>
+                        <span className="text-lg sm:text-xl font-black text-emerald-400 flex items-center justify-center gap-1">
+                            <span>✅</span> {correctCount}
+                        </span>
+                    </div>
+
+                    {/* 3. NOTO'G'RI */}
+                    <div className="p-3.5 sm:p-4 rounded-2xl bg-[#0b1222] border border-white/5 flex flex-col items-center justify-center text-center">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-rose-400/60 mb-1">
+                            NOTO'G'RI
+                        </span>
+                        <span className="text-lg sm:text-xl font-black text-rose-400 flex items-center justify-center gap-1">
+                            <span>❌</span> {wrongCount}
+                        </span>
+                    </div>
+
+                    {/* 4. ANIQLIK */}
+                    <div className="p-3.5 sm:p-4 rounded-2xl bg-[#0b1222] border border-white/5 flex flex-col items-center justify-center text-center">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-indigo-400/60 mb-1">
+                            ANIQLIK
+                        </span>
+                        <span className="text-lg sm:text-xl font-black text-indigo-300 flex items-center justify-center gap-1">
+                            <span>🎯</span> {studentAccuracy}%
+                        </span>
+                    </div>
+
+                    {/* 5. O'QUVCHI PROGRESS */}
+                    <div className="p-3.5 sm:p-4 rounded-2xl bg-[#0b1222] border border-white/5 flex flex-col items-center justify-center text-center col-span-2 sm:col-span-1">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-purple-400/60 mb-1">
+                            O'QUVCHI PROGRESS
+                        </span>
+                        <span className="text-lg sm:text-xl font-black text-purple-300 flex items-center justify-center gap-1">
+                            <span>👥</span> {currentStudentProgressNumber} / {activeStudentsCount}
+                        </span>
                     </div>
                 </div>
             </div>
-        );
-    }
 
-    // ── GAME PHASE ─────────────────────────────────────────────────────────────
-    if (phase === 'game') {
-        const accuracy = (correctCount + wrongCount) > 0
-            ? Math.round((correctCount / (correctCount + wrongCount)) * 100)
-            : 0;
-
-        return (
-            <div className="min-h-[calc(100vh-80px)] py-6 px-4 flex flex-col justify-center items-center">
-                <Confetti trigger={showCorrect} />
-                <WrongAnim trigger={showWrong} />
-
-                <div className="w-full max-w-5xl mx-auto space-y-4 my-auto flex flex-col justify-center animate-fade-in">
-                    {/* Top Bar Navigation: Orqaga (Sessiyani yakunlash) */}
-                    <div className="flex items-center justify-between px-2">
-                        <button
-                            type="button"
-                            onClick={() => { setIsPaused(true); setShowStopModal(true); }}
-                            className="inline-flex items-center justify-center px-4 rounded-2xl bg-white/10 hover:bg-white/20 text-white text-xs sm:text-sm font-black transition-all active:scale-95 border border-white/15 shadow-md hover:border-white/30"
-                            style={{ height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        >
-                            <ArrowLeft className="w-4 h-4 mr-1.5 shrink-0" />
-                            <span>Orqaga (Sessiyani yakunlash)</span>
-                        </button>
-                    </div>
-
-                    {/* Top Main Glass Card */}
-                    <div className="glass-card p-6 sm:p-10 relative overflow-hidden border border-white/15 rounded-3xl shadow-2xl backdrop-blur-2xl">
-                        {/* Top Section: Student Info (Left) & Live Score (Right) */}
-                        <div className="flex items-center justify-between gap-4 pb-6 border-b border-white/10">
-                            {/* Student Information (Top-Left) */}
-                            <div className="flex items-center gap-4">
-                                <div
-                                    className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center text-2xl sm:text-3xl font-black text-white shadow-lg shrink-0"
-                                    style={{ background: 'linear-gradient(135deg, #6366f1, #4f46e5)', boxShadow: '0 8px 25px rgba(99,102,241,0.4)' }}
-                                >
-                                    {currentStudent?.name?.charAt(0)?.toUpperCase() || '?'}
-                                </div>
-                                <div>
-                                    <h2 className="text-lg sm:text-2xl font-black text-white tracking-tight">{currentStudent?.name || "O'quvchi"}</h2>
-                                    <div className="flex items-center gap-2 mt-0.5">
-                                        <span className="text-xs font-bold text-indigo-300 bg-indigo-500/20 px-2.5 py-0.5 rounded-full border border-indigo-500/30 uppercase tracking-wider">
-                                            O'quvchi
-                                        </span>
-                                        {currentStudent?.warningCard && (
-                                            <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-400">
-                                                <AlertTriangle className="w-3.5 h-3.5" /> Ogohlantirish bor
-                                            </span>
-                                        )}
+            {/* ── SINF RO'YXATI (ROSTER ORDER) MODAL ── */}
+                {showRosterModal && (
+                    <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
+                        <div className="max-w-xl w-full p-6 rounded-3xl bg-[#0c1220] border border-white/10 shadow-2xl flex flex-col gap-4 max-h-[85vh] text-white">
+                            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="w-9 h-9 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                                        <Users className="w-5 h-5" />
                                     </div>
-                                </div>
-                            </div>
-
-                            {/* Live Score Panel (Top-Right) */}
-                            <div className="flex items-center gap-3 shrink-0">
-                                <div className="flex items-center gap-2.5 px-4 py-2 sm:px-5 sm:py-2.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 shadow-md">
-                                    <span className="text-lg sm:text-2xl font-black">✔</span>
-                                    <div className="text-left">
-                                        <div className="text-lg sm:text-2xl font-black leading-none">{correctCount}</div>
-                                        <div className="text-[9px] uppercase font-black text-emerald-400/70 tracking-wider">To'g'ri</div>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-2.5 px-4 py-2 sm:px-5 sm:py-2.5 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-400 shadow-md">
-                                    <span className="text-lg sm:text-2xl font-black">✖</span>
-                                    <div className="text-left">
-                                        <div className="text-lg sm:text-2xl font-black leading-none">{wrongCount}</div>
-                                        <div className="text-[9px] uppercase font-black text-red-400/70 tracking-wider">Noto'g'ri</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Center Content: Timer at Top Center, Vocabulary Word at Visual Center */}
-                        <div className="py-4 sm:py-6 flex flex-col items-center justify-center text-center space-y-4">
-                            {/* Compact Timer at Top-Center */}
-                            <CircularTimer
-                                timeLeft={timeLeft}
-                                total={timerDuration}
-                                isPaused={isPaused}
-                                onTogglePause={() => setIsPaused(p => !p)}
-                            />
-
-                            {/* Vocabulary Word Display */}
-                            {currentWord && (
-                                <div className="space-y-3 w-full max-w-4xl mx-auto flex flex-col items-center justify-center overflow-hidden px-2">
-                                    {/* EMOJI TO ATTRACT STUDENTS */}
-                                    {currentWord.emoji && (
-                                        <div className="transform hover:scale-110 transition-transform duration-300">
-                                            <span className="text-7xl sm:text-8xl md:text-9xl filter drop-shadow-[0_10px_35px_rgba(255,255,255,0.35)] select-none">
-                                                {currentWord.emoji}
-                                            </span>
-                                        </div>
-                                    )}
-
-                                    <div className="flex items-center justify-center gap-2 sm:gap-3 flex-wrap max-w-full">
-                                        <h1 className={`font-black text-white tracking-tight drop-shadow-[0_10px_40px_rgba(255,255,255,0.3)] break-words text-center leading-none ${
-                                            currentWord.englishWord.length > 25
-                                                ? 'text-3xl sm:text-4xl md:text-5xl'
-                                                : currentWord.englishWord.length > 15
-                                                ? 'text-4xl sm:text-5xl md:text-6xl'
-                                                : 'text-5xl sm:text-7xl md:text-8xl lg:text-9xl'
-                                        }`}>
-                                            {currentWord.englishWord}
-                                        </h1>
-                                        <button
-                                            type="button"
-                                            onClick={() => handleSpeak(currentWord.englishWord)}
-                                            className="p-2.5 sm:p-3 rounded-2xl bg-white/10 hover:bg-white/20 text-indigo-300 transition-all active:scale-95 shadow-xl hover:shadow-indigo-500/20 hover:text-white shrink-0"
-                                            title="Qayta o'qish"
-                                        >
-                                            <Volume2 className="w-5 h-5 sm:w-6 sm:h-6" />
-                                        </button>
-                                    </div>
-
-                                    {currentWord.phonetic && (
-                                        <p className="text-lg sm:text-xl text-indigo-300/80 font-semibold tracking-wide">
-                                            {currentWord.phonetic}
+                                    <div>
+                                        <h3 className="text-base sm:text-lg font-black text-white">
+                                            Sinf Ro'yxati (Roster Order)
+                                        </h3>
+                                        <p className="text-xs text-white/40">
+                                            {activeStudentsCount} ta o'quvchi • Tartib qat'iy saqlanadi
                                         </p>
-                                    )}
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setShowRosterModal(false)}
+                                    className="p-1.5 rounded-xl hover:bg-white/10 text-white/40 hover:text-white transition-colors cursor-pointer"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
 
-                                    {/* Uzbek Translation Box — Dynamic scaling to prevent overlap */}
-                                    <div className="pt-1 w-full flex flex-col items-center justify-center">
-                                        {showTranslation || timeLeft === 0 ? (
-                                            <div className="animate-fade-in py-1 max-w-full">
-                                                <p className={`font-black text-emerald-400 tracking-wide drop-shadow-[0_0_25px_rgba(16,185,129,0.5)] break-words text-center leading-tight ${
-                                                    currentWord.uzbekTranslation.length > 40
-                                                        ? 'text-xl sm:text-2xl md:text-3xl'
-                                                        : currentWord.uzbekTranslation.length > 20
-                                                        ? 'text-2xl sm:text-4xl md:text-5xl'
-                                                        : 'text-3xl sm:text-5xl md:text-6xl lg:text-7xl'
-                                                }`}>
-                                                    {currentWord.uzbekTranslation}
+                            <div className="space-y-2 overflow-y-auto custom-scrollbar max-h-[55vh] pr-1">
+                                {sessionParticipants.map((p, idx) => {
+                                    const isCurrent = currentStudent?._id === p.studentId;
+                                    return (
+                                        <div
+                                            key={p.studentId}
+                                            className={`p-3 rounded-2xl border flex items-center justify-between transition-all ${
+                                                isCurrent
+                                                    ? 'bg-indigo-600/20 border-indigo-500/60 shadow-lg shadow-indigo-600/20'
+                                                    : p.status === 'completed'
+                                                    ? 'bg-white/[0.03] border-white/10 opacity-75'
+                                                    : 'bg-white/[0.01] border-white/5'
+                                            }`}
+                                        >
+                                            <div className="flex items-center gap-3 min-w-0 pr-2">
+                                                <span className="w-6 text-center text-white/40 font-mono text-xs font-bold">
+                                                    {idx + 1}.
+                                                </span>
+                                                <div className="w-8 h-8 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center font-bold text-sm text-white shrink-0">
+                                                    {p.studentNameSnapshot?.charAt(0) || '?'}
+                                                </div>
+                                                <p className="font-bold text-sm text-white truncate">
+                                                    {p.studentNameSnapshot}
                                                 </p>
                                             </div>
-                                        ) : (
-                                            <div className="space-y-2 py-1 flex flex-col items-center">
-                                                <div className="text-2xl sm:text-3xl text-indigo-300/20 font-black tracking-widest select-none blur-sm">
-                                                    ••••••••••••
-                                                </div>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => { setShowTranslation(true); setTimerActive(false); }}
-                                                    className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-white/5 hover:bg-white/10 text-xs font-black text-indigo-300 border border-white/10 transition-all active:scale-95 shadow-md"
-                                                >
-                                                    <Eye className="w-4 h-4" /> Javobni ko'rsatish
-                                                </button>
+
+                                            <div className="shrink-0 flex items-center gap-2">
+                                                {isCurrent ? (
+                                                    <span className="px-2.5 py-1 rounded-lg bg-indigo-500 text-white font-black text-xs animate-pulse">
+                                                        Hozir Navbatda
+                                                    </span>
+                                                ) : p.status === 'completed' ? (
+                                                    <span className="px-2.5 py-1 rounded-lg bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 font-mono font-bold text-xs">
+                                                        {p.correctAnswers}/{p.questionsAsked} ({p.accuracy}%)
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-white/30 text-xs font-medium">
+                                                        Kutilmoqda
+                                                    </span>
+                                                )}
                                             </div>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
 
-                        {/* Action Buttons: ❌ Noto'g'ri | ⏸ Vaqtni to'xtatish | ✅ To'g'ri (Transforming in-place into Keyingi so'z) */}
-                        <div className="pt-6 border-t border-white/10">
-                            {submitting ? (
-                                <div className="flex items-center justify-center py-6">
-                                    <Loader2 className="w-8 h-8 animate-spin text-indigo-400" />
-                                    <span className="ml-3 text-white/70 font-black">Natija saqlanmoqda...</span>
-                                </div>
-                            ) : (
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
-                                    {/* 1. NOTO'G'RI (Red) OR TRANSFORMED INTO KEYINGI SO'Z */}
-                                    {answeredChoice === 'wrong' ? (
-                                        <button
-                                            type="button"
-                                            onClick={handleNextWord}
-                                            className="group py-6 px-8 rounded-2xl flex items-center justify-center gap-3 font-black text-xl text-white transition-all duration-300 active:scale-95 shadow-2xl shadow-red-500/50 ring-4 ring-red-500/40 animate-pulse scale-[1.02]"
-                                            style={{
-                                                background: 'linear-gradient(135deg, #ef4444, #dc2626)',
-                                                border: '2px solid rgba(239,68,68,0.8)',
-                                            }}
-                                        >
-                                            <span className="text-2xl">➡</span>
-                                            <span>Keyingi so'z</span>
-                                            <ChevronRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
-                                        </button>
-                                    ) : (
-                                        <button
-                                            type="button"
-                                            onClick={() => handleAnswer(false)}
-                                            disabled={answeredChoice !== null}
-                                            className={`group py-6 px-8 rounded-2xl flex items-center justify-center gap-3 font-black text-xl transition-all duration-200 active:scale-95 ${
-                                                answeredChoice !== null
-                                                    ? 'opacity-30 cursor-not-allowed border-red-500/20 text-red-400/40 bg-red-500/5'
-                                                    : 'hover:-translate-y-1 shadow-2xl hover:shadow-red-500/30 hover:brightness-110'
-                                            }`}
-                                            style={{
-                                                background: 'linear-gradient(135deg, rgba(239,68,68,0.35), rgba(239,68,68,0.12))',
-                                                border: '2px solid rgba(239,68,68,0.6)',
-                                                color: '#fca5a5',
-                                            }}
-                                        >
-                                            <XCircle className="w-8 h-8 text-red-400 group-hover:scale-110 transition-transform" />
-                                            <span>Noto'g'ri</span>
-                                        </button>
-                                    )}
-
-                                    {/* 2. VAQTNI TO'XTATISH (Pause / Resume Button) */}
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsPaused(p => !p)}
-                                        disabled={answeredChoice !== null}
-                                        className={`group py-6 px-8 rounded-2xl flex items-center justify-center gap-3 font-black text-xl transition-all duration-200 active:scale-95 ${
-                                            answeredChoice !== null
-                                                ? 'opacity-30 cursor-not-allowed border-amber-500/20 text-amber-400/40 bg-amber-500/5'
-                                                : isPaused
-                                                ? 'bg-amber-500 text-white border-amber-400 shadow-2xl shadow-amber-500/50 animate-pulse'
-                                                : 'hover:-translate-y-1 shadow-2xl hover:shadow-amber-500/30 hover:brightness-110'
-                                        }`}
-                                        style={{
-                                            background: isPaused
-                                                ? 'linear-gradient(135deg, #f59e0b, #d97706)'
-                                                : 'linear-gradient(135deg, rgba(245,158,11,0.35), rgba(245,158,11,0.12))',
-                                            border: '2px solid rgba(245,158,11,0.6)',
-                                            color: isPaused ? '#ffffff' : '#fcd34d',
-                                        }}
-                                    >
-                                        {isPaused ? <Play className="w-8 h-8 fill-current text-white" /> : <Pause className="w-8 h-8 fill-current text-amber-400" />}
-                                        <span>{isPaused ? 'Davom ettirish' : 'Vaqtni to\'xtatish'}</span>
-                                    </button>
-
-                                    {/* 3. TO'G'RI (Green) OR TRANSFORMED INTO KEYINGI SO'Z */}
-                                    {answeredChoice === 'correct' ? (
-                                        <button
-                                            type="button"
-                                            onClick={handleNextWord}
-                                            className="group py-6 px-8 rounded-2xl flex items-center justify-center gap-3 font-black text-xl text-white transition-all duration-300 active:scale-95 shadow-2xl shadow-emerald-500/50 ring-4 ring-emerald-500/40 animate-pulse scale-[1.02]"
-                                            style={{
-                                                background: 'linear-gradient(135deg, #10b981, #059669)',
-                                                border: '2px solid rgba(16,185,129,0.8)',
-                                            }}
-                                        >
-                                            <span className="text-2xl">➡</span>
-                                            <span>Keyingi so'z</span>
-                                            <ChevronRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
-                                        </button>
-                                    ) : (
-                                        <button
-                                            type="button"
-                                            onClick={() => handleAnswer(true)}
-                                            disabled={answeredChoice !== null}
-                                            className={`group py-6 px-8 rounded-2xl flex items-center justify-center gap-3 font-black text-xl transition-all duration-200 active:scale-95 ${
-                                                answeredChoice !== null
-                                                    ? 'opacity-30 cursor-not-allowed border-emerald-500/20 text-emerald-400/40 bg-emerald-500/5'
-                                                    : 'hover:-translate-y-1 shadow-2xl hover:shadow-emerald-500/30 hover:brightness-110'
-                                            }`}
-                                            style={{
-                                                background: 'linear-gradient(135deg, rgba(16,185,129,0.35), rgba(16,185,129,0.12))',
-                                                border: '2px solid rgba(16,185,129,0.6)',
-                                                color: '#6ee7b7',
-                                            }}
-                                        >
-                                            <CheckCircle2 className="w-8 h-8 text-emerald-400 group-hover:scale-110 transition-transform" />
-                                            <span>To'g'ri</span>
-                                        </button>
-                                    )}
-                                </div>
-                            )}
+                            <button
+                                onClick={() => setShowRosterModal(false)}
+                                className="w-full py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold text-xs transition-colors border border-white/5 cursor-pointer"
+                            >
+                                Yopish
+                            </button>
                         </div>
                     </div>
+                )}
 
-                    {/* Bottom Status Bar */}
-                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                        <div className="glass-card p-4 text-center rounded-2xl border border-white/10">
-                            <div className="text-[10px] uppercase font-black text-white/40 tracking-wider">Joriy So'z</div>
-                            <div className="text-xl font-black text-white mt-1">
-                                {currentWordIdx + 1} / {Math.min(questionsPerStudent, currentWords.length)}
-                            </div>
-                        </div>
-                        <div className="glass-card p-4 text-center rounded-2xl border border-white/10">
-                            <div className="text-[10px] uppercase font-black text-emerald-400/70 tracking-wider">Jami To'g'ri</div>
-                            <div className="text-xl font-black text-emerald-400 mt-1">✅ {correctCount}</div>
-                        </div>
-                        <div className="glass-card p-4 text-center rounded-2xl border border-white/10">
-                            <div className="text-[10px] uppercase font-black text-red-400/70 tracking-wider">Jami Noto'g'ri</div>
-                            <div className="text-xl font-black text-red-400 mt-1">❌ {wrongCount}</div>
-                        </div>
-                        <div className="glass-card p-4 text-center rounded-2xl border border-white/10">
-                            <div className="text-[10px] uppercase font-black text-indigo-400/70 tracking-wider">Aniqlik</div>
-                            <div className="text-xl font-black text-indigo-300 mt-1">🎯 {accuracy}%</div>
-                        </div>
-                        <div className="glass-card p-4 text-center rounded-2xl border border-white/10 col-span-2 sm:col-span-1">
-                            <div className="text-[10px] uppercase font-black text-white/40 tracking-wider">O'quvchi Progress</div>
-                            <div className="text-xl font-black text-white mt-1">
-                                👥 {currentStudentIndex + 1} / {totalStudents}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Stop Session Confirmation Modal */}
-                {showStopModal && (
-                    <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fade-in">
-                        <div className="glass-card max-w-md w-full p-6 sm:p-8 space-y-6 text-center border border-white/20 rounded-3xl shadow-2xl bg-slate-900/90">
-                            <div className="w-16 h-16 rounded-2xl bg-red-500/20 border border-red-500/40 flex items-center justify-center mx-auto text-red-400 shadow-lg">
-                                <Square className="w-8 h-8 fill-current" />
+                {/* ── QUICK ADD STUDENT MODAL (DURING ACTIVE GAME) ── */}
+                {showAddStudentModal && (
+                    <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
+                        <div className="max-w-md w-full p-6 rounded-3xl bg-slate-900 border border-slate-700 shadow-2xl flex flex-col gap-4 max-h-[85dvh] overflow-y-auto text-white">
+                            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                                <div>
+                                    <h3 className="text-lg font-black text-white flex items-center gap-2">
+                                        <UserPlus className="w-5 h-5 text-indigo-400" />
+                                        O'quvchi Qo'shish
+                                    </h3>
+                                    <p className="text-xs text-slate-400">Sessiya to'xtatilmasdan o'quvchi qo'shiladi</p>
+                                </div>
+                                <button onClick={() => setShowAddStudentModal(false)} className="text-slate-400 hover:text-white p-1">
+                                    ✕
+                                </button>
                             </div>
 
-                            <div className="space-y-2">
-                                <h3 className="text-2xl font-black text-white tracking-tight">O'yinni yakunlaysizmi?</h3>
-                                <p className="text-sm font-bold text-white/60">
-                                    O'yin davomida to'xtatildi. Natijalarni saqlaysizmi yoki saqlamasdan chiqqan ma'qulmi?
+                            {unjoinedMembers.length === 0 ? (
+                                <p className="text-xs text-center py-6 text-slate-400">
+                                    Guruhdagi barcha o'quvchilar allaqachon sessiyada qatnashmoqda!
                                 </p>
-                            </div>
+                            ) : (
+                                <div className="space-y-2">
+                                    {unjoinedMembers.map(st => (
+                                        <div key={st._id} className="flex items-center justify-between p-3 rounded-2xl bg-slate-800 border border-slate-700">
+                                            <div>
+                                                <p className="font-bold text-sm text-white">{st.name}</p>
+                                                {st.studentId && <span className="text-xs text-indigo-400 font-mono font-bold">{st.studentId}</span>}
+                                            </div>
+                                            <button
+                                                onClick={() => handleAddLateStudent(st)}
+                                                disabled={addingStudentId === st._id}
+                                                className="px-3.5 py-1.5 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-bold text-xs transition-all cursor-pointer"
+                                            >
+                                                {addingStudentId === st._id ? <Loader2 className="w-4 h-4 animate-spin" /> : '+ Qo\'shish'}
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
 
-                            <div className="space-y-3 pt-2">
-                                {/* Save & Finish */}
+                            <button
+                                onClick={() => setShowAddStudentModal(false)}
+                                className="w-full py-3 rounded-xl bg-slate-800 text-slate-300 font-bold text-xs hover:bg-slate-700 transition-all mt-2"
+                            >
+                                Yopish
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Stop / Confirm Modal */}
+                {showStopModal && (
+                    <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
+                        <div className="max-w-sm w-full p-6 rounded-3xl bg-slate-900 border border-slate-700 shadow-2xl flex flex-col gap-4 text-center">
+                            <h3 className="text-lg font-black text-white">Sessiyani yakunlamoqchimisiz?</h3>
+                            <p className="text-xs text-slate-300">
+                                Hozirgi o'quvchilar natijalari saqlanadi va xulosa sahifasiga o'tiladi.
+                            </p>
+                            <div className="grid grid-cols-2 gap-3 pt-2">
                                 <button
-                                    type="button"
-                                    onClick={() => {
-                                        setShowStopModal(false);
-                                        finishCurrentStudent(correctCount, wrongCount);
-                                    }}
-                                    className="w-full px-6 rounded-2xl font-black text-xs sm:text-sm text-white transition-all active:scale-95 shadow-lg shadow-indigo-500/30 hover:brightness-110"
-                                    style={{ height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #6366f1, #4f46e5)' }}
+                                    onClick={() => { setShowStopModal(false); setIsPaused(false); }}
+                                    className="py-3 rounded-xl bg-slate-800 text-slate-300 font-bold text-xs"
                                 >
-                                    <span className="mr-2">💾</span>
-                                    <span>Natijalarni saqlab yakunlash</span>
+                                    Bekor
                                 </button>
-
-                                {/* Discard & Quit */}
                                 <button
-                                    type="button"
                                     onClick={() => {
                                         setShowStopModal(false);
-                                        setPhase('setup');
+                                        loadSummary(sessionId);
+                                        setPhase('ceremony');
                                     }}
-                                    className="w-full px-6 rounded-2xl font-black text-xs sm:text-sm text-red-400 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 transition-all active:scale-95"
-                                    style={{ height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                    className="py-3 rounded-xl bg-rose-600 text-white font-black text-xs"
                                 >
-                                    <span className="mr-2">🗑️</span>
-                                    <span>Saqlamasdan chiqish</span>
-                                </button>
-
-                                {/* Cancel & Resume */}
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setShowStopModal(false);
-                                        setIsPaused(false);
-                                    }}
-                                    className="w-full px-6 rounded-2xl font-black text-xs text-white/50 hover:text-white hover:bg-white/5 transition-all"
-                                    style={{ height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                                >
-                                    <span>✕ Bekor qilish (O'yinni davom ettirish)</span>
+                                    Ha, yakunlash
                                 </button>
                             </div>
                         </div>
@@ -1354,126 +2182,114 @@ export default function VocabGamePage() {
         );
     }
 
-    // ── CEREMONY PHASE ─────────────────────────────────────────────────────────
-    if (phase === 'ceremony') {
-        if (!summary) {
-            return (
-                <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-slate-950">
-                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(99,102,241,0.15),transparent_70%)]" />
-                    <div className="relative z-10 flex flex-col items-center gap-6">
-                        <div className="w-16 h-16 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
-                        <h2 className="text-2xl font-black text-white tracking-widest uppercase animate-pulse">
-                            Natijalar hisoblanmoqda...
-                        </h2>
-                    </div>
-                </div>
-            );
-        }
-
-        const sortedResults = [...(summary.results || [])].sort((a, b) => (b.performanceScore || 0) - (a.performanceScore || 0));
-        const top3 = sortedResults.slice(0, 3);
-        const others = sortedResults.slice(3);
+    // ─── CEREMONY & SUMMARY PHASE (PART 14, 15, 16) ───────────────────────────
+    if (phase === 'ceremony' || phase === 'summary') {
+        const stats = summary?.stats;
+        const results: GameResult[] = summary?.results || [];
+        const difficultWords: DifficultWord[] = summary?.difficultWords || [];
 
         return (
-            <div className="min-h-screen relative overflow-hidden bg-slate-950 flex flex-col pt-12 pb-24 px-4 sm:px-6 z-0">
-                {/* Background Effects */}
-                <div className="absolute inset-0 bg-[url('/img/grid.svg')] opacity-10" />
-                <div className="absolute top-0 inset-x-0 h-[500px] bg-gradient-to-b from-indigo-500/20 via-purple-500/10 to-transparent blur-3xl pointer-events-none" />
-                <Confetti trigger={true} />
-                
-                {/* Main Header */}
-                <div className="relative z-10 text-center mb-16 animate-slide-down">
-                    <h1 className="text-5xl sm:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-br from-amber-200 via-amber-400 to-amber-600 drop-shadow-[0_0_25px_rgba(251,191,36,0.3)] uppercase tracking-tighter">
-                        🎉 Natijalar 🎉
-                    </h1>
-                    <p className="text-lg sm:text-xl font-bold text-indigo-300 mt-4 tracking-widest uppercase">
-                        Sessiya muvaffaqiyatli yakunlandi!
-                    </p>
-                </div>
+            <div ref={summaryRef} className="page-container flex flex-col gap-6 max-w-5xl mx-auto py-4 animate-fade-in">
+                {/* Summary Header */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 glass-card rounded-3xl border border-white/10">
+                    <div>
+                        <h1 className="text-2xl sm:text-3xl font-black text-white flex items-center gap-3">
+                            <Trophy className="w-7 h-7 text-amber-400" />
+                            Sessiya Yakunlandi!
+                        </h1>
+                        <p className="text-xs sm:text-sm text-white/50 font-medium mt-1">
+                            {summary?.session?.groupId?.name || 'Guruh'} • {new Date().toLocaleDateString('uz-UZ')}
+                        </p>
+                    </div>
 
-                {/* Podium Area */}
-                <div className="relative z-10 w-full max-w-4xl mx-auto flex flex-col justify-end items-center mb-24 min-h-[400px]">
-                    <div className="flex items-end justify-center gap-2 sm:gap-6 w-full px-2">
-                        
-                        {/* 2nd Place */}
-                        {top3[1] && (
-                            <div className="flex flex-col items-center animate-slide-up" style={{ animationDelay: '0.2s' }}>
-                                <div className="mb-4 text-center">
-                                    <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-200 rounded-full border-4 border-slate-300 shadow-[0_0_20px_rgba(203,213,225,0.4)] mx-auto flex items-center justify-center text-2xl mb-3 z-10 relative">
-                                        🥈
-                                    </div>
-                                    <div className="bg-slate-900/80 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-700">
-                                        <p className="text-white font-black text-xs sm:text-sm truncate w-24 sm:w-32">{top3[1].studentId.name}</p>
-                                        <p className="text-emerald-400 font-bold text-[10px]">{top3[1].performanceScore} Ball</p>
-                                    </div>
-                                </div>
-                                <div className="w-24 sm:w-32 h-32 sm:h-48 bg-gradient-to-t from-slate-800 to-slate-400/20 rounded-t-lg border-x border-t border-slate-400/30 flex items-start justify-center pt-4 relative overflow-hidden shadow-[0_-10px_30px_rgba(203,213,225,0.1)]">
-                                    <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.1)_50%,transparent_75%)] bg-[length:250%_250%] animate-shimmer" />
-                                    <span className="text-5xl sm:text-7xl font-black text-slate-300/40">2</span>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* 1st Place */}
-                        {top3[0] && (
-                            <div className="flex flex-col items-center animate-slide-up" style={{ animationDelay: '0.6s' }}>
-                                <div className="mb-4 text-center relative">
-                                    <div className="absolute -top-10 left-1/2 -translate-x-1/2 text-4xl animate-bounce">👑</div>
-                                    <div className="w-20 h-20 sm:w-28 sm:h-28 bg-amber-200 rounded-full border-4 border-amber-400 shadow-[0_0_30px_rgba(251,191,36,0.6)] mx-auto flex items-center justify-center text-4xl mb-3 z-10 relative">
-                                        🥇
-                                    </div>
-                                    <div className="bg-slate-900/90 backdrop-blur-md px-4 py-2 rounded-2xl border border-amber-500/50 shadow-[0_0_15px_rgba(251,191,36,0.2)]">
-                                        <p className="text-white font-black text-sm sm:text-base truncate w-28 sm:w-40">{top3[0].studentId.name}</p>
-                                        <p className="text-amber-400 font-black text-xs">{top3[0].performanceScore} Ball</p>
-                                    </div>
-                                </div>
-                                <div className="w-28 sm:w-40 h-40 sm:h-64 bg-gradient-to-t from-amber-900/50 to-amber-400/30 rounded-t-lg border-x border-t border-amber-400/50 flex items-start justify-center pt-6 relative overflow-hidden shadow-[0_-10px_40px_rgba(251,191,36,0.2)] z-0">
-                                    <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.2)_50%,transparent_75%)] bg-[length:250%_250%] animate-shimmer" />
-                                    <span className="text-7xl sm:text-9xl font-black text-amber-300/40">1</span>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* 3rd Place */}
-                        {top3[2] && (
-                            <div className="flex flex-col items-center animate-slide-up" style={{ animationDelay: '0.4s' }}>
-                                <div className="mb-4 text-center">
-                                    <div className="w-16 h-16 sm:w-20 sm:h-20 bg-amber-900/40 rounded-full border-4 border-amber-700 shadow-[0_0_20px_rgba(180,83,9,0.4)] mx-auto flex items-center justify-center text-2xl mb-3 z-10 relative">
-                                        🥉
-                                    </div>
-                                    <div className="bg-slate-900/80 backdrop-blur-md px-3 py-1.5 rounded-xl border border-amber-900/50">
-                                        <p className="text-white font-black text-xs sm:text-sm truncate w-24 sm:w-32">{top3[2].studentId.name}</p>
-                                        <p className="text-emerald-400 font-bold text-[10px]">{top3[2].performanceScore} Ball</p>
-                                    </div>
-                                </div>
-                                <div className="w-24 sm:w-32 h-24 sm:h-40 bg-gradient-to-t from-amber-950 to-amber-700/30 rounded-t-lg border-x border-t border-amber-700/50 flex items-start justify-center pt-4 relative overflow-hidden shadow-[0_-10px_30px_rgba(180,83,9,0.1)]">
-                                    <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.05)_50%,transparent_75%)] bg-[length:250%_250%] animate-shimmer" />
-                                    <span className="text-5xl sm:text-7xl font-black text-amber-700/40">3</span>
-                                </div>
-                            </div>
-                        )}
-
+                    <div className="flex items-center gap-2 flex-wrap no-export">
+                        <button
+                            onClick={exportSummaryImage}
+                            disabled={exportingImage}
+                            className="px-4 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm flex items-center gap-2 transition-all shadow-md cursor-pointer disabled:opacity-50"
+                        >
+                            {exportingImage ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
+                            <span>Rasmni saqlash</span>
+                        </button>
+                        <button
+                            onClick={() => {
+                                if (summary?.session?.groupId?.telegramChatId && !telegramChatId) {
+                                    setTelegramChatId(summary.session.groupId.telegramChatId);
+                                }
+                                if (summary?.telegramMessage && !telegramEditableText) {
+                                    setTelegramEditableText(summary.telegramMessage);
+                                }
+                                setShowTelegramModal(true);
+                            }}
+                            className="px-4 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs sm:text-sm flex items-center gap-2 transition-all shadow-lg shadow-indigo-600/30 cursor-pointer"
+                        >
+                            <Send className="w-4 h-4" />
+                            <span>Telegramga Jo'natish</span>
+                        </button>
+                        <button
+                            onClick={copyTelegram}
+                            className="px-3 py-2.5 rounded-2xl bg-white/5 hover:bg-white/10 text-white font-bold text-xs sm:text-sm border border-white/10 transition-all cursor-pointer flex items-center gap-1.5"
+                            title="Matnni nusxalash"
+                        >
+                            {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4 text-white/60" />}
+                            <span>{copied ? 'Nusxalandi' : 'Matn'}</span>
+                        </button>
+                        <button
+                            onClick={() => { setPhase('setup'); setSelectedGroup(''); setSelectedUnitIds([]); }}
+                            className="px-4 py-2.5 rounded-2xl bg-white/5 hover:bg-white/10 text-white font-bold text-xs sm:text-sm border border-white/10 transition-all cursor-pointer"
+                        >
+                            Yangi Sessiya
+                        </button>
                     </div>
                 </div>
 
-                {/* Others List */}
-                {others.length > 0 && (
-                    <div className="relative z-10 w-full max-w-2xl mx-auto space-y-3 animate-fade-in" style={{ animationDelay: '1s', animationFillMode: 'both' }}>
-                        <h3 className="text-sm font-black text-indigo-300/50 uppercase tracking-widest text-center mb-4">Qolgan O'quvchilar</h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            {others.map((r, i) => (
-                                <div key={r._id || i} className="bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center justify-between hover:bg-white/10 transition-colors backdrop-blur-sm">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center font-black text-white/50 text-xs border border-white/5">
-                                            {i + 4}
+                {/* Overall Stats Cards */}
+                {stats && (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                        <div className="p-4 sm:p-5 rounded-2xl glass-card border border-white/10 text-center">
+                            <p className="text-[11px] font-bold text-white/50 uppercase tracking-wider">O'quvchilar</p>
+                            <p className="text-2xl sm:text-3xl font-black text-white mt-1">{stats.totalStudents}</p>
+                        </div>
+                        <div className="p-4 sm:p-5 rounded-2xl glass-card border border-white/10 text-center">
+                            <p className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Jami Savollar</p>
+                            <p className="text-2xl sm:text-3xl font-black text-white mt-1">{stats.totalQuestions}</p>
+                        </div>
+                        <div className="p-4 sm:p-5 rounded-2xl glass-card border border-white/10 text-center">
+                            <p className="text-[11px] font-bold text-white/50 uppercase tracking-wider">To'g'ri / Noto'g'ri</p>
+                            <p className="text-xl sm:text-2xl font-black text-emerald-400 mt-1">
+                                {stats.totalCorrect} <span className="text-white/30 text-sm">/</span> <span className="text-rose-400 text-xl sm:text-2xl">{stats.totalWrong}</span>
+                            </p>
+                        </div>
+                        <div className="p-4 sm:p-5 rounded-2xl glass-card border border-white/10 text-center">
+                            <p className="text-[11px] font-bold text-white/50 uppercase tracking-wider">Umumiy Aniqlik</p>
+                            <p className="text-2xl sm:text-3xl font-black text-indigo-400 mt-1">{stats.avgAccuracy}%</p>
+                        </div>
+                    </div>
+                )}
+
+                {/* ── MOST DIFFICULT WORDS (PART 15) ── */}
+                {difficultWords.length > 0 && (
+                    <div className="glass-card p-6 rounded-3xl border border-white/10 space-y-4">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
+                                <AlertTriangle className="w-5 h-5 text-rose-400" />
+                                Eng Ko'p Xato Qilingan So'zlar (Most Difficult Words)
+                            </h3>
+                            <span className="text-xs text-white/40">Qayta takrorlash tavsiya etiladi</span>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                            {difficultWords.slice(0, 6).map((dw, i) => (
+                                <div key={i} className="p-3.5 rounded-2xl bg-white/5 border border-white/10 flex flex-col justify-between gap-2">
+                                    <div>
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-base font-black text-white">{dw.englishWord}</span>
+                                            <span className="text-xs font-black text-rose-400 font-mono">{dw.accuracy}% to'g'ri</span>
                                         </div>
-                                        <div>
-                                            <p className="text-white font-bold text-sm">{r.studentId.name}</p>
-                                            <p className="text-emerald-400/70 text-[10px] font-black">{r.accuracy}% Aniqlik</p>
-                                        </div>
+                                        <p className="text-xs text-white/60 font-medium mt-0.5">{dw.uzbekTranslation}</p>
                                     </div>
-                                    <div className="text-right">
-                                        <p className="text-indigo-300 font-black text-sm">{r.performanceScore} Ball</p>
+                                    <div className="text-[11px] text-white/40 font-bold">
+                                        {dw.wrongCount} ta xato / {dw.totalAsked} ta so'ralgan
                                     </div>
                                 </div>
                             ))}
@@ -1481,244 +2297,341 @@ export default function VocabGamePage() {
                     </div>
                 )}
 
-                {/* Bottom Actions Fixed */}
-                <div className="fixed bottom-0 inset-x-0 p-4 sm:p-6 bg-gradient-to-t from-slate-950 via-slate-950 to-transparent z-50 flex justify-center gap-4 animate-slide-up" style={{ animationDelay: '1.2s', animationFillMode: 'both' }}>
-                    <button
-                        onClick={() => setPhase('summary')}
-                        className="px-6 py-4 rounded-2xl font-black text-white shadow-xl shadow-indigo-500/20 hover:scale-105 transition-all flex items-center gap-3 bg-indigo-500"
-                    >
-                        <span>📊</span> To'liq Statistikani Ko'rish
-                    </button>
-                    <button
-                        onClick={() => {
-                            copyTelegram();
-                            setPhase('summary');
-                        }}
-                        className="px-6 py-4 rounded-2xl font-black text-white shadow-xl shadow-sky-500/20 hover:scale-105 transition-all flex items-center gap-3 bg-sky-500"
-                    >
-                        <span>✈️</span> Telegramga Yuborish
-                    </button>
-                </div>
-            </div>
-        );
-    }
-
-    // ── SUMMARY PHASE ──────────────────────────────────────────────────────────
-    if (phase === 'summary') {
-        return (
-            <div className="min-h-screen py-8 px-4">
-                <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
-                    {/* Header */}
+                {/* ── INDIVIDUAL STUDENT DETAILED RESULTS (PART 13, 14, 16) ── */}
+                <div className="glass-card p-6 rounded-3xl border border-white/10 space-y-4">
                     <div className="flex items-center justify-between">
-                        <div>
-                            <h1 className="text-3xl font-black text-white flex items-center gap-3">
-                                <Trophy className="w-8 h-8 text-amber-400" /> Sessiya Natijalari
-                            </h1>
-                            <p className="text-white/40 text-sm font-bold mt-1">Barcha o'quvchilar tugatdi</p>
-                        </div>
-                        <button
-                            onClick={() => { setPhase('setup'); setSummary(null); }}
-                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black transition-all"
-                            style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.3)', color: '#a5b4fc' }}
-                        >
-                            <RefreshCw className="w-4 h-4" /> Yangi Sessiya
-                        </button>
+                        <h3 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
+                            <Users className="w-5 h-5 text-indigo-400" />
+                            O'quvchilar Natijalari (Roster Order)
+                        </h3>
+                        <span className="text-xs text-white/40">O'quvchilar ballini to'g'irlash uchun "Tahrirlash" tugmasini bosing</span>
                     </div>
 
-                    {(noSave || summary?.session?.noSave) && (
-                        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/25 text-amber-400 text-xs font-black flex items-center gap-2.5 shadow-sm">
-                            <span className="text-base">🚫</span>
-                            <span>No-Save Rejimi: Ushbu sessiya natijalari va o'quvchilar ogohlantirishlari tarixga saqlanmadi.</span>
-                        </div>
-                    )}
+                    <div className="space-y-3">
+                        {results.map((r, i) => {
+                            const isEditing = editingResultId === r._id;
 
-                    {loadingSummary ? (
-                        <div className="flex justify-center py-20">
-                            <Loader2 className="w-10 h-10 text-indigo-500 animate-spin" />
-                        </div>
-                    ) : summary ? (
-                        <>
-                            {/* Stats Overview */}
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                {[
-                                    { label: "O'rtacha ball", value: `${summary.stats.avgScore}`, icon: Target, color: 'indigo' },
-                                    { label: 'Eng yuqori', value: `${summary.stats.highestScore}`, icon: Star, color: 'amber' },
-                                    { label: 'Eng past', value: `${summary.stats.lowestScore}`, icon: TrendingUp, color: 'rose' },
-                                    { label: 'Ogohlantirish', value: `${summary.stats.warningCardCount}`, icon: AlertTriangle, color: 'orange' },
-                                ].map((s, i) => (
-                                    <div key={i} className="glass-card p-5 text-center space-y-2">
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-white/30">{s.label}</p>
-                                        <p className="text-3xl font-black text-white">{s.value}</p>
-                                    </div>
-                                ))}
-                            </div>
+                            return (
+                                <div key={r._id || i} className="p-4 sm:p-5 rounded-2xl bg-white/5 border border-white/10 space-y-3">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-xl bg-indigo-500/20 text-indigo-300 font-black flex items-center justify-center">
+                                                {i + 1}
+                                            </div>
+                                            <div>
+                                                <h4 className="text-base font-black text-white">{r.studentId?.name}</h4>
+                                                {r.studentId?.studentId && (
+                                                    <span className="text-xs font-mono font-bold text-indigo-400">{r.studentId.studentId}</span>
+                                                )}
+                                            </div>
+                                        </div>
 
-                            <div className="grid md:grid-cols-2 gap-6">
-                                {/* Leaderboard */}
-                                <div className="glass-card p-6 space-y-4">
-                                    <h3 className="text-sm font-black uppercase tracking-widest text-white/60 flex items-center gap-2">
-                                        <Medal className="w-4 h-4 text-amber-400" /> Reyting
-                                    </h3>
-                                    <div className="space-y-3">
-                                        {summary.results.map((r: GameResult, i: number) => {
-                                            const medals = ['🥇', '🥈', '🥉'];
-                                            const medal = medals[i] || `${i + 1}.`;
-                                            return (
-                                                <div
-                                                    key={i}
-                                                    className="flex items-center gap-4 p-3 rounded-xl transition-all"
-                                                    style={{
-                                                        background: i < 3 ? 'rgba(245,158,11,0.06)' : 'rgba(255,255,255,0.02)',
-                                                        border: `1px solid ${i < 3 ? 'rgba(245,158,11,0.15)' : 'rgba(255,255,255,0.05)'}`,
-                                                    }}
-                                                >
-                                                    <span className="text-xl w-8 text-center">{medal}</span>
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="font-black text-white text-sm truncate">
-                                                            {r.studentId?.name}
-                                                            {r.warningCard && <span className="ml-2 text-amber-400 text-xs">⚠️</span>}
-                                                        </p>
-                                                        {/* Progress bar */}
-                                                        <div className="mt-1 h-1.5 rounded-full bg-white/10">
-                                                            <div
-                                                                className="h-1.5 rounded-full bg-emerald-500 transition-all duration-700"
-                                                                style={{ width: `${r.accuracy}%` }}
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                    <div className="text-right shrink-0">
-                                                        <p className="font-black text-emerald-400">{r.correctCount} ✅</p>
-                                                        <p className="text-[10px] text-white/30">{r.accuracy}%</p>
-                                                    </div>
+                                        <div className="flex items-center gap-3">
+                                            {isEditing ? (
+                                                <div className="flex items-center gap-2 bg-slate-900/90 p-2 rounded-xl border border-indigo-500/50">
+                                                    <span className="text-xs text-white/50">To'g'ri:</span>
+                                                    <input
+                                                        type="number"
+                                                        min={0}
+                                                        max={editTotal}
+                                                        value={editCorrect}
+                                                        onChange={(e) => setEditCorrect(Number(e.target.value))}
+                                                        className="w-12 px-2 py-1 rounded-lg bg-white/10 border border-white/20 text-white font-mono font-bold text-xs text-center"
+                                                    />
+                                                    <span className="text-xs text-white/50">/ Jami:</span>
+                                                    <input
+                                                        type="number"
+                                                        min={1}
+                                                        max={50}
+                                                        value={editTotal}
+                                                        onChange={(e) => setEditTotal(Number(e.target.value))}
+                                                        className="w-12 px-2 py-1 rounded-lg bg-white/10 border border-white/20 text-white font-mono font-bold text-xs text-center"
+                                                    />
+                                                    <button
+                                                        onClick={() => {
+                                                            if (r._id) {
+                                                                handleSaveStudentScore(r._id);
+                                                            }
+                                                        }}
+                                                        disabled={savingEdit || !r._id}
+                                                        className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                                                    >
+                                                        {savingEdit ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                                                        Saqlash
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setEditingResultId(null)}
+                                                        className="px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs cursor-pointer"
+                                                    >
+                                                        Bekor
+                                                    </button>
                                                 </div>
-                                            );
-                                        })}
+                                            ) : (
+                                                <>
+                                                    <span className="text-sm font-black text-white">{r.correctCount} / {r.questionsAsked}</span>
+                                                    <span className="px-3 py-1 rounded-xl bg-indigo-500/20 text-indigo-300 font-mono font-black text-xs border border-indigo-500/30">
+                                                        {r.accuracy}%
+                                                    </span>
+                                                    {r._id && (
+                                                        <button
+                                                            onClick={() => {
+                                                                setEditingResultId(r._id || null);
+                                                                setEditCorrect(r.correctCount || 0);
+                                                                setEditTotal(r.questionsAsked || 6);
+                                                            }}
+                                                            className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/50 hover:text-white transition-colors cursor-pointer no-export"
+                                                            title="Natijani tahrirlash"
+                                                        >
+                                                            <Edit2 className="w-4 h-4" />
+                                                        </button>
+                                                    )}
+                                                </>
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
 
-                                {/* Charts */}
-                                <div className="space-y-4">
-                                    <div className="glass-card p-6 space-y-4">
-                                        <h3 className="text-sm font-black uppercase tracking-widest text-white/60 flex items-center gap-2">
-                                            <PieIcon className="w-4 h-4 text-indigo-400" /> O'tish / O'tmaslik
-                                        </h3>
-                                        <SimplePieChart pass={summary.stats.passCount} fail={summary.stats.failCount} />
+                                {/* Correct vs Weak Words Breakdown */}
+                                <div className="pt-2 border-t border-white/5">
+                                    <div className="flex items-center justify-between gap-2 mb-2">
+                                        <span className="text-[10px] text-white/40 italic">
+                                            💡 So'z ustiga bosing — uni to'g'ri yoki xatoga almashtiradi (hisobot avtomatik yangilanadi)
+                                        </span>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                                        {/* Correct Words */}
+                                        <div>
+                                            <p className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider mb-1.5">
+                                                ✓ To'g'ri topilgan so'zlar ({r.correctWords?.length || 0}):
+                                            </p>
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {r.correctWords && r.correctWords.length > 0 ? (
+                                                    r.correctWords.map((cw, ci) => {
+                                                        const isToggling = togglingWordKey === `${r._id}_${cw.englishWord}`;
+                                                        return (
+                                                            <button
+                                                                key={ci}
+                                                                type="button"
+                                                                onClick={() => r._id && handleToggleWord(r._id, cw.englishWord, 'correct')}
+                                                                disabled={isToggling}
+                                                                title="Ustiga bosing: Xatoga o'tkazish"
+                                                                className="group flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 hover:bg-rose-500/20 text-emerald-300 hover:text-rose-300 border border-emerald-500/20 hover:border-rose-500/40 transition-all cursor-pointer font-medium active:scale-95 disabled:opacity-50"
+                                                            >
+                                                                <span>{cw.englishWord}</span>
+                                                                {isToggling ? (
+                                                                    <Loader2 className="w-3 h-3 animate-spin text-emerald-400" />
+                                                                ) : (
+                                                                    <span className="text-[10px] opacity-40 group-hover:opacity-100 group-hover:text-rose-400 font-bold transition-opacity">➔ ✕</span>
+                                                                )}
+                                                            </button>
+                                                        );
+                                                    })
+                                                ) : (
+                                                    <span className="text-white/30 italic">Yo'q</span>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Weak Words (Needs Practice) */}
+                                        <div>
+                                            <p className="text-[11px] font-bold text-rose-400 uppercase tracking-wider mb-1.5">
+                                                ✕ Mashq qilish kerak (Xatolar) ({r.wrongWords?.length || 0}):
+                                            </p>
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {r.wrongWords && r.wrongWords.length > 0 ? (
+                                                    r.wrongWords.map((ww, wi) => {
+                                                        const isToggling = togglingWordKey === `${r._id}_${ww.englishWord}`;
+                                                        return (
+                                                            <button
+                                                                key={wi}
+                                                                type="button"
+                                                                onClick={() => r._id && handleToggleWord(r._id, ww.englishWord, 'wrong')}
+                                                                disabled={isToggling}
+                                                                title="Ustiga bosing: To'g'riga o'tkazish"
+                                                                className="group flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-emerald-500/20 text-rose-300 hover:text-emerald-300 border border-rose-500/20 hover:border-emerald-500/40 transition-all cursor-pointer font-medium active:scale-95 disabled:opacity-50"
+                                                            >
+                                                                <span>{ww.englishWord}</span>
+                                                                {isToggling ? (
+                                                                    <Loader2 className="w-3 h-3 animate-spin text-rose-400" />
+                                                                ) : (
+                                                                    <span className="text-[10px] opacity-40 group-hover:opacity-100 group-hover:text-emerald-400 font-bold transition-opacity">➔ ✓</span>
+                                                                )}
+                                                            </button>
+                                                        );
+                                                    })
+                                                ) : (
+                                                    <span className="text-white/30 italic">Xato yo'q (A'lo!)</span>
+                                                )}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
+                                );
+                            })}
+                        </div>
+                </div>
 
-                            {/* Bar Chart */}
-                            <div className="glass-card p-6 space-y-4">
-                                <h3 className="text-sm font-black uppercase tracking-widest text-white/60 flex items-center gap-2">
-                                    <BarChart3 className="w-4 h-4 text-indigo-400" /> Natijalar Taqqoslamasi
-                                </h3>
-                                <SimpleBarChart data={summary.barChartData || []} />
-                            </div>
-
-                            {/* Warning Cards */}
-                            {summary.stats.warningCardCount > 0 && (
-                                <div
-                                    className="glass-card p-6 border-amber-500/30 space-y-3"
-                                    style={{ borderColor: 'rgba(245,158,11,0.3)' }}
+                {/* ── Telegram Send Modal ── */}
+                {showTelegramModal && (
+                    <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in">
+                        <div className="max-w-xl w-full p-6 sm:p-7 rounded-3xl bg-slate-900 border border-slate-700 shadow-2xl flex flex-col gap-5">
+                            {/* Modal Header */}
+                            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                                        <Send className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-lg font-black text-white">Telegram Guruhiga Jo'natish</h3>
+                                        <p className="text-xs text-white/50">Hisobotni guruh o'quvchilariga yetkazish</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setShowTelegramModal(false)}
+                                    className="p-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-all cursor-pointer"
                                 >
-                                    <h3 className="text-sm font-black uppercase tracking-widest text-amber-400 flex items-center gap-2">
-                                        <AlertTriangle className="w-4 h-4" /> Ogohlantirish Kartasi Berildi
-                                    </h3>
-                                    <div className="flex flex-wrap gap-2">
-                                        {summary.results.filter((r: GameResult) => r.warningCard).map((r: GameResult, i: number) => (
-                                            <span key={i} className="px-3 py-1.5 rounded-xl text-xs font-black text-amber-400 bg-amber-400/10 border border-amber-400/20">
-                                                ⚠️ {r.studentId?.name}
-                                            </span>
-                                        ))}
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+
+                            {/* Telegram Chat ID */}
+                            <div className="space-y-1.5">
+                                <label className="text-[11px] font-black uppercase tracking-wider text-indigo-400">
+                                    Telegram Guruh Chat ID (Ixtiyoriy / Almashtirish)
+                                </label>
+                                <input
+                                    type="text"
+                                    value={telegramChatId}
+                                    onChange={(e) => setTelegramChatId(e.target.value)}
+                                    placeholder="-1001234567890 yoki @guruh_nomi"
+                                    className="w-full h-12 px-4 rounded-[6px] bg-[#060a14] border-2 border-indigo-500/40 hover:border-indigo-400/70 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/30 text-white font-mono text-sm sm:text-base placeholder:text-white/30 transition-all shadow-md shadow-black/50 outline-none"
+                                    style={{ borderRadius: '6px' }}
+                                />
+                                <p className="text-[10px] text-white/40">
+                                    Ushbu sessiya guruhi uchun belgilangan ID avtomatik qo'yildi. Agar kerak bo'lsa uni o'zgartirishingiz mumkin.
+                                </p>
+                            </div>
+
+                            {/* Send Type Selector */}
+                            <div className="space-y-2">
+                                <label className="text-[11px] font-black uppercase tracking-wider text-indigo-400">
+                                    Jo'natish Turi
+                                </label>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {[
+                                        { id: 'both', label: '✨ Ikkalasi ham', desc: 'Rasm + Matn' },
+                                        { id: 'image', label: '🖼️ Faqat Rasm', desc: 'Infografika PNG' },
+                                        { id: 'text', label: '📝 Faqat Matn', desc: 'Hisobot matni' },
+                                    ].map(opt => (
+                                        <button
+                                            key={opt.id}
+                                            type="button"
+                                            onClick={() => setTelegramSendType(opt.id as any)}
+                                            className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                                                telegramSendType === opt.id
+                                                    ? 'bg-indigo-600/20 border-indigo-500 text-white shadow-md shadow-indigo-600/20'
+                                                    : 'bg-white/5 border-white/10 text-white/60 hover:bg-white/10'
+                                            }`}
+                                        >
+                                            <p className="text-xs font-black">{opt.label}</p>
+                                            <p className="text-[10px] text-white/40 mt-0.5">{opt.desc}</p>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Editable Message Textarea */}
+                            {(telegramSendType === 'text' || telegramSendType === 'both') && (
+                                <div className="space-y-1.5">
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-[11px] font-black uppercase tracking-wider text-indigo-400">
+                                            Xabar Matni (Tahrirlash mumkin)
+                                        </label>
+                                        <span className="text-[10px] text-white/40">
+                                            {telegramEditableText.length} belgi
+                                        </span>
                                     </div>
-                                    <p className="text-xs text-white/40">Bu o'quvchilar 0 ta to'g'ri javob berdi. Keyingi darsga lug'atlarni yaxshiroq tayyorlab kelishlarini eslatib qo'ying.</p>
+                                    <textarea
+                                        rows={6}
+                                        value={telegramEditableText}
+                                        onChange={(e) => setTelegramEditableText(e.target.value)}
+                                        className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white font-mono text-xs focus:outline-none focus:border-indigo-500 transition-all resize-y custom-scrollbar leading-relaxed"
+                                    />
                                 </div>
                             )}
 
-                            {/* Telegram Section */}
-                            <div className="glass-card p-6 space-y-4">
-                                <h3 className="text-sm font-black uppercase tracking-widest text-white/60 flex items-center gap-2">
-                                    <Send className="w-4 h-4 text-blue-400" /> Telegram Xabari
-                                </h3>
-                                <pre className="text-xs text-white/60 whitespace-pre-wrap font-mono bg-white/5 rounded-xl p-4 leading-relaxed border border-white/5">
-                                    {summary.telegramMessage}
-                                </pre>
+                            {/* Actions */}
+                            <div className="flex items-center justify-end gap-3 pt-2 border-t border-white/10">
                                 <button
-                                    onClick={copyTelegram}
-                                    className="w-full flex items-center justify-center gap-3 py-3.5 rounded-xl font-black text-sm transition-all"
-                                    style={{
-                                        background: copied ? 'rgba(16,185,129,0.15)' : 'rgba(59,130,246,0.12)',
-                                        border: `1px solid ${copied ? 'rgba(16,185,129,0.4)' : 'rgba(59,130,246,0.35)'}`,
-                                        color: copied ? '#34d399' : '#60a5fa',
-                                    }}
+                                    type="button"
+                                    onClick={() => setShowTelegramModal(false)}
+                                    className="px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white font-bold text-xs transition-all cursor-pointer"
                                 >
-                                    {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                                    {copied ? 'Nusxalandi!' : 'Telegram uchun nusxalash'}
+                                    Bekor qilish
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleSendTelegram}
+                                    disabled={sendingTelegram || !telegramChatId.trim()}
+                                    className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 transition-all shadow-lg shadow-indigo-600/30 disabled:opacity-50 cursor-pointer"
+                                >
+                                    {sendingTelegram ? (
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                        <Send className="w-4 h-4" />
+                                    )}
+                                    <span>Guruhga Jo'natish</span>
                                 </button>
                             </div>
-                        </>
-                    ) : (
-                        <p className="text-center text-white/40">Natijalar yuklanmadi</p>
-                    )}
-                </div>
+                        </div>
+                    </div>
+                )}
             </div>
         );
     }
 
-    // ── HISTORY PHASE ──────────────────────────────────────────────────────────
+    // ─── HISTORY PHASE ────────────────────────────────────────────────────────
     return (
-        <div className="min-h-screen py-8 px-4">
-            <div className="max-w-3xl mx-auto space-y-6 animate-fade-in">
-                <div className="flex items-center gap-4">
-                    <button onClick={() => setPhase('setup')} className="p-2 rounded-xl hover:bg-white/10 transition-all text-white/60 hover:text-white">
-                        <ArrowLeft className="w-5 h-5" />
-                    </button>
-                    <div>
-                        <h1 className="text-2xl font-black text-white">Sessiya Tarixi</h1>
-                        <p className="text-white/40 text-sm">O'tgan lug'at sessiyalari</p>
-                    </div>
+        <div className="page-container flex flex-col gap-6 max-w-5xl mx-auto py-4 animate-fade-in">
+            <div className="flex items-center justify-between p-6 glass-card rounded-3xl border border-white/10">
+                <div>
+                    <h1 className="text-2xl font-black text-white">Sessiyalar Tarixi</h1>
+                    <p className="text-xs text-white/50">Avvalgi o'tkazilgan live lug'at sessiyalari</p>
                 </div>
-
-                {loadingHistory ? (
-                    <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-indigo-500" /></div>
-                ) : history.length === 0 ? (
-                    <div className="glass-card p-16 text-center">
-                        <BookOpen className="w-12 h-12 text-white/20 mx-auto mb-4" />
-                        <p className="text-white/40 font-bold">Hali hech qanday sessiya o'tkazilmagan</p>
-                    </div>
-                ) : (
-                    <div className="space-y-3">
-                        {history.map((s: any) => (
-                            <button
-                                key={s._id}
-                                onClick={() => { loadSummary(s._id); setPhase('summary'); setSessionId(s._id); }}
-                                className="w-full glass-card p-5 flex items-center gap-4 text-left hover:-translate-y-0.5 transition-all"
-                            >
-                                <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0">
-                                    <Trophy className="w-6 h-6 text-indigo-400" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="font-black text-white">{s.groupId?.name || 'Guruh'}</p>
-                                    <p className="text-xs text-white/40 mt-0.5">
-                                        {Array.isArray(s.unitIds) && s.unitIds.length > 0
-                                            ? s.unitIds.map((u: any) => u.title || 'Unit').join(', ')
-                                            : (s.unitId?.title || 'Unit')} · {s.questionsPerStudent} ta savol
-                                    </p>
-                                </div>
-                                <div className="text-right shrink-0">
-                                    <p className="text-xs font-black text-white/40">{new Date(s.createdAt).toLocaleDateString()}</p>
-                                    <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-lg mt-1 inline-block ${
-                                        s.status === 'ENDED' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-indigo-500/10 text-indigo-400'
-                                    }`}>
-                                        {s.status === 'ENDED' ? 'Tugatildi' : 'Faol'}
-                                    </span>
-                                </div>
-                                <ChevronRight className="w-5 h-5 text-white/20 shrink-0" />
-                            </button>
-                        ))}
-                    </div>
-                )}
+                <button
+                    onClick={() => setPhase('setup')}
+                    className="px-4 py-2 rounded-2xl bg-indigo-500 hover:bg-indigo-600 text-white font-bold text-xs"
+                >
+                    Orqaga
+                </button>
             </div>
+
+            {loadingHistory ? (
+                <div className="py-20 flex justify-center">
+                    <Loader2 className="w-8 h-8 animate-spin text-indigo-400" />
+                </div>
+            ) : history.length === 0 ? (
+                <div className="py-16 text-center text-white/40">
+                    Hozircha hech qanday sessiya tarixi mavjud emas
+                </div>
+            ) : (
+                <div className="space-y-3">
+                    {history.map(s => (
+                        <div key={s._id} className="p-5 rounded-2xl glass-card border border-white/10 flex items-center justify-between">
+                            <div>
+                                <h3 className="font-black text-white">{s.groupId?.name || 'Guruh'}</h3>
+                                <p className="text-xs text-white/50">{new Date(s.createdAt).toLocaleString('uz-UZ')}</p>
+                            </div>
+                            <button
+                                onClick={() => { loadSummary(s._id); setPhase('summary'); }}
+                                className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold text-xs border border-white/10"
+                            >
+                                Xulosani ko'rish
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 }

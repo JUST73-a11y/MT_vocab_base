@@ -7,7 +7,36 @@ import { useAuth } from '@/lib/auth/AuthContext';
 import { getWordsByUnits, getTodaySession, createSession, updateSession, updateUserWordCount, getRandomTeacherSettings, getUnits } from '@/lib/firestore';
 import { Word, Unit } from '@/lib/types';
 import { getRandomWord, getBalancedExclusions } from '@/lib/randomEngine';
-import { ArrowLeft, SkipForward, Loader2, Play, Volume2, Timer, FolderOpen, Headphones, Settings2, Eye, EyeOff, Languages } from 'lucide-react';
+import { ArrowLeft, SkipForward, Loader2, Play, Volume2, Timer, FolderOpen, Headphones, Settings2, Eye, EyeOff, Languages, Search, ChevronRight, Check, X } from 'lucide-react';
+
+// ─── Types ─────────────────────────────────────────────────────────────
+interface CategoryNode {
+    _id: string;
+    name: string;
+    parentId?: string | null;
+    children?: CategoryNode[];
+}
+
+function findNodeInTree(nodes: CategoryNode[], id: string): CategoryNode | null {
+    for (const n of nodes) {
+        if (n._id === id) return n;
+        if (n.children && n.children.length > 0) {
+            const found = findNodeInTree(n.children, id);
+            if (found) return found;
+        }
+    }
+    return null;
+}
+
+function getAllDescendantCategoryIds(node: CategoryNode): string[] {
+    const ids: string[] = [node._id];
+    if (node.children && node.children.length > 0) {
+        for (const c of node.children) {
+            ids.push(...getAllDescendantCategoryIds(c));
+        }
+    }
+    return ids;
+}
 
 // ─── Circular Timer ────────────────────────────────────────────────────
 function CircularTimer({ timeLeft, total, isPaused }: { timeLeft: number; total: number; isPaused: boolean }) {
@@ -21,30 +50,33 @@ function CircularTimer({ timeLeft, total, isPaused }: { timeLeft: number; total:
         ? '#f59e0b'
         : '#ef4444';
     return (
-        <div className="relative flex items-center justify-center mb-8 drop-shadow-[0_0_15px_rgba(99,102,241,0.3)]" style={{ width: 140, height: 140 }}>
-            <svg className="absolute inset-0 -rotate-90" style={{ width: '100%', height: '100%' }} viewBox="0 0 120 120">
+        <div className="relative flex items-center justify-center mb-6 sm:mb-8 drop-shadow-[0_0_20px_rgba(99,102,241,0.35)] w-[140px] h-[140px] sm:w-[170px] sm:h-[170px]">
+            <svg className="absolute inset-0 -rotate-90 w-full h-full" viewBox="0 0 120 120">
                 <circle cx="60" cy="60" r={R} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="6" />
                 <circle cx="60" cy="60" r={R} fill="none" stroke={color} strokeWidth="6"
                     strokeDasharray={`${C * progress} ${C}`} strokeLinecap="round"
                     style={{ transition: 'stroke-dasharray 1s linear, stroke 0.5s' }} />
             </svg>
             <div className="text-center z-10">
-                <div className="text-4xl font-black tabular-nums text-white">{timeLeft}</div>
-                <div className="text-[10px] uppercase font-black tracking-widest text-white/30">saniye</div>
+                <div className="text-4xl sm:text-6xl font-black tabular-nums text-white drop-shadow-md">{timeLeft}</div>
+                <div className="text-[10px] sm:text-xs uppercase font-black tracking-widest text-white/40 mt-1">saniye</div>
             </div>
         </div>
     );
 }
 
-export default function RandomPracticePage() {
+export default function StudentRandomPracticePage() {
     const { user, loading } = useAuth();
     const router = useRouter();
 
     const [availableUnits, setAvailableUnits] = useState<Unit[]>([]);
     const [selectedUnitIds, setSelectedUnitIds] = useState<string[]>([]);
     const [isSelectionMode, setIsSelectionMode] = useState(true);
-    const [activeCategory, setActiveCategory] = useState<string | null>(null);
-    const [viewingUnits, setViewingUnits] = useState(false);
+
+    // Folder Hierarchy State
+    const [categoriesTree, setCategoriesTree] = useState<CategoryNode[]>([]);
+    const [currentPath, setCurrentPath] = useState<CategoryNode[]>([]);
+    const [searchQuery, setSearchQuery] = useState<string>('');
 
     const [allWords, setAllWords] = useState<Word[]>([]);
     const [currentWord, setCurrentWord] = useState<Word | null>(null);
@@ -57,6 +89,7 @@ export default function RandomPracticePage() {
     const [isPaused, setIsPaused] = useState(false);
     const [historyStack, setHistoryStack] = useState<Word[]>([]);
     const [speechRate, setSpeechRate] = useState(1.0);
+    const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
     const [isBlurred, setIsBlurred] = useState(false);
     const [loadingData, setLoadingData] = useState(true);
     const [error, setError] = useState('');
@@ -64,17 +97,27 @@ export default function RandomPracticePage() {
     const [practiceMode, setPracticeMode] = useState<'EN' | 'UZ'>('EN'); // EN -> UZ or UZ -> EN
     const [wordServedAt, setWordServedAt] = useState<number>(Date.now());
 
-    const categoryMap = availableUnits.reduce((acc, unit) => {
-        const cat = unit.category || 'Kategoriyasiz';
-        if (!acc[cat]) acc[cat] = [];
-        acc[cat].push(unit);
-        return acc;
-    }, {} as Record<string, Unit[]>);
-    const categories = Object.keys(categoryMap).sort((a, b) =>
-        a === 'Kategoriyasiz' ? 1 : b === 'Kategoriyasiz' ? -1 : a.localeCompare(b));
-    const displayedUnits = activeCategory ? (categoryMap[activeCategory] || []) : availableUnits;
+    useEffect(() => {
+        if (loading || !user) return;
+        loadInitialData();
 
-    useEffect(() => { if (loading || !user) return; loadInitialData(); }, [user, loading]);
+        // Load voices and listen for changes
+        const loadVoices = () => {
+            if (typeof window !== 'undefined' && window.speechSynthesis) {
+                const v = window.speechSynthesis.getVoices();
+                if (v.length > 0) setVoices(v);
+            }
+        };
+        loadVoices();
+        if (typeof window !== 'undefined' && window.speechSynthesis) {
+            window.speechSynthesis.onvoiceschanged = loadVoices;
+        }
+        return () => {
+            if (typeof window !== 'undefined' && window.speechSynthesis) {
+                window.speechSynthesis.onvoiceschanged = null;
+            }
+        };
+    }, [user, loading]);
 
     useEffect(() => {
         let interval: NodeJS.Timeout | undefined;
@@ -114,24 +157,26 @@ export default function RandomPracticePage() {
                 fetch('/api/teacher/categories/tree').catch(() => null)
             ]);
 
-            let tree = [];
+            let tree: CategoryNode[] = [];
             if (treeRes && treeRes.ok) {
                 tree = await treeRes.json();
             }
+            setCategoriesTree(tree || []);
 
             const catIdToPathName: Record<string, string> = {};
-            const flatten = (nodes: any[], depthStr: string) => {
+            const buildPath = (nodes: CategoryNode[], depthStr: string) => {
                 nodes.forEach(n => {
-                    catIdToPathName[n._id] = depthStr + n.name;
+                    catIdToPathName[n._id] = depthStr ? `${depthStr} / ${n.name}` : n.name;
                     if (n.children && n.children.length > 0) {
-                        flatten(n.children, depthStr + n.name + ' / ');
+                        buildPath(n.children, depthStr ? `${depthStr} / ${n.name}` : n.name);
                     }
                 });
             };
-            flatten(tree, '');
+            buildPath(tree, '');
 
-            const unitsWithPath = unitsRes.map(u => ({
+            const unitsWithPath = (unitsRes || []).map((u: any) => ({
                 ...u,
+                id: u._id || u.id,
                 category: (u.categoryId && catIdToPathName[u.categoryId]) ? catIdToPathName[u.categoryId] : (u.category || 'Kategoriyasiz')
             }));
 
@@ -173,21 +218,42 @@ export default function RandomPracticePage() {
 
     const handleSpeak = (e?: React.MouseEvent | null, lang: 'en-US' | 'en-GB' = 'en-US') => {
         if (e) e.stopPropagation();
-        if (!currentWord) return;
+        if (!currentWord || typeof window === 'undefined' || !window.speechSynthesis) return;
+
+        // Cancel existing speech
         window.speechSynthesis.cancel();
-        const u = new SpeechSynthesisUtterance(currentWord.englishWord.toLowerCase());
-        u.lang = lang; u.rate = speechRate;
-        const v = window.speechSynthesis.getVoices().find(v => v.lang === lang || v.lang.startsWith(lang));
-        if (v) u.voice = v;
-        window.speechSynthesis.speak(u);
+
+        // Small delay to ensure cancel clears properly before speaking again
+        setTimeout(() => {
+            const u = new SpeechSynthesisUtterance(currentWord.englishWord.toLowerCase());
+            u.lang = lang;
+            u.rate = speechRate;
+
+            // Find best matching voice from available voices
+            const availableVoices = window.speechSynthesis.getVoices();
+            const v = availableVoices.find(voice => voice.lang === lang || voice.lang.startsWith(lang))
+                || availableVoices.find(voice => voice.lang.startsWith('en'))
+                || availableVoices[0];
+
+            if (v) u.voice = v;
+            window.speechSynthesis.speak(u);
+        }, 50);
     };
 
     useEffect(() => {
-        if (currentWord && !isSelectionMode && !showTranslation && practiceMode === 'EN') {
-            const t = setTimeout(() => handleSpeak(null, 'en-GB'), 500);
-            return () => clearTimeout(t);
+        if (currentWord && !isSelectionMode) {
+            // Case 1: EN mode - speak when word appears
+            if (practiceMode === 'EN' && !showTranslation) {
+                const t = setTimeout(() => handleSpeak(null, 'en-GB'), 500);
+                return () => clearTimeout(t);
+            }
+            // Case 2: UZ mode - speak when translation (EN word) is revealed
+            if (practiceMode === 'UZ' && showTranslation) {
+                const t = setTimeout(() => handleSpeak(null, 'en-GB'), 300);
+                return () => clearTimeout(t);
+            }
         }
-    }, [currentWord?.id, isSelectionMode, practiceMode]);
+    }, [currentWord?.id, isSelectionMode, practiceMode, showTranslation]);
 
     const handleNext = async () => {
         if (!sessionId || !currentWord || !user) return;
@@ -222,17 +288,44 @@ export default function RandomPracticePage() {
         catch { setError('Reset xato'); setLoadingData(false); }
     };
 
+    // ── Hierarchy Helpers ──
+    const currentCatId = currentPath.length > 0 ? currentPath[currentPath.length - 1]._id : null;
+    const currentCatNode = currentCatId ? findNodeInTree(categoriesTree, currentCatId) : null;
+
+    // Folders at this level
+    const currentFolders: CategoryNode[] = currentCatId
+        ? (currentCatNode?.children || [])
+        : categoriesTree;
+
+    // Units directly in this category / level
+    const currentLevelUnits: Unit[] = currentCatId
+        ? availableUnits.filter(u => u.categoryId === currentCatId || (!u.categoryId && u.category === currentCatNode?.name))
+        : [];
+
+    // All units under a given folder node (including descendants)
+    const getUnitsInFolder = (node: CategoryNode): Unit[] => {
+        const descIds = getAllDescendantCategoryIds(node);
+        return availableUnits.filter(u =>
+            (u.categoryId && descIds.includes(u.categoryId)) ||
+            (u.category && u.category.includes(node.name))
+        );
+    };
+
+    // Search results
+    const isSearching = !!searchQuery.trim();
+    const searchedUnits = isSearching
+        ? availableUnits.filter(u =>
+            u.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (u.category && u.category.toLowerCase().includes(searchQuery.toLowerCase()))
+          )
+        : [];
+
     // ── Loading ──
     if (loading || (loadingData && !isSelectionMode)) return (
-        <div className="flex-1 w-full min-h-[60vh] flex items-center justify-center p-4">
-            <div className="glass-card max-w-sm w-full p-8 text-center animate-fade-in flex flex-col items-center gap-4 my-auto">
-                <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
-                    <Loader2 className="w-8 h-8 animate-spin text-amber-400" />
-                </div>
-                <div>
-                    <p className="text-white font-black text-xl tracking-tight">Tayyorlaning...</p>
-                    <p className="text-white/40 text-xs mt-1 font-bold">So'zlar va mashqlar yuklanmoqda</p>
-                </div>
+        <div className="min-h-screen flex items-center justify-center bg-[#0a0a0f]">
+            <div className="text-center animate-pulse">
+                <Loader2 className="w-16 h-16 text-indigo-500 mx-auto mb-6 animate-spin" />
+                <p className="text-white/40 font-black uppercase tracking-[0.3em] text-xs">Tayyorlaning...</p>
             </div>
         </div>
     );
@@ -268,195 +361,324 @@ export default function RandomPracticePage() {
 
     if (isSelectionMode) {
         return (
-            <div className="flex-1 w-full flex items-center justify-center p-4">
-                <main className="glass-card w-full max-w-lg flex flex-col max-h-[85vh] animate-fade-in">
+            <div className="w-full flex items-center justify-center p-2 sm:p-4 my-auto min-h-[calc(100vh-90px)] animate-fade-in">
+                <main className="glass-card max-w-xl w-full flex flex-col max-h-[min(88dvh,820px)] text-left relative rounded-3xl border border-white/10 overflow-hidden shadow-2xl">
                     {/* Header */}
-                    <header className="px-8 py-6 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
-                        <div className="flex items-center gap-4">
-                            {viewingUnits ? (
-                                <button onClick={() => { setViewingUnits(false); setActiveCategory(null); }}
-                                    className="w-10 h-10 rounded-xl flex items-center justify-center transition-all bg-white/5 border border-white/10 hover:bg-white/10 active:scale-95">
-                                    <ArrowLeft className="w-5 h-5 text-white" />
-                                </button>
-                            ) : (
-                                <Link href="/student/dashboard"
-                                    className="w-10 h-10 rounded-xl flex items-center justify-center transition-all bg-white/5 border border-white/10 hover:bg-white/10 active:scale-95">
-                                    <ArrowLeft className="w-5 h-5 text-white" />
-                                </Link>
-                            )}
-                            <div>
-                                <h1 className="font-black text-xl tracking-tighter text-white">
-                                    {viewingUnits ? activeCategory : 'Mashq Turi'}
-                                </h1>
-                                <p className="text-[10px] font-black uppercase tracking-widest text-white/30 mt-0.5">
-                                    {viewingUnits ? 'Bo\'limni tanlang' : 'Yo\'nalishni tanlang'}
-                                </p>
+                    <header className="px-5 sm:px-6 py-4 border-b border-white/5 bg-white/[0.02] shrink-0 flex flex-col gap-3">
+                        <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-3 min-w-0">
+                                {currentPath.length > 0 ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => setCurrentPath(p => p.slice(0, -1))}
+                                        className="w-10 h-10 rounded-xl flex items-center justify-center transition-all bg-white/5 border border-white/10 hover:bg-white/10 active:scale-95 shrink-0"
+                                    >
+                                        <ArrowLeft className="w-5 h-5 text-white" />
+                                    </button>
+                                ) : (
+                                    <Link
+                                        href="/student/dashboard"
+                                        className="w-10 h-10 rounded-xl flex items-center justify-center transition-all bg-white/5 border border-white/10 hover:bg-white/10 active:scale-95 shrink-0"
+                                    >
+                                        <ArrowLeft className="w-5 h-5 text-white" />
+                                    </Link>
+                                )}
+                                <div className="min-w-0">
+                                    <h1 className="font-black text-lg sm:text-xl tracking-tight text-white truncate">
+                                        {currentPath.length > 0 ? currentPath[currentPath.length - 1].name : "Mashq Bo'limlari"}
+                                    </h1>
+                                    <p className="text-[11px] font-bold text-white/40 truncate">
+                                        {currentPath.length > 0 ? "Papkadagi unitlarni tanlang" : "Papkani tanlang yoki qidiring"}
+                                    </p>
+                                </div>
                             </div>
+
+                            {/* Badge */}
+                            <div className="px-3 py-1 rounded-xl bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 font-mono text-xs font-bold shrink-0">
+                                {selectedUnitIds.length} tanlandi
+                            </div>
+                        </div>
+
+                        {/* Breadcrumbs Navigation */}
+                        {currentPath.length > 0 && (
+                            <nav className="flex items-center gap-1.5 flex-wrap text-xs bg-black/20 p-2 rounded-xl border border-white/5">
+                                <button
+                                    type="button"
+                                    onClick={() => setCurrentPath([])}
+                                    className="font-bold text-indigo-400 hover:text-indigo-300 transition-colors flex items-center gap-1"
+                                >
+                                    <FolderOpen className="w-3.5 h-3.5" /> Asosiy
+                                </button>
+                                {currentPath.map((p, idx) => (
+                                    <div key={p._id} className="flex items-center gap-1.5">
+                                        <ChevronRight className="w-3.5 h-3.5 text-white/30" />
+                                        <button
+                                            type="button"
+                                            onClick={() => setCurrentPath(currentPath.slice(0, idx + 1))}
+                                            className={`font-bold transition-colors truncate max-w-[140px] ${
+                                                idx === currentPath.length - 1 ? 'text-white' : 'text-white/50 hover:text-white'
+                                            }`}
+                                        >
+                                            {p.name}
+                                        </button>
+                                    </div>
+                                ))}
+                            </nav>
+                        )}
+
+                        {/* Search Bar */}
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                            <input
+                                type="text"
+                                value={searchQuery}
+                                onChange={e => setSearchQuery(e.target.value)}
+                                placeholder="Unit yoki papka qidirish..."
+                                className="w-full pl-9 pr-8 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/40 font-bold outline-none focus:border-indigo-500 text-xs transition-all"
+                            />
+                            {searchQuery && (
+                                <button
+                                    type="button"
+                                    onClick={() => setSearchQuery('')}
+                                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/40 hover:text-white"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            )}
                         </div>
                     </header>
 
-                    {/* Content Area */}
-                    <div className="flex-1 overflow-y-auto px-6 py-4 custom-scrollbar">
+                    {/* Content Area - Scrollable */}
+                    <div className="flex-1 min-h-0 overflow-y-auto px-5 sm:px-6 py-3.5 custom-scrollbar space-y-2">
                         {loadingData ? (
-                            <div className="flex flex-col items-center justify-center py-20 gap-4">
+                            <div className="flex flex-col items-center justify-center py-16 gap-3">
                                 <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
-                                <span className="text-[10px] uppercase font-black tracking-widest text-white/20">Yuklanmoqda...</span>
+                                <span className="text-xs uppercase font-bold tracking-widest text-white/30">Yuklanmoqda...</span>
+                            </div>
+                        ) : isSearching ? (
+                            /* Search Results */
+                            <div className="space-y-2">
+                                <p className="text-[11px] font-bold uppercase tracking-wider text-white/40 mb-2">
+                                    Qidiruv natijalari ({searchedUnits.length} ta unit)
+                                </p>
+                                {searchedUnits.length === 0 ? (
+                                    <p className="text-xs text-white/30 text-center py-8">Hech narsa topilmadi</p>
+                                ) : (
+                                    searchedUnits.map(unit => {
+                                        const sel = selectedUnitIds.includes(unit.id);
+                                        return (
+                                            <button
+                                                key={unit.id}
+                                                type="button"
+                                                onClick={() => toggleUnitSelection(unit.id)}
+                                                className={`w-full flex items-center justify-between p-3.5 rounded-2xl transition-all border text-left ${
+                                                    sel ? 'bg-indigo-500/20 border-indigo-500/40 text-white shadow-sm' : 'bg-white/5 border-white/5 hover:border-white/10 text-white/70'
+                                                }`}
+                                            >
+                                                <div className="flex items-center gap-3 min-w-0 pr-2">
+                                                    <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs shrink-0 border ${
+                                                        sel ? 'bg-indigo-500 border-indigo-400 text-white' : 'border-white/20 bg-white/5'
+                                                    }`}>
+                                                        {sel && <Check className="w-3.5 h-3.5" />}
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className="font-bold text-sm truncate">{unit.title}</p>
+                                                        {unit.category && (
+                                                            <p className="text-[10px] text-white/40 truncate font-mono mt-0.5">{unit.category}</p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                {sel && <span className="text-[10px] font-bold text-indigo-400 uppercase shrink-0">Tanlangan</span>}
+                                            </button>
+                                        );
+                                    })
+                                )}
                             </div>
                         ) : (
-                            <div className="flex flex-col gap-2">
-                                {!viewingUnits ? (
-                                    <>
-                                        {/* Folders (excluding Kategoriyasiz if we want to show its units) */}
-                                        {categories.filter(cat => cat !== 'Kategoriyasiz' && cat !== 'Uncategorized').map(cat => {
-                                            const unitsInCat = categoryMap[cat] || [];
-                                            const selectedInCat = unitsInCat.filter(u => selectedUnitIds.includes(u.id)).length;
+                            /* Normal Folder / Unit Hierarchy */
+                            <div className="space-y-2">
+                                {/* Folders */}
+                                {currentFolders.map(folder => {
+                                    const unitsInF = getUnitsInFolder(folder);
+                                    const selectedInF = unitsInF.filter(u => selectedUnitIds.includes(u.id)).length;
+                                    const allSelected = unitsInF.length > 0 && selectedInF === unitsInF.length;
+
+                                    return (
+                                        <div
+                                            key={folder._id}
+                                            className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-white/5 border border-white/10 hover:border-indigo-500/30 transition-all group"
+                                        >
+                                            <button
+                                                type="button"
+                                                onClick={() => setCurrentPath([...currentPath, folder])}
+                                                className="flex items-center gap-3 flex-1 min-w-0 text-left cursor-pointer"
+                                            >
+                                                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0 group-hover:bg-indigo-500/20 transition-colors">
+                                                    <FolderOpen className="w-5 h-5 text-indigo-400" />
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <span className="font-black text-sm text-white block truncate">{folder.name}</span>
+                                                    <span className="text-[10px] font-bold text-white/40 uppercase tracking-wider">{unitsInF.length} ta bo'lim</span>
+                                                </div>
+                                            </button>
+
+                                            <div className="flex items-center gap-2 shrink-0 ml-2">
+                                                {unitsInF.length > 0 && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const ids = unitsInF.map(u => u.id);
+                                                            if (allSelected) {
+                                                                setSelectedUnitIds(prev => prev.filter(id => !ids.includes(id)));
+                                                            } else {
+                                                                setSelectedUnitIds(prev => Array.from(new Set([...prev, ...ids])));
+                                                            }
+                                                        }}
+                                                        className={`text-[10px] font-bold px-2.5 py-1.5 rounded-lg border transition-all ${
+                                                            selectedInF > 0
+                                                                ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
+                                                                : 'bg-white/5 border-white/10 text-white/50 hover:text-white'
+                                                        }`}
+                                                    >
+                                                        {selectedInF > 0 ? `${selectedInF}/${unitsInF.length}` : 'Tanlash'}
+                                                    </button>
+                                                )}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setCurrentPath([...currentPath, folder])}
+                                                    className="w-8 h-8 rounded-lg flex items-center justify-center text-white/30 hover:text-white transition-colors"
+                                                >
+                                                    <ChevronRight className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+
+                                {/* Units directly in this category */}
+                                {currentLevelUnits.length > 0 && (
+                                    <div className="pt-2 space-y-2">
+                                        <div className="flex items-center justify-between px-1">
+                                            <span className="text-[10px] font-black uppercase tracking-wider text-white/40">
+                                                Bo'limlar ({currentLevelUnits.length} ta)
+                                            </span>
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const ids = currentLevelUnits.map(u => u.id);
+                                                        setSelectedUnitIds(prev => Array.from(new Set([...prev, ...ids])));
+                                                    }}
+                                                    className="text-[10px] font-bold text-indigo-400 hover:underline"
+                                                >
+                                                    Hammasi
+                                                </button>
+                                                <span className="text-white/20">•</span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const ids = currentLevelUnits.map(u => u.id);
+                                                        setSelectedUnitIds(prev => prev.filter(id => !ids.includes(id)));
+                                                    }}
+                                                    className="text-[10px] font-bold text-rose-400 hover:underline"
+                                                >
+                                                    Bekor
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {currentLevelUnits.map(unit => {
+                                            const sel = selectedUnitIds.includes(unit.id);
                                             return (
-                                                <button key={cat} onClick={() => { setActiveCategory(cat); setViewingUnits(true); }}
-                                                    className="w-full flex items-center justify-between p-5 rounded-2xl text-left transition-all hover:bg-white/5 border border-transparent hover:border-white/10 active:scale-[0.98] group">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="w-12 h-12 rounded-xl bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20 group-hover:bg-indigo-500/20 transition-all">
-                                                            <FolderOpen className="w-5 h-5 text-indigo-400" />
+                                                <button
+                                                    key={unit.id}
+                                                    type="button"
+                                                    onClick={() => toggleUnitSelection(unit.id)}
+                                                    className={`w-full flex items-center justify-between p-3.5 rounded-2xl transition-all border text-left ${
+                                                        sel ? 'bg-indigo-500/20 border-indigo-500/40 text-white shadow-sm' : 'bg-white/5 border-white/5 hover:border-white/10 text-white/70'
+                                                    }`}
+                                                >
+                                                    <div className="flex items-center gap-3 min-w-0 pr-2">
+                                                        <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs shrink-0 border ${
+                                                            sel ? 'bg-indigo-500 border-indigo-400 text-white' : 'border-white/20 bg-white/5'
+                                                        }`}>
+                                                            {sel && <Check className="w-3.5 h-3.5" />}
                                                         </div>
-                                                        <div>
-                                                            <span className="font-black text-lg text-white block leading-tight">{cat}</span>
-                                                            <p className="text-[10px] font-black uppercase tracking-widest text-white/30 mt-1">{unitsInCat.length} bo'lim</p>
-                                                        </div>
+                                                        <span className="font-bold text-sm truncate">{unit.title}</span>
                                                     </div>
-                                                    {selectedInCat > 0 ? (
-                                                        <div className="px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase tracking-widest">
-                                                            {selectedInCat} tanlandi
-                                                        </div>
-                                                    ) : (
-                                                        <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white/20 group-hover:text-white/60 transition-all">
-                                                            <ArrowLeft className="w-5 h-5 rotate-180" />
-                                                        </div>
-                                                    )}
+                                                    {sel && <span className="text-[10px] font-bold text-indigo-400 uppercase shrink-0">Tanlangan</span>}
                                                 </button>
                                             );
                                         })}
+                                    </div>
+                                )}
 
-                                        {/* Divider for Root Units */}
-                                        {categories.length > 0 && (availableUnits.filter(u => !u.category || u.category === 'Kategoriyasiz' || u.category === 'Uncategorized').length > 0) && (
-                                            <div className="my-4 flex items-center gap-4 px-2">
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-white/20">Unitlar</span>
-                                                <div className="flex-1 h-px bg-white/5" />
-                                            </div>
-                                        )}
-
-                                        {/* Root Units */}
-                                        <div className="space-y-2">
-                                            {availableUnits
-                                                .filter(u => !u.category || u.category === 'Kategoriyasiz' || u.category === 'Uncategorized')
-                                                .map(unit => {
-                                                    const sel = selectedUnitIds.includes(unit.id);
-                                                    return (
-                                                        <button key={unit.id} onClick={() => toggleUnitSelection(unit.id)}
-                                                            className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all border ${sel ? 'bg-indigo-500/10 border-indigo-500/30' : 'bg-transparent border-white/5 hover:border-white/10'}`}>
-                                                            <div className="flex items-center gap-4">
-                                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${sel ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/30' : 'bg-white/5 text-white/20'}`}>
-                                                                    <Play className="w-3.5 h-3.5 fill-current" />
-                                                                </div>
-                                                                <span className={`font-black text-sm ${sel ? 'text-white' : 'text-white/60'}`}>{unit.title}</span>
-                                                            </div>
-                                                            <div className={`w-5 h-5 rounded-md flex items-center justify-center transition-all ${sel ? 'bg-emerald-500 scale-110 shadow-lg shadow-emerald-500/30' : 'bg-white/10 border border-white/20'}`}>
-                                                                {sel && <svg width="10" height="8" viewBox="0 0 12 10" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M2 5l2 2 6-6" /></svg>}
-                                                            </div>
-                                                        </button>
-                                                    );
-                                                })}
-                                        </div>
-                                    </>
-                                ) : (
-                                    <>
-                                        <div className="flex items-center gap-2 mb-4">
-                                            <button onClick={() => {
-                                                const ids = displayedUnits.map(u => u.id);
-                                                setSelectedUnitIds(p => Array.from(new Set([...p, ...ids])));
-                                            }} className="flex-1 py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 transition-all active:scale-95">
-                                                Hammasi
-                                            </button>
-                                            <button onClick={() => {
-                                                const ids = displayedUnits.map(u => u.id);
-                                                setSelectedUnitIds(p => p.filter(id => !ids.includes(id)));
-                                            }} className="flex-1 py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest bg-red-500/10 border border-red-500/20 text-red-400 transition-all active:scale-95">
-                                                Barchasini Bekor Qilish
-                                            </button>
-                                        </div>
-                                        <div className="space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar pr-1">
-                                            {displayedUnits.map(unit => {
-                                                const sel = selectedUnitIds.includes(unit.id);
-                                                return (
-                                                    <button key={unit.id} onClick={() => toggleUnitSelection(unit.id)}
-                                                        className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all border ${sel ? 'bg-indigo-500/10 border-indigo-500/30' : 'bg-transparent border-white/5 hover:border-white/10'}`}>
-                                                        <div className="flex items-center gap-4">
-                                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${sel ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/30' : 'bg-white/5 text-white/20'}`}>
-                                                                <FolderOpen className="w-4 h-4" />
-                                                            </div>
-                                                            <span className={`font-black text-sm ${sel ? 'text-white' : 'text-white/60'}`}>{unit.title}</span>
-                                                        </div>
-                                                        <div className={`w-5 h-5 rounded-md flex items-center justify-center transition-all ${sel ? 'bg-emerald-500 scale-110 shadow-lg shadow-emerald-500/30' : 'bg-white/10 border border-white/20'}`}>
-                                                            {sel && <svg width="10" height="8" viewBox="0 0 12 10" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M2 5l2 2 6-6" /></svg>}
-                                                        </div>
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                    </>
+                                {currentFolders.length === 0 && currentLevelUnits.length === 0 && (
+                                    <p className="text-xs text-white/30 text-center py-8">Ushbu papkada hech qanday bo'lim yo'q</p>
                                 )}
                             </div>
                         )}
                     </div>
 
-                    {/* Footer - Timer Settings */}
-                    <footer className="px-8 py-6 border-t border-white/5 bg-white/[0.02]">
-                        <div className="flex items-center justify-between mb-6">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-white/60">
-                                    <Settings2 className="w-4 h-4" />
-                                </div>
+                    {/* Footer - Fixed */}
+                    <footer className="px-5 sm:px-6 py-4 border-t border-white/5 bg-slate-950/80 shrink-0 space-y-3.5">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {/* Timer Duration */}
+                            <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/5 border border-white/10">
                                 <div>
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-white/30">Vaqt chegarasi</p>
-                                    <p className="text-sm font-black text-white">{timerDuration} soniya</p>
+                                    <p className="text-[9px] font-black uppercase tracking-wider text-white/40">Vaqt</p>
+                                    <p className="text-xs font-black text-white">{timerDuration}s</p>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    {[5, 10, 20, 30].map(val => (
+                                        <button
+                                            key={val}
+                                            type="button"
+                                            onClick={() => setTimerDuration(val)}
+                                            className={`px-2 py-1 rounded-lg text-[10px] font-black transition-all ${
+                                                timerDuration === val ? 'bg-indigo-500 text-white shadow-sm' : 'bg-white/5 text-white/40 hover:text-white'
+                                            }`}
+                                        >
+                                            {val}s
+                                        </button>
+                                    ))}
                                 </div>
                             </div>
-                            <div className="flex items-center gap-1">
-                                {[5, 10, 20, 30].map(val => (
-                                    <button key={val} onClick={() => setTimerDuration(val)}
-                                        className={`w-10 h-8 rounded-lg text-[10px] font-black transition-all ${timerDuration === val ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/30' : 'bg-white/5 text-white/30 hover:text-white/60'}`}>
-                                        {val}
-                                    </button>
-                                ))}
+
+                            {/* Translation Direction */}
+                            <div className="flex items-center justify-between p-2.5 rounded-xl bg-white/5 border border-white/10">
+                                <div>
+                                    <p className="text-[9px] font-black uppercase tracking-wider text-white/40">Yo'nalish</p>
+                                    <p className="text-xs font-black text-white">{practiceMode === 'EN' ? 'EN → UZ' : 'UZ → EN'}</p>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    {(['EN', 'UZ'] as const).map(m => (
+                                        <button
+                                            key={m}
+                                            type="button"
+                                            onClick={() => setPracticeMode(m)}
+                                            className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase transition-all ${
+                                                practiceMode === m ? 'bg-indigo-500 text-white shadow-sm' : 'bg-white/5 text-white/40 hover:text-white'
+                                            }`}
+                                        >
+                                            {m}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                         </div>
 
-                        {/* Mode Selection */}
-                        <div className="flex items-center justify-between mb-8">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-white/60">
-                                    <Languages className="w-4 h-4" />
-                                </div>
-                                <div>
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-white/30">Tarjima yo'nalishi</p>
-                                    <p className="text-sm font-black text-white">{practiceMode === 'EN' ? 'EN → UZ' : 'UZ → EN'}</p>
-                                </div>
-                            </div>
-                            <div className="flex bg-white/5 rounded-2xl p-1.5 gap-2">
-                                {(['EN', 'UZ'] as const).map(m => (
-                                    <button key={m} onClick={() => setPracticeMode(m)}
-                                        className={`px-8 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${practiceMode === m ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/30 scale-105' : 'text-white/30 hover:text-white/60'}`}>
-                                        {m}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        <button onClick={startPractice} disabled={selectedUnitIds.length === 0 || loadingData}
-                            className="btn-premium w-full h-16 text-lg group">
-                            <Play className="w-5 h-5 fill-current" />
-                            <span>Mashqni boshlash</span>
-                            <div className="shimmer-active group-hover:block" />
+                        <button
+                            type="button"
+                            onClick={startPractice}
+                            disabled={selectedUnitIds.length === 0 || loadingData}
+                            className="btn-premium w-full h-12 text-sm font-black flex items-center justify-center gap-2 transition-all disabled:opacity-40"
+                            style={{ borderRadius: '5px' }}
+                        >
+                            <Play className="w-4 h-4 fill-current" />
+                            <span>Mashqni boshlash {selectedUnitIds.length > 0 ? `(${selectedUnitIds.length} ta unit)` : ''}</span>
                         </button>
-                        {error && <p className="text-red-400 text-[10px] font-black uppercase text-center mt-3 tracking-widest">{error}</p>}
+                        {error && <p className="text-red-400 text-[10px] font-black uppercase text-center mt-2 tracking-widest">{error}</p>}
                     </footer>
                 </main>
             </div>

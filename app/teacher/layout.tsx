@@ -214,22 +214,23 @@ function TeacherLayoutInner({ children }: { children: React.ReactNode }) {
                 }}
             />
 
-            {/* ── TOP NAV (FLOATING PILL / CARD WRAPPER MATCHING STUDENT) ── */}
-            <div className="w-full max-w-[1600px] mx-auto sticky top-3 md:top-4 z-50 flex justify-center px-3 sm:px-6 lg:px-8 mb-4 md:mb-6">
-                <nav
-                    id="teacher-nav"
-                    className="w-full flex items-center transition-all duration-300 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)]"
-                    style={{
-                        minHeight: '68px',
-                        borderRadius: '18px',
-                        background: 'var(--theme-nav-bg, rgba(10, 18, 35, 0.85))',
-                        backdropFilter: 'var(--theme-nav-blur, blur(24px))',
-                        WebkitBackdropFilter: 'var(--theme-nav-blur, blur(24px))',
-                        border: 'var(--theme-nav-border, 1px solid rgba(255,255,255,0.12))',
-                        transition: 'all 0.4s ease',
-                        ...config.navStyle,
-                    }}
-                >
+            {/* ── TOP NAV (CLEAN TOP-PINNED STICKY HEADER) ── */}
+            <header className="w-full sticky top-0 z-50 backdrop-blur-2xl bg-[#0a1223]/90 border-b border-white/[0.08] shadow-[0_4px_24px_rgba(0,0,0,0.35)] transition-all">
+                <div className="w-full max-w-[1600px] mx-auto flex justify-center px-3 sm:px-6 lg:px-8 py-2">
+                    <nav
+                        id="teacher-nav"
+                        className="w-full flex items-center transition-all duration-300"
+                        style={{
+                            minHeight: '62px',
+                            borderRadius: '14px',
+                            background: 'var(--theme-nav-bg, rgba(15, 23, 42, 0.75))',
+                            backdropFilter: 'var(--theme-nav-blur, blur(24px))',
+                            WebkitBackdropFilter: 'var(--theme-nav-blur, blur(24px))',
+                            border: 'var(--theme-nav-border, 1px solid rgba(255,255,255,0.12))',
+                            transition: 'all 0.4s ease',
+                            ...config.navStyle,
+                        }}
+                    >
                     <div className="w-full h-full px-3.5 sm:px-5 md:px-6 py-2 flex items-center justify-between gap-2 md:gap-4">
 
                         {/* Left: Logo */}
@@ -469,7 +470,8 @@ function TeacherLayoutInner({ children }: { children: React.ReactNode }) {
                         </div>
                     </div>
                 </nav>
-            </div>
+                </div>
+            </header>
 
             <MessagesModal isOpen={showMessagesModal} onClose={() => setShowMessagesModal(false)} />
 
@@ -651,7 +653,7 @@ function TeacherLayoutInner({ children }: { children: React.ReactNode }) {
             )}
 
             {/* ── MAIN CONTENT (FULL WIDTH RESPONSIVE CONTAINER) ── */}
-            <main className="w-full max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8 min-w-0 relative z-10 pb-20">
+            <main className="w-full max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8 min-w-0 relative z-10 pt-4 md:pt-6 pb-20">
                 {children}
             </main>
         </div>

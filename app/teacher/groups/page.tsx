@@ -17,6 +17,7 @@ interface Group {
     teacherId: string;
     memberCount: number;
     unitCount: number;
+    telegramChatId?: string;
     createdAt: string;
 }
 
@@ -59,7 +60,9 @@ export default function TeacherGroupsPage() {
 
     // Detail View / Edit State
     const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
-    const [activeTab, setActiveTab] = useState<'members' | 'access' | 'stats' | 'quiz'>('members');
+    const [activeTab, setActiveTab] = useState<'members' | 'access' | 'stats' | 'quiz' | 'telegram'>('members');
+    const [groupTelegramChatId, setGroupTelegramChatId] = useState<string>('');
+    const [savingTelegram, setSavingTelegram] = useState<boolean>(false);
 
     // Member Management
     const [groupMembers, setGroupMembers] = useState<string[]>([]); // student IDs
@@ -159,6 +162,7 @@ export default function TeacherGroupsPage() {
     const openGroupDetails = async (group: Group) => {
         setSelectedGroup(group);
         setActiveTab('members');
+        setGroupTelegramChatId(group.telegramChatId || '');
 
         // Load members
         try {
@@ -175,6 +179,36 @@ export default function TeacherGroupsPage() {
             setQuizSelectedUnits(data.unitIds || []);
         } catch (error) {
             
+        }
+    };
+
+    const handleSaveTelegram = async () => {
+        if (!selectedGroup) return;
+        setSavingTelegram(true);
+        try {
+            const raw = groupTelegramChatId.trim();
+            let normalized = raw;
+            if (raw && !raw.startsWith('@')) {
+                const cleaned = raw.replace(/\s+/g, '');
+                if (cleaned.startsWith('100') && cleaned.length >= 12) normalized = '-' + cleaned;
+                else if (/^\d{9,13}$/.test(cleaned)) normalized = `-100${cleaned}`;
+                else if (/^-\d{9,13}$/.test(cleaned) && !cleaned.startsWith('-100')) normalized = `-100${cleaned.slice(1)}`;
+                else normalized = cleaned;
+            }
+            setGroupTelegramChatId(normalized);
+
+            await apiFetch(`/api/teacher/groups/${selectedGroup.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ telegramChatId: normalized }),
+            });
+            setGroups(prev => prev.map(g => g.id === selectedGroup.id ? { ...g, telegramChatId: normalized } : g));
+            setSelectedGroup(prev => prev ? { ...prev, telegramChatId: normalized } : null);
+            toast.success('Telegram guruhi muvaffaqiyatli saqlandi!');
+        } catch (error: any) {
+            toast.error(error.message || 'Telegram ID saqlanmadi');
+        } finally {
+            setSavingTelegram(false);
         }
     };
 
@@ -582,6 +616,7 @@ export default function TeacherGroupsPage() {
                                 { id: 'access', label: 'Unitlar', icon: BookOpen },
                                 { id: 'quiz', label: 'Quiz', icon: Zap },
                                 { id: 'stats', label: 'Statistika', icon: BarChart3 },
+                                { id: 'telegram', label: 'Telegram', icon: Send },
                             ].map(tab => (
                                 <button
                                     key={tab.id}
@@ -1096,6 +1131,63 @@ export default function TeacherGroupsPage() {
                                                     })}
                                                 </div>
                                             )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {activeTab === 'telegram' && (
+                                <div className="space-y-6 animate-fade-in">
+                                    <div className="p-5 rounded-2xl bg-indigo-500/10 border border-indigo-500/20">
+                                        <div className="flex items-center gap-3 mb-2">
+                                            <div className="w-9 h-9 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-400">
+                                                <Send className="w-5 h-5" />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-base font-black text-white">Telegram Guruh Integratsiyasi</h3>
+                                                <p className="text-xs text-white/50">Ushbu guruhning natijalari va hisobotlarini to'g'ridan-to'g'ri Telegram guruhiga yuborish</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="p-5 rounded-2xl bg-white/5 border border-white/10 space-y-4">
+                                        <div>
+                                            <label className="text-xs font-black uppercase tracking-widest text-indigo-400 mb-2.5 flex items-center justify-between">
+                                                <span>Telegram Guruh Chat ID</span>
+                                                <span className="text-[10px] text-white/40 normal-case font-normal">(-100 bilan boshlanadi yoki @username)</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={groupTelegramChatId}
+                                                onChange={(e) => setGroupTelegramChatId(e.target.value)}
+                                                placeholder="Masalan: -1001234567890 yoki @guruhingiz"
+                                                className="w-full h-12 px-4 rounded-[6px] bg-[#060a14] border-2 border-indigo-500/40 hover:border-indigo-400/70 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/30 text-white font-mono text-sm sm:text-base placeholder:text-white/30 transition-all shadow-md shadow-black/50 outline-none"
+                                                style={{ borderRadius: '6px' }}
+                                            />
+                                        </div>
+
+                                        <div className="p-4 rounded-[6px] bg-white/[0.02] border border-white/10 space-y-2.5 text-xs text-white/70" style={{ borderRadius: '6px' }}>
+                                            <p className="font-bold text-white flex items-center gap-1.5">
+                                                <Info className="w-4 h-4 text-indigo-400 shrink-0" />
+                                                Laptopda yoki kompyuterda guruh Chat ID sini olish usullari:
+                                            </p>
+                                            <div className="space-y-2 text-white/60 leading-relaxed pl-1">
+                                                <p><strong className="text-indigo-300">1-usul (Telegram Web orqali — eng osoni):</strong> Laptop brauzerida <code className="px-1.5 py-0.5 rounded-[4px] bg-white/10 text-amber-300 font-mono">web.telegram.org</code> ga kiring va guruhni oching. Tepada brauzer URL manziliga qarang: masalan <code className="px-1.5 py-0.5 rounded-[4px] bg-white/10 text-emerald-400 font-mono">#-1002345678901</code> yoki <code className="px-1.5 py-0.5 rounded-[4px] bg-white/10 text-emerald-400 font-mono">#2345678901</code>. O'sha raqam guruh ID si bo'ladi (agar oldida -100 bo'lmasa, <code className="text-white font-mono">-100</code> bilan yoziladi).</p>
+                                                <p><strong className="text-indigo-300">2-usul (Bot orqali):</strong> Guruhga <code className="px-1.5 py-0.5 rounded-[4px] bg-white/10 text-indigo-300 font-mono">@RawDataBot</code> yoki <code className="px-1.5 py-0.5 rounded-[4px] bg-white/10 text-indigo-300 font-mono">@username_to_id_bot</code> ni qo'shing — u darhol guruhning ID raqamini xabar qilib beradi.</p>
+                                                <p><strong className="text-indigo-300">Muhim eslatma:</strong> Bot xabar yuborishi uchun guruhingizga <code className="px-1.5 py-0.5 rounded-[4px] bg-indigo-500/20 text-indigo-300 font-mono font-bold">@MT_vocab_Bot</code> ni Admin qilib qo'shishni unutmang!</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="pt-2 flex justify-end">
+                                            <button
+                                                onClick={handleSaveTelegram}
+                                                disabled={savingTelegram}
+                                                className="h-12 px-6 rounded-[6px] bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs uppercase tracking-wider flex items-center gap-2 transition-all shadow-lg shadow-indigo-600/30 disabled:opacity-50 cursor-pointer active:scale-95"
+                                                style={{ borderRadius: '6px' }}
+                                            >
+                                                {savingTelegram ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                                                <span>Telegram ID ni Saqlash</span>
+                                            </button>
                                         </div>
                                     </div>
                                 </div>

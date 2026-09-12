@@ -26,6 +26,12 @@ const UserSchema = new Schema({
     teacherCode: { type: String, unique: true, sparse: true }, // Only for teachers
     teacherId: { type: Schema.Types.ObjectId, ref: 'User', default: null }, // Only for students
 
+    // Classroom Student Identification (e.g. M00001)
+    studentId: { type: String, unique: true, sparse: true },
+    firstName: { type: String },
+    lastName: { type: String },
+    isClassroomStudent: { type: Boolean, default: false },
+
     // Vocabulary Game
     warningCard: { type: Boolean, default: false }, // True if student scored 0 in a vocab session
     needsPasswordSetup: { type: Boolean, default: false }, // True for teacher-created students on first login

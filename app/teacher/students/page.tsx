@@ -16,8 +16,12 @@ import toast from 'react-hot-toast';
 
 interface Student {
     _id: string;
+    studentId?: string;
+    firstName?: string;
+    lastName?: string;
     name: string;
     email: string;
+    isClassroomStudent?: boolean;
     status: 'active' | 'blocked';
     lastLoginAt: string | null;
     createdAt: string;
@@ -110,9 +114,10 @@ export default function TeacherStudentsPage() {
     // Create Student Modal
     const [showCreateStudent, setShowCreateStudent] = useState(false);
     const [createStudentGroups, setCreateStudentGroups] = useState<{_id: string; name: string}[]>([]);
-    const [newStudentName, setNewStudentName] = useState('');
+    const [newStudentFullName, setNewStudentFullName] = useState('');
     const [newStudentEmail, setNewStudentEmail] = useState('');
     const [newStudentGroupId, setNewStudentGroupId] = useState('');
+    const [noLoginRequired, setNoLoginRequired] = useState(false);
     const [creatingStudent, setCreatingStudent] = useState(false);
 
     const [mounted, setMounted] = useState(false);
@@ -440,8 +445,17 @@ export default function TeacherStudentsPage() {
                                                     {student.name.charAt(0).toUpperCase()}
                                                 </div>
                                                 <div style={{minWidth:0}}>
-                                                    <p className="font-bold text-sm truncate" style={{color:'var(--text-primary)'}} title={student.name}>{student.name}</p>
-                                                    <p className="text-xs truncate" style={{color:'var(--text-muted)'}} title={student.email}>{student.email}</p>
+                                                    <div className="flex items-center gap-2">
+                                                        <p className="font-bold text-sm truncate" style={{color:'var(--text-primary)'}} title={student.name}>{student.name}</p>
+                                                        {student.studentId && (
+                                                            <span className="px-2 py-0.5 rounded text-[11px] font-mono font-black bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                                                                {student.studentId}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-xs truncate" style={{color:'var(--text-muted)'}} title={student.email}>
+                                                        {student.isClassroomStudent ? 'Sinf o\'quvchisi (login talab qilinmaydi)' : student.email}
+                                                    </p>
                                                 </div>
                                             </div>
                                         </td>
@@ -842,37 +856,55 @@ export default function TeacherStudentsPage() {
                 </div>,
                 document.body
             )}
-            {/* ── Create Student Modal ── */}
+            {/* ── Create Student Modal (5px radius, unified name, loginless toggle) ── */}
             {mounted && showCreateStudent && createPortal(
-                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-                    <div className="max-w-md w-full p-8 flex flex-col gap-6 rounded-[2rem]"
-                        style={{ background: 'linear-gradient(160deg,#13111f,#0f0d1e)', border: '1px solid rgba(255,255,255,0.12)' }}>
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+                    <div className="max-w-md w-full p-6 sm:p-7 flex flex-col gap-4 max-h-[92dvh] overflow-y-auto"
+                        style={{
+                            background: 'linear-gradient(160deg,#13111f,#0f0d1e)',
+                            border: '1px solid rgba(255,255,255,0.12)',
+                            borderRadius: '5px',
+                        }}>
                         <header>
-                            <h2 className="text-2xl font-black text-white tracking-tight flex items-center gap-3">
-                                <UserPlus className="w-6 h-6 text-indigo-400" /> Yangi Talaba Yaratish
+                            <h2 className="text-xl font-black text-white tracking-tight flex items-center gap-2.5">
+                                <UserPlus className="w-5 h-5 text-indigo-400" /> Yangi Talaba Qo'shish
                             </h2>
-                            <p className="text-sm text-white/40 font-medium mt-1">Talaba Gmail va ismi yetarli</p>
+                            <p className="text-xs text-white/50 font-medium mt-0.5">Talaba ma'lumotlarini kiriting</p>
                         </header>
                         <form
                             onSubmit={async (e) => {
                                 e.preventDefault();
-                                if (!newStudentName.trim() || !newStudentEmail.trim()) return;
+                                if (!newStudentFullName.trim()) {
+                                    toast.error('Ism va familiyani kiriting');
+                                    return;
+                                }
+                                if (!newStudentGroupId) {
+                                    toast.error('Guruhni tanlang');
+                                    return;
+                                }
+                                if (!noLoginRequired && !newStudentEmail.trim()) {
+                                    toast.error('Email manzilini kiriting');
+                                    return;
+                                }
                                 setCreatingStudent(true);
                                 try {
-                                    await apiFetch('/api/teacher/students/create', {
+                                    const res = await apiFetch('/api/teacher/students/create', {
                                         method: 'POST',
                                         headers: { 'Content-Type': 'application/json' },
                                         body: JSON.stringify({
-                                            name: newStudentName,
-                                            email: newStudentEmail,
-                                            groupId: newStudentGroupId || undefined,
+                                            name: newStudentFullName.trim(),
+                                            email: noLoginRequired ? undefined : newStudentEmail.trim(),
+                                            groupId: newStudentGroupId,
+                                            isClassroomStudent: noLoginRequired,
                                         }),
                                     });
-                                    toast.success(`${newStudentName} muvaffaqiyatli yaratildi!`);
+                                    const createdId = res?.student?.studentId || '';
+                                    toast.success(`${newStudentFullName} muvaffaqiyatli yaratildi! ${createdId ? `(${createdId})` : ''}`);
                                     setShowCreateStudent(false);
-                                    setNewStudentName('');
+                                    setNewStudentFullName('');
                                     setNewStudentEmail('');
                                     setNewStudentGroupId('');
+                                    setNoLoginRequired(false);
                                     loadData();
                                 } catch (err: any) {
                                     toast.error(err.message || 'Xatolik yuz berdi');
@@ -880,48 +912,144 @@ export default function TeacherStudentsPage() {
                                     setCreatingStudent(false);
                                 }
                             }}
-                            className="space-y-4"
+                            className="space-y-3.5"
                         >
-                            <input
-                                type="text"
-                                value={newStudentName}
-                                onChange={e => setNewStudentName(e.target.value)}
-                                placeholder="To'liq ism (masalan, Ali Karimov)"
-                                className="w-full rounded-2xl px-5 py-4 bg-white/5 border border-white/10 text-white font-bold outline-none focus:border-indigo-500 transition-all"
-                                autoFocus
-                                required
-                            />
-                            <input
-                                type="email"
-                                value={newStudentEmail}
-                                onChange={e => setNewStudentEmail(e.target.value)}
-                                placeholder="Gmail manzili (masalan, ali@gmail.com)"
-                                className="w-full rounded-2xl px-5 py-4 bg-white/5 border border-white/10 text-white font-bold outline-none focus:border-indigo-500 transition-all"
-                                required
-                            />
-                            <select
-                                value={newStudentGroupId}
-                                onChange={e => setNewStudentGroupId(e.target.value)}
-                                className="w-full rounded-2xl px-5 py-4 bg-white/5 border border-white/10 text-white font-bold outline-none focus:border-indigo-500 transition-all"
-                            >
-                                <option value="" className="bg-gray-900">— Guruhni tanlang (ixtiyoriy) —</option>
-                                {createStudentGroups.map((g: any) => (
-                                    <option key={g._id || g.id} value={g._id || g.id} className="bg-gray-900">{g.name}</option>
-                                ))}
-                            </select>
-                            <div className="p-4 rounded-xl text-xs text-white/40 font-bold space-y-1"
-                                style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.12)' }}>
-                                <p>ℹ️ Talaba birinchi marta Gmail manzili bilan kirganda parol o'rnatishga yo'naltiriladi.</p>
+                            {/* Unified Name Input (Ism va Familiya bitta inputda) */}
+                            <div>
+                                <label className="block text-xs font-bold text-white/80 uppercase tracking-wider mb-1.5">
+                                    Ism va Familiya <span className="text-rose-400">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    value={newStudentFullName}
+                                    onChange={e => setNewStudentFullName(e.target.value)}
+                                    placeholder="Masalan: Ali Karimov"
+                                    className="w-full h-12 min-h-[48px] px-4 text-white placeholder-white/45 font-bold outline-none transition-all text-sm focus:ring-2 focus:ring-indigo-500/30"
+                                    style={{
+                                        borderRadius: '5px',
+                                        background: 'rgba(255, 255, 255, 0.08)',
+                                        border: '1.5px solid rgba(255, 255, 255, 0.22)',
+                                        boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.25)',
+                                    }}
+                                    onFocus={e => {
+                                        e.currentTarget.style.borderColor = '#818cf8';
+                                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)';
+                                    }}
+                                    onBlur={e => {
+                                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.22)';
+                                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                                    }}
+                                    autoFocus
+                                    required
+                                />
                             </div>
-                            <div className="grid grid-cols-2 gap-3 pt-2">
+
+                            {/* Group Dropdown */}
+                            <div>
+                                <label className="block text-xs font-bold text-white/80 uppercase tracking-wider mb-1.5">
+                                    Guruh <span className="text-rose-400">*</span>
+                                </label>
+                                <select
+                                    value={newStudentGroupId}
+                                    onChange={e => setNewStudentGroupId(e.target.value)}
+                                    className="w-full h-12 min-h-[48px] px-4 text-white font-bold outline-none transition-all text-sm focus:ring-2 focus:ring-indigo-500/30"
+                                    style={{
+                                        borderRadius: '5px',
+                                        background: 'rgba(255, 255, 255, 0.08)',
+                                        border: '1.5px solid rgba(255, 255, 255, 0.22)',
+                                        boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.25)',
+                                    }}
+                                    onFocus={e => {
+                                        e.currentTarget.style.borderColor = '#818cf8';
+                                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)';
+                                    }}
+                                    onBlur={e => {
+                                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.22)';
+                                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                                    }}
+                                    required
+                                >
+                                    <option value="" className="bg-[#13111f] text-white/50">— Guruhni tanlang —</option>
+                                    {createStudentGroups.map((g: any) => (
+                                        <option key={g._id || g.id} value={g._id || g.id} className="bg-[#13111f] text-white">{g.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* "Login kerak emas" Checkbox Toggle */}
+                            <div className="flex items-center justify-between p-3.5 min-h-[48px] transition-all"
+                                style={{
+                                    borderRadius: '5px',
+                                    background: 'rgba(99, 102, 241, 0.08)',
+                                    border: '1.5px solid rgba(129, 140, 248, 0.3)',
+                                }}>
+                                <div className="flex items-center gap-2.5">
+                                    <input
+                                        type="checkbox"
+                                        id="noLoginCheckbox"
+                                        checked={noLoginRequired}
+                                        onChange={e => setNoLoginRequired(e.target.checked)}
+                                        className="w-4 h-4 rounded accent-indigo-500 cursor-pointer"
+                                    />
+                                    <label htmlFor="noLoginCheckbox" className="text-xs font-bold text-white cursor-pointer select-none">
+                                        Login kerak emas (faqat sinfda qatnashadi)
+                                    </label>
+                                </div>
+                                <span className="text-[10px] font-mono px-2 py-0.5 bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-bold" style={{ borderRadius: '3px' }}>
+                                    M00001+ ID
+                                </span>
+                            </div>
+
+                            {/* Email Input (Default holatda so'raladi, agar checkbox tanlansa shart emas) */}
+                            {!noLoginRequired ? (
+                                <div className="animate-fade-in">
+                                    <label className="block text-xs font-bold text-white/80 uppercase tracking-wider mb-1.5">
+                                        Gmail / Email manzili <span className="text-rose-400">*</span>
+                                    </label>
+                                    <input
+                                        type="email"
+                                        value={newStudentEmail}
+                                        onChange={e => setNewStudentEmail(e.target.value)}
+                                        placeholder="Masalan: ali@gmail.com"
+                                        className="w-full h-12 min-h-[48px] px-4 text-white placeholder-white/45 font-bold outline-none transition-all text-sm focus:ring-2 focus:ring-indigo-500/30"
+                                        style={{
+                                            borderRadius: '5px',
+                                            background: 'rgba(255, 255, 255, 0.08)',
+                                            border: '1.5px solid rgba(255, 255, 255, 0.22)',
+                                            boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.25)',
+                                        }}
+                                        onFocus={e => {
+                                            e.currentTarget.style.borderColor = '#818cf8';
+                                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)';
+                                        }}
+                                        onBlur={e => {
+                                            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.22)';
+                                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                                        }}
+                                        required
+                                    />
+                                </div>
+                            ) : (
+                                <div className="p-3 bg-indigo-500/15 border border-indigo-500/30 text-xs text-indigo-200 font-medium flex items-center gap-2" style={{ borderRadius: '5px' }}>
+                                    <span>ℹ️ Email va login talab qilinmaydi. Talabaga avtomatik <b>Student ID</b> biriktiriladi.</span>
+                                </div>
+                            )}
+
+                            {/* Actions Buttons */}
+                            <div className="grid grid-cols-2 gap-2.5 pt-2">
                                 <button type="button" onClick={() => setShowCreateStudent(false)}
-                                    className="py-4 rounded-2xl font-black text-white/40 hover:text-white transition-all"
-                                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                                    className="h-12 min-h-[48px] font-bold text-white/70 hover:text-white transition-all text-sm flex items-center justify-center"
+                                    style={{
+                                        background: 'rgba(255, 255, 255, 0.06)',
+                                        border: '1.5px solid rgba(255, 255, 255, 0.18)',
+                                        borderRadius: '5px'
+                                    }}>
                                     Bekor
                                 </button>
                                 <button type="submit" disabled={creatingStudent}
-                                    className="btn-premium py-4">
-                                    {creatingStudent ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Yaratish'}
+                                    className="btn-premium h-12 min-h-[48px] text-sm font-black flex items-center justify-center gap-2"
+                                    style={{ borderRadius: '5px' }}>
+                                    {creatingStudent ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Yaratish'}
                                 </button>
                             </div>
                         </form>

@@ -153,6 +153,26 @@ body {
   .page-container { padding: var(--space-4) var(--content-padding-mobile); }
 }
 
+/* Viewport-safe and responsive modal wrapper */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(12px, 3vh, 24px);
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.modal-content-scrollable {
+  max-height: min(90dvh, 800px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
 /* Page header block */
 .page-header {
   display: flex;

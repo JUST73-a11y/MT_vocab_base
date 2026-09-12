@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import dbConnect from '@/lib/db';
 import Unit from '@/models/Unit';
 import User from '@/models/User';
+import Word from '@/models/Word';
 import { getServerSession } from '@/lib/serverAuth';
 import StudentUnitAccess from '@/models/StudentUnitAccess';
 import GroupMember from '@/models/GroupMember';
@@ -79,6 +80,13 @@ export async function GET(req: Request) {
                 .sort({ createdAt: -1 })
                 .lean();
 
+            const unitIds = rawUnits.map((u: any) => u._id);
+            const wordCounts = await Word.aggregate([
+                { $match: { unitId: { $in: unitIds } } },
+                { $group: { _id: '$unitId', count: { $sum: 1 } } }
+            ]);
+            const wordCountMap = new Map(wordCounts.map((wc: any) => [wc._id.toString(), wc.count]));
+
             const mapped = rawUnits.map((u: any) => {
                 const unitId = u._id?.toString() || u.id;
                 const sharedCatId = sharedIdMap.get(unitId);
@@ -93,13 +101,14 @@ export async function GET(req: Request) {
                     creatorName: creator?.name || (creator?._id?.toString() === user.id ? user.name : "Noma'lum"),
                     category: u.category || 'Uncategorized',
                     categoryId: (sharedCatId || u.categoryId?.toString()) ?? null,
+                    wordCount: wordCountMap.get(unitId) || 0,
                 };
             });
 
             if (cacheKey) cache.set(cacheKey, mapped, UNITS_TTL);
             return NextResponse.json(mapped);
         }
- else if (user.role === 'admin' && teacherId) {
+        else if (user.role === 'admin' && teacherId) {
             query.createdBy = teacherId;
         }
 
@@ -111,6 +120,13 @@ export async function GET(req: Request) {
             .sort({ createdAt: -1 })
             .lean();
 
+        const unitIds = rawUnits.map((u: any) => u._id);
+        const wordCounts = await Word.aggregate([
+            { $match: { unitId: { $in: unitIds } } },
+            { $group: { _id: '$unitId', count: { $sum: 1 } } }
+        ]);
+        const wordCountMap = new Map(wordCounts.map((wc: any) => [wc._id.toString(), wc.count]));
+
         const mapped = rawUnits.map((u: any) => ({
             ...u,
             id: u._id?.toString(),
@@ -120,6 +136,7 @@ export async function GET(req: Request) {
             creatorName: u.createdBy?.name || "Noma'lum",
             category: u.category || 'Uncategorized',
             categoryId: u.categoryId?.toString() ?? null,
+            wordCount: wordCountMap.get(u._id?.toString()) || 0,
         }));
 
         if (cacheKey) cache.set(cacheKey, mapped, UNITS_TTL);

@@ -770,7 +770,7 @@ export default function UnitsPage() {
     }
 
     return (
-        <div className="min-h-screen text-white flex flex-col mt-4">
+        <div className="text-white flex flex-col gap-6 animate-fade-in">
             {/* ── Dashboard Explorer Header ── */}
             <div className="mb-8 px-8 py-10 relative overflow-hidden group/header"
                 style={{

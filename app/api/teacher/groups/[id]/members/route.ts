@@ -16,18 +16,25 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
         const members = await GroupMember.find({ groupId: id }).populate({
             path: 'studentId',
-            select: 'name email status lastLoginAt'
+            select: 'name email status lastLoginAt studentId firstName lastName isClassroomStudent'
         });
 
         // Format for response
-        const formattedMembers = members.map((m: any) => ({
-            id: m.studentId._id,
-            name: m.studentId.name,
-            email: m.studentId.email,
-            status: m.studentId.status,
-            lastLoginAt: m.studentId.lastLoginAt,
-            joinedAt: m.joinedAt
-        }));
+        const formattedMembers = members
+            .filter((m: any) => m.studentId)
+            .map((m: any) => ({
+                id: m.studentId._id,
+                _id: m.studentId._id,
+                name: m.studentId.name,
+                firstName: m.studentId.firstName || '',
+                lastName: m.studentId.lastName || '',
+                studentId: m.studentId.studentId || '',
+                email: m.studentId.email,
+                status: m.studentId.status,
+                isClassroomStudent: m.studentId.isClassroomStudent || false,
+                lastLoginAt: m.studentId.lastLoginAt,
+                joinedAt: m.joinedAt
+            }));
 
         return NextResponse.json(formattedMembers);
     } catch (error) {

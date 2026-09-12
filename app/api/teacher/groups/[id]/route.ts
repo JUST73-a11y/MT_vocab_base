@@ -57,7 +57,7 @@ export async function PATCH(req: Request, { params }: { params: Params }) {
         }
 
         const updates = await req.json();
-        const allowed = ['name', 'level', 'course', 'vocabularyMode'];
+        const allowed = ['name', 'level', 'course', 'vocabularyMode', 'telegramChatId'];
         for (const key of allowed) {
             if (updates[key] !== undefined) (group as any)[key] = updates[key];
         }

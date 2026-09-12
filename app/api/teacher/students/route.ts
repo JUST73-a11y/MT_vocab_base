@@ -44,7 +44,7 @@ export async function GET(req: Request) {
         }
 
         const students = await User.find(query)
-            .select('name email status lastLoginAt createdAt totalWordsSeen')
+            .select('name email status lastLoginAt createdAt totalWordsSeen studentId firstName lastName isClassroomStudent')
             .sort({ createdAt: -1 });
 
         return NextResponse.json(students);
