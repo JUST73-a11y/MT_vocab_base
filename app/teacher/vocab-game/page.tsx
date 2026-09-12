@@ -12,7 +12,7 @@ import {
     AlertTriangle, Star, RefreshCw, ArrowLeft, Zap, Target,
     Medal, TrendingUp, PieChart as PieIcon, Download, Volume2, VolumeX,
     Eye, EyeOff, Square, UserPlus, Flame, Sparkles, FolderOpen, ChevronDown, CheckCheck, Search, X,
-    Camera, Edit2, Save
+    Camera, Edit2, Save, SkipForward
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { announcer } from '@/lib/announcerSound';
@@ -233,6 +233,10 @@ export default function VocabGamePage() {
 
     // Roster Modal during live game
     const [showRosterModal, setShowRosterModal] = useState<boolean>(false);
+
+    // Skip Turn Modal during live game
+    const [showSkipModal, setShowSkipModal] = useState<boolean>(false);
+    const [skippingTurn, setSkippingTurn] = useState<boolean>(false);
 
     // Timer & Controls
     const [timeLeft, setTimeLeft] = useState<number>(10);
@@ -617,6 +621,61 @@ export default function VocabGamePage() {
             toast.error(err.message || 'Xatolik yuz berdi');
         } finally {
             setSubmitting(false);
+        }
+    };
+
+    const handleSkipTurn = async (action: 'defer' | 'skip_absent' = 'defer') => {
+        if (!sessionId) return;
+        setSkippingTurn(true);
+        const toastId = toast.loading(action === 'defer' ? 'Navbat oxiriga surilmoqda...' : "O'quvchi o'tkazib yuborilmoqda...");
+        try {
+            const res = await apiFetch(`/api/teacher/vocab-game/session/${sessionId}/skip-turn`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action }),
+            });
+
+            if (res.isFinished) {
+                toast.success(res.message || 'Sessiya yakunlandi!', { id: toastId });
+                setShowSkipModal(false);
+                loadSummary(sessionId);
+                setPhase('ceremony');
+                return;
+            }
+
+            if (res.nextStudent) {
+                answeringWordIdxRef.current = null;
+                setCurrentStudent(res.nextStudent);
+                setCurrentWords(res.nextWords || []);
+                setCurrentWordIdx(0);
+                setCorrectCount(0);
+                setWrongCount(0);
+                setStudentQuestionAnswers([]);
+                setStudentTotalTimeMs(0);
+                setCurrentStudentIndex(res.session?.currentStudentIndex ?? 0);
+                setTimeLeft(timerDuration);
+                setTimerActive(true);
+                setIsPaused(false);
+                setShowTranslation(false);
+                setAnsweredChoice(null);
+                setWordStartTime(Date.now());
+                if (res.session?.participants) {
+                    setSessionParticipants(res.session.participants);
+                }
+
+                const firstWord = (res.nextWords || [])[0]?.englishWord;
+                triggerTurnAnnouncement(res.nextStudent, firstWord);
+
+                const msg = action === 'defer'
+                    ? `Gal o'tkazildi! Yangi navbat: ${res.nextStudent.name}`
+                    : `${res.nextStudent.name} navbatiga o'tildi`;
+                toast.success(msg, { id: toastId });
+            }
+            setShowSkipModal(false);
+        } catch (err: any) {
+            toast.error(err.message || "Galni o'tkazishda xatolik", { id: toastId });
+        } finally {
+            setSkippingTurn(false);
         }
     };
 
@@ -1715,6 +1774,16 @@ export default function VocabGamePage() {
                     <div className="flex items-center gap-2">
                         <button
                             type="button"
+                            onClick={() => { setIsPaused(true); setShowSkipModal(true); }}
+                            className="px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer"
+                            title="O'quvchi xonadan chiqqan bo'lsa navbatni oxiriga surish"
+                        >
+                            <SkipForward className="w-4 h-4 text-amber-400" />
+                            <span>Galni o'tkazish</span>
+                        </button>
+
+                        <button
+                            type="button"
                             onClick={() => setShowRosterModal(true)}
                             className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer"
                         >
@@ -1758,7 +1827,7 @@ export default function VocabGamePage() {
                     </div>
 
                     {/* Top Row: Current Student (Left) & Live Scores (Right) */}
-                    <div className="flex items-start justify-between w-full z-10">
+                    <div className="flex items-start justify-between w-full z-10 flex-wrap gap-4">
                         <div className="flex items-center gap-3.5">
                             <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-indigo-600 text-white font-black text-2xl flex items-center justify-center shadow-lg shadow-indigo-600/40 border border-indigo-400/30 shrink-0">
                                 {currentStudent?.name?.charAt(0).toUpperCase() || 'M'}
@@ -1780,7 +1849,18 @@ export default function VocabGamePage() {
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap justify-end">
+                            <button
+                                type="button"
+                                onClick={() => { setIsPaused(true); setShowSkipModal(true); }}
+                                disabled={submitting || skippingTurn}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 hover:border-amber-500/60 text-amber-300 font-bold text-xs sm:text-sm transition-all cursor-pointer active:scale-95 shadow-sm shadow-amber-500/10"
+                                title="O'quvchi muhim ish bilan chiqqan bo'lsa navbatni oxiriga surish"
+                            >
+                                <SkipForward className="w-4 h-4 text-amber-400" />
+                                <span>Galni o'tkazish</span>
+                            </button>
+
                             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-950/40 border border-emerald-500/40 text-emerald-400 font-black text-xs sm:text-sm">
                                 <Check className="w-4 h-4" />
                                 <span>{correctCount} TO'G'RI</span>
@@ -2070,12 +2150,27 @@ export default function VocabGamePage() {
 
                                             <div className="shrink-0 flex items-center gap-2">
                                                 {isCurrent ? (
-                                                    <span className="px-2.5 py-1 rounded-lg bg-indigo-500 text-white font-black text-xs animate-pulse">
-                                                        Hozir Navbatda
-                                                    </span>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="px-2.5 py-1 rounded-lg bg-indigo-500 text-white font-black text-xs animate-pulse">
+                                                            Hozir Navbatda
+                                                        </span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => { setShowRosterModal(false); setIsPaused(true); setShowSkipModal(true); }}
+                                                            className="px-2 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 font-bold text-xs flex items-center gap-1 transition-all cursor-pointer"
+                                                            title="Navbatni oxiriga surish"
+                                                        >
+                                                            <SkipForward className="w-3.5 h-3.5 text-amber-400" />
+                                                            <span>O'tkazish</span>
+                                                        </button>
+                                                    </div>
                                                 ) : p.status === 'completed' ? (
                                                     <span className="px-2.5 py-1 rounded-lg bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 font-mono font-bold text-xs">
                                                         {p.correctAnswers}/{p.questionsAsked} ({p.accuracy}%)
+                                                    </span>
+                                                ) : p.status === 'absent' ? (
+                                                    <span className="px-2.5 py-1 rounded-lg bg-rose-500/20 border border-rose-500/30 text-rose-400 text-xs font-bold">
+                                                        Qatnashmadi
                                                     </span>
                                                 ) : (
                                                     <span className="text-white/30 text-xs font-medium">
@@ -2173,6 +2268,90 @@ export default function VocabGamePage() {
                                     className="py-3 rounded-xl bg-rose-600 text-white font-black text-xs"
                                 >
                                     Ha, yakunlash
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* ── GALNI O'TKAZISH MODAL ── */}
+                {showSkipModal && (
+                    <div className="fixed inset-0 z-[260] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in">
+                        <div className="max-w-md w-full p-6 sm:p-7 rounded-3xl bg-[#0c1220] border border-amber-500/30 shadow-2xl shadow-amber-950/40 flex flex-col gap-5 text-white">
+                            {/* Modal Header */}
+                            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
+                                        <SkipForward className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-lg font-black text-white">Galni O'tkazish</h3>
+                                        <p className="text-xs text-amber-300/80 font-medium">
+                                            Hozirgi navbat: <span className="text-white font-bold">{currentStudent?.name}</span>
+                                        </p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => { setShowSkipModal(false); setIsPaused(false); }}
+                                    className="p-2 rounded-xl hover:bg-white/10 text-white/40 hover:text-white transition-colors cursor-pointer"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+
+                            {/* Explanation */}
+                            <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-200 leading-relaxed">
+                                💡 O'quvchi muhim ish bilan tashqariga chiqqan bo'lsa, uni navbat oxiriga surishingiz mumkin. U qaytib kelganda navbati oxirida yana keladi.
+                            </div>
+
+                            {/* Action Options */}
+                            <div className="flex flex-col gap-3">
+                                {/* Option 1: Defer to End (Recommended) */}
+                                <button
+                                    type="button"
+                                    onClick={() => handleSkipTurn('defer')}
+                                    disabled={skippingTurn}
+                                    className="group p-4 rounded-2xl bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 hover:border-indigo-500/70 text-left transition-all cursor-pointer active:scale-[0.99] flex items-center justify-between"
+                                >
+                                    <div>
+                                        <p className="text-sm font-black text-white flex items-center gap-2">
+                                            <span>⏩ Navbat oxiriga surish</span>
+                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Tavsiya</span>
+                                        </p>
+                                        <p className="text-xs text-white/50 mt-1">
+                                            Keyingi o'quvchi boshlaydi. Bu o'quvchi esa oxirida javob beradi.
+                                        </p>
+                                    </div>
+                                    <ChevronRight className="w-5 h-5 text-indigo-400 group-hover:translate-x-1 transition-transform shrink-0" />
+                                </button>
+
+                                {/* Option 2: Mark Absent / Skip Entirely */}
+                                <button
+                                    type="button"
+                                    onClick={() => handleSkipTurn('skip_absent')}
+                                    disabled={skippingTurn}
+                                    className="group p-4 rounded-2xl bg-white/[0.03] hover:bg-rose-500/10 border border-white/10 hover:border-rose-500/30 text-left transition-all cursor-pointer active:scale-[0.99] flex items-center justify-between"
+                                >
+                                    <div>
+                                        <p className="text-sm font-bold text-white/80 group-hover:text-rose-300 flex items-center gap-2">
+                                            <span>🚫 Qatnashmadi deb o'tkazish</span>
+                                        </p>
+                                        <p className="text-xs text-white/40 mt-1">
+                                            Agar o'quvchi darsga qaytmasa, navbatdan butunlay chiqariladi.
+                                        </p>
+                                    </div>
+                                    <ChevronRight className="w-5 h-5 text-white/30 group-hover:text-rose-400 group-hover:translate-x-1 transition-transform shrink-0" />
+                                </button>
+                            </div>
+
+                            {/* Footer Cancel */}
+                            <div className="flex justify-end pt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => { setShowSkipModal(false); setIsPaused(false); }}
+                                    className="w-full py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 hover:text-white font-bold text-xs transition-colors cursor-pointer"
+                                >
+                                    Bekor qilish (O'yinni davom ettirish)
                                 </button>
                             </div>
                         </div>

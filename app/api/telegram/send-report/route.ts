@@ -62,10 +62,25 @@ export async function POST(req: Request) {
             await group.save().catch(() => {});
         }
 
-        const botToken = (customBotToken || process.env.TELEGRAM_BOT_TOKEN)?.trim();
+        const rawTokenOrUrl = (
+            customBotToken ||
+            process.env.TELEGRAM_BOT_TOKEN ||
+            process.env.TELEGRAM_BOT_URL ||
+            process.env.TELEGRAM_URL_BOT ||
+            process.env.TELEGRAM_TOKEN ||
+            process.env.TELEGRAM_URL
+        )?.trim() || '';
+
+        // If user provided full URL like https://api.telegram.org/bot8859834314:AAEm..., extract token
+        let botToken = rawTokenOrUrl;
+        const urlMatch = rawTokenOrUrl.match(/bot(\d+:[A-Za-z0-9_-]+)/i);
+        if (urlMatch) {
+            botToken = urlMatch[1];
+        }
+
         if (!botToken) {
             return NextResponse.json({ 
-                message: 'Telegram Bot Token topilmadi. Server sozlamalarida TELEGRAM_BOT_TOKEN ni sozlang yoki bot token kiriting.' 
+                message: 'Telegram Bot Token topilmadi. Server sozlamalarida TELEGRAM_BOT_TOKEN yoki TELEGRAM_BOT_URL ni sozlang.' 
             }, { status: 400 });
         }
 
